@@ -9,194 +9,63 @@
 
 <body>
 
-    <!-- ========================= -->
-    <!-- TOP NAVIGATION TABS       -->
-    <!-- ========================= -->
-    <header class="top-tabs">
-        <button class="tab-btn active" data-tab="meals" onclick="switchTab('meals')">Recipes</button>
-        <button class="tab-btn" data-tab="planner" onclick="switchTab('planner')">Planner</button>
-        <button class="tab-btn" data-tab="extras" onclick="switchTab('extras')">Other</button>
-        <button class="tab-btn" data-tab="stores" onclick="switchTab('stores')">Stores</button>
-        <button class="tab-btn" data-tab="groceries" onclick="switchTab('groceries')">Grocery List</button>
-    </header>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <button class="nav-btn active" data-tab="recipesView">Recipes</button>
+        <button class="nav-btn" data-tab="plannerView">Planner</button>
+        <button class="nav-btn" data-tab="otherView">Other</button>
+        <button class="nav-btn" data-tab="storesView">Stores</button>
+        <button class="nav-btn" data-tab="groceryView">Grocery List</button>
+    </nav>
 
+    <!-- App Container -->
+    <main>
 
-    <!-- ========================= -->
-    <!-- RECIPES TAB               -->
-    <!-- ========================= -->
-    <section id="tab-meals">
-        <h2>Recipes</h2>
+        <!-- RECIPES TAB -->
+        <section id="recipesView" class="tab-section active">
+            <h1>Recipes</h1>
+            <div id="recipesContainer"></div>
+        </section>
 
-        <div id="meals-empty-state" class="empty-state hidden">
-            No meals yet. Tap the + button to add one!
-        </div>
+        <!-- PLANNER TAB -->
+        <section id="plannerView" class="tab-section">
+            <h1>Weekly Planner</h1>
+            <div id="plannerMealsContainer"></div>
+            <h2>Additional Items</h2>
+            <div id="plannerExtrasContainer"></div>
+        </section>
 
-        <div id="meal-list"></div>
+        <!-- OTHER TAB -->
+        <section id="otherView" class="tab-section">
+            <h1>Other Items</h1>
+            <div id="otherItemsContainer"></div>
+        </section>
 
-        <!-- Floating Add Meal Button -->
-        <button id="fab-recipes" class="fab">+</button>
+        <!-- STORES TAB -->
+        <section id="storesView" class="tab-section">
+            <h1>Stores</h1>
+            <div id="storesContainer"></div>
+        </section>
 
-        <!-- Add Meal Modal -->
-        <div id="meal-modal" class="modal hidden">
-            <div class="modal-content">
-                <h3>Add New Meal</h3>
-
-                <label>Meal Name</label>
-                <input id="meal-name" type="text" />
-
-                <label>Category</label>
-                <select id="meal-category" onchange="handleNewCategorySelection()"></select>
-
-                <label>Notes</label>
-                <textarea id="meal-notes"></textarea>
-
-                <div class="modal-actions">
-                    <button id="add-meal-btn" class="btn btn-primary">Save Meal</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('meal-modal').classList.add('hidden')">Cancel</button>
-                </div>
+        <!-- GROCERY LIST TAB -->
+        <section id="groceryView" class="tab-section">
+            <h1>Groceries by Store</h1>
+            <div class="grocery-header-actions">
+                <button id="refreshGroceryBtn" class="btn small">Refresh from Plan</button>
+                <button id="clearChecksBtn" class="btn small">Clear Checks</button>
+                <button id="copyListBtn" class="btn small">Copy List</button>
             </div>
-        </div>
-    </section>
+            <div id="groceryListContainer"></div>
+        </section>
+    </main>
 
+    <!-- FAB BUTTONS -->
+    <button id="fab-add-recipe" class="fab" data-tab-target="recipesView">+</button>
+    <button id="fab-add-custom" class="fab hidden" data-tab-target="plannerView">+</button>
+    <button id="fab-add-other" class="fab hidden" data-tab-target="otherView">+</button>
+    <button id="fab-add-store" class="fab hidden" data-tab-target="storesView">+</button>
 
-    <!-- ========================= -->
-    <!-- INGREDIENT MODAL          -->
-    <!-- ========================= -->
-    <div id="ingredient-modal" class="modal hidden">
-        <div class="modal-content wide">
-            <h3>Ingredient</h3>
-
-            <label>Name</label>
-            <input id="ingredient-name" type="text" />
-
-            <div class="grid-3">
-                <div>
-                    <label>Qty</label>
-                    <input id="ingredient-qty" type="number" value="1" />
-                </div>
-                <div>
-                    <label>Unit</label>
-                    <input id="ingredient-unit" type="text" value="CT" />
-                </div>
-                <div>
-                    <label>Store</label>
-                    <select id="ingredient-store"></select>
-                </div>
-            </div>
-
-            <label>Substitution Group</label>
-            <input id="ingredient-group" type="text" placeholder="Example: chicken type" />
-
-            <label>
-                <input id="ingredient-default" type="checkbox" />
-                Default ingredient in group
-            </label>
-
-            <div class="modal-actions">
-                <button id="ingredient-save" class="btn btn-primary">Save</button>
-                <button id="ingredient-cancel" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- ========================= -->
-    <!-- PLANNER TAB               -->
-    <!-- ========================= -->
-    <section id="tab-planner" class="hidden">
-        <h2>Meal Planner</h2>
-
-        <div id="planner-empty" class="empty-state hidden">
-            Add meals first to begin planning!
-        </div>
-
-        <!-- Planner Controls -->
-        <div class="planner-controls">
-            <button id="collapse-all-btn" class="btn btn-secondary">Collapse All</button>
-            <button id="expand-selected-btn" class="btn btn-secondary">Expand Selected</button>
-            <button id="generate-list-btn" class="btn btn-primary">Generate Grocery List</button>
-        </div>
-
-        <div id="planner-meals"></div>
-
-        <!-- Planner-only item entry -->
-        <h3 class="sub-header">Add Additional Items</h3>
-        <div class="extra-form">
-            <input id="extra-name" placeholder="Item name" />
-            <input id="extra-qty" type="number" placeholder="Qty" />
-            <input id="extra-unit" placeholder="Unit" />
-            <select id="extra-store"></select>
-            <button id="add-extra-btn" class="btn btn-primary">Add</button>
-        </div>
-    </section>
-
-
-    <!-- ========================= -->
-    <!-- EXTRAS TAB                -->
-    <!-- ========================= -->
-    <section id="tab-extras" class="hidden">
-        <h2>Other Items</h2>
-
-        <div id="extras-empty" class="empty-state hidden">
-            No items added yet.
-        </div>
-
-        <div id="extras-list"></div>
-
-        <!-- Floating Add Extras Button -->
-        <button id="fab-extras" class="fab">+</button>
-
-        <!-- Add Extras Modal -->
-        <div id="extras-modal" class="modal hidden">
-            <div class="modal-content">
-                <h3>Add Item</h3>
-                <label>Name</label>
-                <input id="extras-name" type="text" />
-                <label>Qty</label>
-                <input id="extras-qty" type="number" value="1" />
-                <label>Unit</label>
-                <input id="extras-unit" type="text" value="CT" />
-                <label>Store</label>
-                <select id="extras-store"></select>
-
-                <div class="modal-actions">
-                    <button id="extras-save" class="btn btn-primary">Save</button>
-                    <button id="extras-cancel" class="btn btn-secondary">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-    <!-- ========================= -->
-    <!-- STORES TAB                -->
-    <!-- ========================= -->
-    <section id="tab-stores" class="hidden">
-        <h2>Stores</h2>
-
-        <div class="store-input-row">
-            <input id="store-name" placeholder="Add new store" />
-            <button id="add-store-btn" class="btn btn-primary">Add</button>
-        </div>
-
-        <div id="store-list" class="tag-container"></div>
-    </section>
-
-
-    <!-- ========================= -->
-    <!-- GROCERY LIST TAB          -->
-    <!-- ========================= -->
-    <section id="tab-groceries" class="hidden">
-        <h2>Grocery List</h2>
-
-        <div id="grocery-groups"></div>
-    </section>
-
-
-    <!-- ========================= -->
-    <!-- SCRIPT                    -->
-    <!-- ========================= -->
-    <script src="script.js"></script>
-
+    <!-- SCRIPT -->
+    <script src="scipt.js"></script>
 </body>
 </html>
