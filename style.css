@@ -14,7 +14,7 @@ body {
 .app-container {
     max-width: 900px;
     margin: 0 auto;
-    padding: 1rem;
+    padding: 1rem 1.2rem;
 }
 
 /* ------------------------------
@@ -24,8 +24,8 @@ body {
 .top-tabs {
     display: flex;
     justify-content: space-around;
-    border-bottom: 1px solid #ddd;
     background: white;
+    border-bottom: 1px solid #ddd;
     position: sticky;
     top: 0;
     z-index: 50;
@@ -34,16 +34,29 @@ body {
 .top-tabs button {
     flex: 1;
     padding: 1rem;
-    background: none;
+    background: transparent;
     border: none;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
+    color: #444;
 }
 
-.top-tabs button.active {
-    border-bottom: 3px solid dodgerblue;
-    color: dodgerblue;
+.tab-btn.active {
     font-weight: 600;
+    color: dodgerblue;
+    border-bottom: 3px solid dodgerblue;
+}
+
+/* ------------------------------
+   TAB PAGES — SHOW/HIDE LOGIC
+------------------------------ */
+
+.tab-page {
+    display: none;
+}
+
+.tab-page.active {
+    display: block;
 }
 
 /* ------------------------------
@@ -52,61 +65,48 @@ body {
 
 h1 {
     font-size: 1.75rem;
-    margin: 1.2rem 0 0.5rem;
+    margin-top: 1.4rem;
 }
 
 h2 {
-    font-size: 1.3rem;
-    margin: 1.5rem 0 0.5rem;
-}
-
-.section-note {
-    color: #555;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    margin-top: 1.3rem;
 }
 
 /* ------------------------------
-   CARDS (Meals, Ingredients, Stores)
+   CARDS
 ------------------------------ */
 
 .card {
     background: white;
-    border-radius: 14px;
     padding: 1rem 1.2rem;
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
     margin: 1rem 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 /* ------------------------------
-   RECIPE LIST
+   FORMS
 ------------------------------ */
 
-.recipe-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+input, select, textarea {
+    width: 100%;
+    padding: 0.65rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: .6rem;
 }
 
-.recipe-title {
-    font-size: 1.3rem;
-    font-weight: 600;
+textarea {
+    height: 90px;
 }
-
-.recipe-meta {
-    color: #777;
-    margin-bottom: .3rem;
-}
-
-/* ------------------------------
-   BUTTONS
------------------------------- */
 
 button {
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
     border: none;
     border-radius: 8px;
-    padding: 0.55rem 1rem;
-    background: #e7e7e7;
-    font-size: 0.9rem;
     cursor: pointer;
 }
 
@@ -121,43 +121,23 @@ button.danger {
 }
 
 /* ------------------------------
-   FORMS
+   INGREDIENT ROWS
 ------------------------------ */
 
-input, select, textarea {
-    width: 100%;
-    padding: 0.6rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    margin-bottom: .6rem;
-}
-
-textarea {
-    height: 90px;
-    resize: vertical;
-}
-
-/* Spacing between ingredient rows */
 .ingredient-row {
-    padding: .7rem 0;
-    border-bottom: 1px solid #eee;
+    padding: 0.8rem 0;
     margin-bottom: 0.6rem;
+    border-bottom: 1px solid #eee;
 }
-
-/* ------------------------------
-   DEFAULT SUBSTITUTE TOGGLE
------------------------------- */
 
 .default-toggle {
     display: inline-block;
     padding: 0.35rem 0.7rem;
     border-radius: 20px;
-    cursor: pointer;
     border: 1px solid dodgerblue;
     color: dodgerblue;
-    font-size: 0.85rem;
-    margin-left: 0.5rem;
+    margin-top: 0.4rem;
+    cursor: pointer;
 }
 
 .default-toggle.active {
@@ -171,26 +151,20 @@ textarea {
 
 .grocery-store-card {
     background: white;
-    padding: 1rem;
+    padding: 1rem 1.2rem;
     margin: 1rem 0;
     border-radius: 14px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
 }
 
 .grocery-item {
-    display: flex;
-    align-items: center;
-    padding: 0.45rem 0;
+    padding: 0.4rem 0;
+    font-size: 1rem;
     border-bottom: 1px solid #f0f0f0;
 }
 
 .grocery-item:last-child {
     border-bottom: none;
-}
-
-.grocery-item label {
-    margin-left: 0.6rem;
-    font-size: 0.95rem;
 }
 
 /* ------------------------------
@@ -206,39 +180,25 @@ textarea {
     border-radius: 50%;
     background: dodgerblue;
     color: white;
-    font-size: 2rem;
+    font-size: 2.2rem;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 200;
 }
 
 /* ------------------------------
-   MOBILE IMPROVEMENTS
+   MOBILE RESPONSIVE
 ------------------------------ */
 
 @media (max-width: 600px) {
     .app-container {
-        padding: 0.7rem;
+        padding: 0.8rem;
     }
 
     h1 {
-        font-size: 1.45rem;
-    }
-
-    .recipe-title {
-        font-size: 1.15rem;
+        font-size: 1.5rem;
     }
 }
-/* Hide all tabs by default */
-.tab-page {
-    display: none;
-}
-
-/* Show only the active one */
-.tab-page.active {
-    display: block;
-}
-
