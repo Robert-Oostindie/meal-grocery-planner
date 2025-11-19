@@ -1,769 +1,367 @@
-:root {
-  --bg: #f4f5fb;
-  --bg-accent: #e5e7ff;
-  --card-bg: #ffffff;
-  --primary: #2563eb;
-  --primary-soft: #dbeafe;
-  --accent: #16a34a;
-  --danger: #dc2626;
-  --text-main: #111827;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --border-soft: #edf0f7;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-pill: 999px;
-  --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.14);
-}
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
+/* ========================================= */
+/* ============ GLOBAL STYLES ============== */
+/* ========================================= */
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    sans-serif;
-  background: radial-gradient(circle at top, #e0e7ff 0, #f9fafb 38%, #f3f4f6 100%);
-  color: var(--text-main);
-  display: flex;
-  justify-content: center;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #fafafa;
+    color: #222;
+    padding-bottom: 80px; /* space for FABs */
 }
 
-/* APP SHELL */
-
-.app-shell {
-  width: 100%;
-  max-width: 480px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 64px;
-  position: relative;
+h2 {
+    margin: 16px;
+    font-size: 22px;
+    font-weight: 600;
 }
 
-/* HEADER */
-
-header {
-  padding: 16px 18px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.sub-header {
+    margin: 20px 16px 8px;
+    font-weight: 600;
+    color: #333;
 }
 
-.app-title {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.015em;
-  display: flex;
-  flex-direction: column;
-}
+/* ========================================= */
+/* ============ TOP TABS =================== */
+/* ========================================= */
 
-.app-title span.sub {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-top: 2px;
-}
-
-.pill {
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
-  background: rgba(37, 99, 235, 0.08);
-  font-size: 11px;
-  color: var(--primary);
-  font-weight: 600;
-  border: 1px solid rgba(191, 219, 254, 0.8);
-  box-shadow: 0 8px 18px rgba(129, 140, 248, 0.3);
-}
-
-/* MAIN CONTENT */
-
-main {
-  flex: 1;
-  padding: 0 14px 80px;
-  overflow-y: auto;
-}
-
-/* TABS (BOTTOM NAV) */
-
-.tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  padding: 6px 12px 10px;
-  background: rgba(249, 250, 251, 0.96);
-  backdrop-filter: blur(18px);
-  border-top: 1px solid rgba(209, 213, 219, 0.85);
-  display: flex;
-  gap: 6px;
-  z-index: 50;
+.top-tabs {
+    display: flex;
+    overflow-x: auto;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
 }
 
 .tab-btn {
-  flex: 1;
-  border-radius: var(--radius-pill);
-  border: none;
-  padding: 6px 4px;
-  font-size: 11px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.tab-btn span.icon {
-  font-size: 16px;
+    flex: 1;
+    padding: 12px 6px;
+    background: none;
+    border: none;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
 }
 
 .tab-btn.active {
-  background: var(--primary-soft);
-  color: var(--primary);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    color: #007aff;
+    border-bottom: 2px solid #007aff;
 }
 
-/* CARDS */
-
-.card {
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  padding: 14px 14px 10px;
-  box-shadow: var(--shadow-soft);
-  margin-bottom: 14px;
-  border: 1px solid var(--border-soft);
+/* Hide sections by default */
+.hidden {
+    display: none !important;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
+/* ========================================= */
+/* ============ EMPTY STATE ================= */
+/* ========================================= */
+
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    font-size: 14px;
 }
 
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.card-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  background: #eef2ff;
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* FORM CONTROLS */
-
-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  display: block;
-  margin-bottom: 2px;
-}
-
-input[type="text"],
-input[type="number"],
-select,
-textarea {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  font-size: 13px;
-  outline: none;
-  background: #f9fafb;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease,
-    background 0.12s ease;
-}
-
-textarea {
-  resize: vertical;
-  min-height: 50px;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.22);
-  background: #ffffff;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-}
-
-.row > * {
-  flex: 1;
-}
-
-/* BUTTONS */
+/* ========================================= */
+/* ============ BUTTONS ===================== */
+/* ========================================= */
 
 .btn {
-  border-radius: var(--radius-pill);
-  border: none;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-  transition: transform 0.07s ease, box-shadow 0.07s ease,
-    background 0.15s ease, border-color 0.15s ease;
-  white-space: nowrap;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: white;
-  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.45);
+    background: #007aff;
+    color: white;
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-muted);
+.btn-secondary {
+    background: #e3e3e3;
+    color: #333;
 }
 
 .btn-outline {
-  background: #ffffff;
-  color: var(--text-main);
-  border: 1px solid var(--border);
-}
-
-.btn-danger {
-  background: #fef2f2;
-  color: var(--danger);
-  border: 1px solid rgba(254, 226, 226, 0.9);
+    background: transparent;
+    border: 1px solid #007aff;
+    color: #007aff;
 }
 
 .btn-sm {
-  padding: 4px 9px;
-  font-size: 11px;
+    padding: 4px 8px;
+    font-size: 12px;
 }
 
-.btn:active {
-  transform: scale(0.97);
-  box-shadow: none;
+.btn-danger {
+    background: #ff3b30;
+    color: white;
 }
 
-/* TEXT / HELP */
+/* ========================================= */
+/* ============ MODALS ====================== */
+/* ========================================= */
 
-.section-note {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.inline-note {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
+.modal-content {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
 }
 
-.muted {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.divider {
-  border: none;
-  border-top: 1px dashed var(--border);
-  margin: 8px 0;
-}
-
-/* MEAL LIST */
-
-.meal-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.meal-item {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-soft);
-  padding: 8px 10px 6px;
-  background: linear-gradient(135deg, #f9fafb, #eef2ff);
-}
-
-.meal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.meal-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.meal-category-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  font-size: 10px;
-  background: #ecfeff;
-  color: #0f766e;
-  margin-top: 2px;
-}
-
-.meal-notes {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.meal-actions {
-  display: flex;
-  gap: 4px;
-}
-
-/* INGREDIENTS INSIDE MEALS */
-
-.ingredients-list {
-  margin-top: 6px;
-  border-top: 1px dashed #e5e7eb;
-  padding-top: 4px;
-}
-
-.ingredient-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  padding: 2px 0;
-  gap: 6px;
-}
-
-.ingredient-main {
-  display: flex;
-  flex-direction: column;
-}
-
-.ingredient-name {
-  font-weight: 500;
-}
-
-.ingredient-meta {
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
-.ingredient-actions {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-/* GENERIC CHECKBOX ROW */
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.checkbox-row input {
-  width: auto;
-}
-
-/* STORES */
-
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.store-pill {
-  border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-size: 11px;
-  border: 1px solid var(--border);
-  background: #f9fafb;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.store-pill span.icon {
-  font-size: 13px;
-}
-
-.store-pill .remove {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.store-pill.primary {
-  border-color: var(--primary);
-  background: #eff6ff;
-  color: var(--primary);
-}
-
-/* SMALL PILL */
-
-.pill-muted {
-  padding: 2px 6px;
-  border-radius: var(--radius-pill);
-  background: #f3f4f6;
-  font-size: 10px;
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* GROCERY LIST GROUPS */
-
-.grocery-group {
-  margin-bottom: 10px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-soft);
-  background: #f9fafb;
-  padding: 8px 10px 6px;
-}
-
-.grocery-group-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.grocery-group-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.grocery-item-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  padding: 3px 0;
-}
-
-.grocery-item-row input[type="checkbox"] {
-  width: auto;
-}
-
-.grocery-item-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.grocery-item-name {
-  font-weight: 500;
-}
-
-.grocery-item-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-/* PLANNER – CATEGORY & MEALS */
-
-.planner-category-block {
-  margin-bottom: 12px;
-  padding: 4px 2px;
-  background: transparent;
-  border: none;
-}
-
-.planner-category-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid var(--border); /* thin divider line */
-}
-
-.planner-meal-row {
-  border-radius: var(--radius-md);
-  padding: 6px 6px;
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 4px;
-}
-
-.planner-meal-mainline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.planner-meal-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.planner-meal-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.planner-meal-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.planner-meal-toggle {
-  font-size: 11px;
-  color: var(--primary);
-  cursor: pointer;
-  border-radius: var(--radius-pill);
-  padding: 2px 8px;
-  background: #eff6ff;
-  border: none;
-}
-
-/* PLANNER – INGREDIENT ROWS (INLINE COMMENT) */
-
-.planner-meal-details {
-  margin-top: 4px;
-  border-top: 1px dashed #e5e7eb;
-  padding-top: 4px;
-}
-
-.planner-ingredient-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-
-.planner-ingredient-name {
-  font-weight: 500;
-}
-
-.planner-ingredient-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.planner-ingredient-comment-input {
-  flex: 1;
-  max-width: 45%;
-  font-size: 11px;
-  padding: 4px 6px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  background: #f9fafb;
-}
-
-/* MODALS */
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  z-index: 80;
-}
-
-.modal-sheet {
-  width: 100%;
-  max-width: 480px;
-  background: var(--card-bg);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -18px 28px rgba(15, 23, 42, 0.4);
-  padding: 10px 14px 18px;
-  border-top: 1px solid rgba(148, 163, 184, 0.45);
-  animation: slideUp 0.18s ease-out;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.modal-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.modal-handle {
-  width: 40px;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: #e5e7eb;
-  margin: 0 auto 8px;
+.modal-content.wide {
+    max-width: 460px;
 }
 
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 10px;
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
 }
 
-/* SUBSTITUTES MODAL */
+/* ========================================= */
+/* ============ FAB BUTTONS ================ */
+/* ========================================= */
 
-.subs-meal-block {
-  margin-bottom: 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-soft);
-  background: #f9fafb;
-  padding: 8px 10px;
+.fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #007aff;
+    color: white;
+    font-size: 32px;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
 }
 
-.subs-meal-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 4px;
+/* ========================================= */
+/* ============ MEAL LIST =================== */
+/* ========================================= */
+
+.meal-item {
+    background: #fff;
+    margin: 12px 16px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e2e2;
 }
 
-.subs-group-title {
-  font-size: 12px;
-  font-weight: 500;
-  margin: 4px 0 2px;
+.meal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.subs-option-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  margin: 2px 0;
+.meal-title {
+    font-size: 18px;
+    font-weight: 600;
 }
 
-/* UTILITIES */
-
-.mt-4 {
-  margin-top: 4px;
-}
-.mt-6 {
-  margin-top: 6px;
-}
-.mt-8 {
-  margin-top: 8px;
-}
-.mt-10 {
-  margin-top: 10px;
+.meal-category-label {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #777;
 }
 
-.hidden {
-  display: none !important;
+.meal-ingredients-count {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #444;
 }
 
-/* ANIMATION */
-
-@keyframes slideUp {
-  from {
-    transform: translateY(16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.ingredient-row {
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
 }
 
-/* DARK MODE */
+/* ========================================= */
+/* ============ CATEGORY HEADERS =========== */
+/* ========================================= */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #020617;
-    --bg-accent: #0f172a;
-    --card-bg: #020617;
-    --text-main: #e5e7eb;
-    --text-muted: #9ca3af;
-    --border: #1e293b;
-    --border-soft: #111827;
-    --primary-soft: rgba(37, 99, 235, 0.18);
-    --shadow-soft: 0 22px 35px rgba(0, 0, 0, 0.75);
-  }
+.category-header {
+    margin-top: 18px;
+    margin-left: 16px;
+    margin-right: 16px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+}
 
-  body {
-    background: radial-gradient(circle at top, #0b1120 0, #020617 45%, #020617 100%);
-  }
+.category-divider {
+    height: 1px;
+    background: #ddd;
+    margin: 6px 16px 10px;
+}
 
-  input[type="text"],
-  input[type="number"],
-  select,
-  textarea {
-    background: #020617;
-    color: var(--text-main);
-    border-color: #1f2937;
-  }
+/* ========================================= */
+/* ============ PLANNER ===================== */
+/* ========================================= */
 
-  .card,
-  .grocery-group,
-  .subs-meal-block,
-  .planner-meal-row,
-  .meal-item {
-    background: #020617;
-    border-color: #1f2937;
-  }
+.planner-controls {
+    display: flex;
+    gap: 8px;
+    margin: 16px;
+}
 
-  .planner-meal-details {
-    border-top-color: #1f2937;
-  }
+.planner-meal {
+    margin: 0 16px 10px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
 
-  .modal-sheet {
-    background: #020617;
-    border-top-color: #1f2937;
-  }
+.planner-meal-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
-  .modal-handle {
-    background: #4b5563;
-  }
+.planner-meal-name {
+    flex: 1;
+    font-size: 16px;
+}
 
-  .tabbar {
-    background: rgba(15, 23, 42, 0.96);
-    border-top-color: rgba(30, 64, 175, 0.8);
-  }
+.expand-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #007aff;
+    cursor: pointer;
+}
 
-  .btn-outline {
-    background: #020617;
-    border-color: #1f2937;
-    color: var(--text-main);
-  }
+.planner-ingredients {
+    margin-top: 10px;
+}
 
-  .planner-category-title {
-    border-bottom-color: #1f2937;
-  }
+/* Ingredient rows */
+.planner-ing-row {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comment-input {
+    margin-top: 4px;
+    width: 100%;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-size: 13px;
+}
+
+/* ========================================= */
+/* ============ EXTRA ITEMS ================ */
+/* ========================================= */
+
+.extra-form {
+    margin: 16px;
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 1fr auto;
+    gap: 8px;
+}
+
+.extras-row {
+    background: white;
+    margin: 10px 16px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ========================================= */
+/* ============ STORES TAB ================= */
+/* ========================================= */
+
+.store-input-row {
+    display: flex;
+    gap: 8px;
+    margin: 16px;
+}
+
+.tag-container {
+    margin: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag {
+    padding: 6px 10px;
+    background: #eef2ff;
+    color: #334;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* ========================================= */
+/* ============ GROCERY LIST =============== */
+/* ========================================= */
+
+.grocery-item {
+    margin: 6px 20px;
+    font-size: 15px;
+}
+
+/* Bullet alignment */
+.grocery-item::before {
+    content: "";
+}
+
+/* ========================================= */
+/* ============ INPUTS ====================== */
+/* ========================================= */
+
+input, select, textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+textarea {
+    min-height: 60px;
+}
+
+/* ========================================= */
+/* ============ GRID HELPERS =============== */
+/* ========================================= */
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
 }
