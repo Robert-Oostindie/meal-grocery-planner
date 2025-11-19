@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meal & Grocery Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card-bg: #ffffff;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --accent: #16a34a;
+      --danger: #dc2626;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --radius-lg: 18px;
+      --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, #eef2ff 0, #f9fafb 40%, #f3f4f6 100%);
+    }
+
+    header {
+      padding: 16px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-title span.sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.06);
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    main {
+      flex: 1;
+      padding: 0 14px 70px;
+      overflow-y: auto;
+    }
+
+    .tabbar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      padding: 6px 12px 10px;
+      background: rgba(249, 250, 251, 0.94);
+      backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(209, 213, 219, 0.8);
+      display: flex;
+      gap: 6px;
+      z-index: 50;
+    }
+
+    .tab-btn {
+      flex: 1;
+      border-radius: 999px;
+      border: none;
+      padding: 6px 4px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .tab-btn span.icon {
+      font-size: 16px;
+    }
+
+    .tab-btn.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 14px 14px 10px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 14px;
+      border: 1px solid rgba(229, 231, 235, 0.7);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f3f4ff;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      background: #f9fafb;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+      background: #ffffff;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > * {
+      flex: 1;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: center;
+      transition: transform 0.05s ease, box-shadow 0.05s ease,
+        background 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+      box-shadow: none;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      background: #f3f4f6;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip.store {
+      background: #ecfdf3;
+      color: #15803d;
+    }
+
+    .chip-muted {
+      background: #f3f4f6;
+      color: var(--text-muted);
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .meal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .meal-item {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      background: #f9fafb;
+    }
+
+    .meal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meal-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .meal-notes {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .meal-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ingredients-list {
+      margin-top: 6px;
+      border-top: 1px dashed #e5e7eb;
+      padding-top: 4px;
+    }
+
+    .ingredient-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      padding: 2px 0;
+      gap: 6px;
+    }
+
+    .ingredient-main {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ingredient-name {
+      font-weight: 500;
+    }
+
+    .ingredient-meta {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+    .ingredient-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .tiny {
+      font-size: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .checkbox-row input {
+      width: auto;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .store-pill {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .store-pill span.icon {
+      font-size: 13px;
+    }
+
+    .store-pill .remove {
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .store-pill.primary {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .pill-muted {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      font-size: 10px;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .grocery-group {
+      margin-bottom: 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      padding: 8px 10px;
+    }
+
+    .grocery-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .grocery-group-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .grocery-item-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 3px 0;
+    }
+
+    .grocery-item-row input[type="checkbox"] {
+      width: auto;
+    }
+
+    .grocery-item-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .grocery-item-name {
+      font-weight: 500;
+    }
+
+    .grocery-item-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .badge-soft {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      background: #ecfdf3;
+      color: #15803d;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px dashed #e5e7eb;
+      margin: 8px 0;
+    }
+
+    .pill-warning {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-success {
+      background: #ecfdf3;
+      color: #166534;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inline-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .mt-4 {
+      margin-top: 4px;
+    }
+
+    .mt-6 {
+      margin-top: 6px;
+    }
+
+    .mt-8 {
+      margin-top: 8px;
+    }
+
+    .mt-10 {
+      margin-top: 10px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #020617;
+        --card-bg: #020617;
+        --text-main: #e5e7eb;
+        --text-muted: #9ca3af;
+        --border: #1e293b;
+        --primary-soft: rgba(37, 99, 235, 0.18);
+        --shadow-soft: 0 20px 30px rgba(0, 0, 0, 0.6);
+      }
+
+      body {
+        background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        background: #020617;
+        color: var(--text-main);
+      }
+
+      main {
+        padding-bottom: 80px;
+      }
+
+      .tabbar {
+        background: rgba(15, 23, 42, 0.94);
+        border-top-color: rgba(30, 64, 175, 0.7);
+      }
+
+      .btn-outline {
+        background: #020617;
+      }
+
+      .meal-item {
+        background: #020617;
+      }
+
+      .grocery-group {
+        background: #020617;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="app-title">
+        Meal Planner
+        <span class="sub">Meals • Pantry • Groceries by Store</span>
+      </div>
+      <div class="pill">Weekly Groceries</div>
+    </header>
+
+    <main>
+      <!-- MEALS TAB -->
+      <section id="tab-meals">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Add a Meal</div>
+              <div class="card-subtitle">Define meals and their ingredients once, reuse every week.</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <label for="meal-name">Meal name</label>
+            <input id="meal-name" type="text" placeholder="e.g. Chicken Tacos" />
+          </div>
+          <div class="mt-4">
+            <label for="meal-notes">Notes (optional)</label>
+            <textarea id="meal-notes" placeholder="e.g. Kids love this • Use on Tuesdays"></textarea>
+          </div>
+          <div class="mt-6" style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary" id="add-meal-btn">
+              <span>＋ Add Meal</span>
+            </button>
+          </div>
+          <div class="inline-note">
+            Tip: After adding a meal, open it below to attach ingredients and stores.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Saved Meals</div>
+              <div class="card-subtitle">Tap a meal to manage ingredients, stores, and notes.</div>
+            </div>
+            <span class="badge" id="meal-count-badge">0 meals</span>
+          </div>
+          <div id="meal-list" class="meal-list"></div>
+          <div id="meals-empty-state" class="muted mt-4">
+            No meals yet. Add your first meal above.
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANNER TAB -->
+      <section id="tab-planner" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Weekly Plan</div>
+              <div class="card-subtitle">Select meals for this week. The app builds your list.</div>
+            </div>
+            <span class="badge"><span>🗓️</span> Week</span>
+          </div>
+          <div id="planner-meals"></div>
+          <div id="planner-empty" class="muted">
+            Add some meals first on the <strong>Meals</strong> tab.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Generate Grocery List</div>
+              <div class="card-subtitle">
+                Uses selected meals, skips ingredients already in your pantry.
+              </div>
+            </div>
+          </div>
+          <p class="section-note">
+            When you're ready for this week's shopping, tap the button below.
+          </p>
+          <button class="btn btn-primary" id="generate-list-btn">
+            <span>🛒 Generate Grocery List</span>
+          </button>
+          <p class="inline-note">
+            You'll see your list grouped by store under the <strong>Groceries</strong> tab.
+          </p>
+        </div>
+      </section>
+
+      <!-- PANTRY TAB -->
+      <section id="tab-pantry" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Pantry & Fridge</div>
+              <div class="card-subtitle">
+                Mark what you already have. The app skips these items when building the list.
+              </div>
+            </div>
+            <span class="badge-soft"><span>✅</span> Have It</span>
+          </div>
+          <p class="section-note">
+            Items come from the ingredients in your meals. Check the box if it's currently stocked.
+          </p>
+          <div class="mt-4">
+            <label for="pantry-search">Filter ingredients</label>
+            <input id="pantry-search" type="text" placeholder="e.g. chicken, pasta…" />
+          </div>
+          <hr class="divider" />
+          <div id="pantry-list"></div>
+          <div id="pantry-empty" class="muted">
+            No ingredients yet. Add some ingredients to your meals on the <strong>Meals</strong> tab.
+          </div>
+        </div>
+      </section>
+
+      <!-- STORES TAB -->
+      <section id="tab-stores" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Stores</div>
+              <div class="card-subtitle">
+                Manage places you shop: Aldi, Walmart, Festival Foods, Woodmans, etc.
+              </div>
+            </div>
+            <span class="badge"><span>🏬</span> Locations</span>
+          </div>
+          <div class="mt-4 row">
+            <div>
+              <label for="store-name">Add store</label>
+              <input id="store-name" type="text" placeholder="e.g. Aldi" />
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary btn-sm" id="add-store-btn">
+                <span>＋ Add</span>
+              </button>
+            </div>
+          </div>
+          <div class="inline-note">
+            These stores appear in ingredient dropdowns and in your grocery list groups.
+          </div>
+          <hr class="divider" />
+          <div class="tag-list" id="store-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Data & Storage</div>
+              <div class="card-subtitle">Your data lives in this browser only.</div>
+            </div>
+          </div>
+          <p class="section-note">
+            Everything is stored locally using <code>localStorage</code>. Clearing your browser data will
+            remove meals, pantry, and lists.
+          </p>
+          <div class="mt-6" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="export-data-btn">
+              <span>📤 Export Data</span>
+            </button>
+            <button class="btn btn-danger btn-sm" id="reset-app-btn">
+              <span>🧨 Reset App</span>
+            </button>
+          </div>
+          <p id="export-status" class="inline-note"></p>
+        </div>
+      </section>
+
+      <!-- GROCERY LIST TAB -->
+      <section id="tab-groceries" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Groceries by Store</div>
+              <div class="card-subtitle">
+                Checklist view of everything you need, grouped by store.
+              </div>
+            </div>
+            <span class="badge"><span>🛒</span> List</span>
+          </div>
+          <div class="mt-4" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="refresh-from-plan-btn">
+              <span>↻ Refresh from Plan</span>
+            </button>
+            <button class="btn btn-ghost btn-sm" id="clear-checks-btn">
+              <span>☑️ Clear Checks</span>
+            </button>
+          </div>
+          <div class="inline-note">
+            If you change your weekly meals or pantry, tap <strong>Refresh from Plan</strong>.
+          </div>
+          <hr class="divider" />
+          <div id="grocery-groups"></div>
+          <div id="grocery-empty" class="muted">
+            No grocery list yet. Go to the <strong>Planner</strong> tab and tap
+            <strong>Generate Grocery List</strong>.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom navigation -->
+    <nav class="tabbar">
+      <button class="tab-btn active" data-tab="meals">
+        <span class="icon">🍽️</span>
+        <span>Meals</span>
+      </button>
+      <button class="tab-btn" data-tab="planner">
+        <span class="icon">🗓️</span>
+        <span>Planner</span>
+      </button>
+      <button class="tab-btn" data-tab="pantry">
+        <span class="icon">✅</span>
+        <span>Pantry</span>
+      </button>
+      <button class="tab-btn" data-tab="stores">
+        <span class="icon">🏬</span>
+        <span>Stores</span>
+      </button>
+      <button class="tab-btn" data-tab="groceries">
+        <span class="icon">🛒</span>
+        <span>Groceries</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // ---------- DATA MODEL ----------
+    const STORAGE_KEY = "mealGroceryPlanner_v1";
+
+    let state = {
+      stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans", "Other"],
+      meals: [],
+      weekPlan: {
+        selectedMealIds: []
+      },
+      pantry: {
+        // ingredientKey: { have: boolean, updated: timestamp }
+      },
+      groceryList: {
+        // itemKey: { name, store, quantity, unit, checked }
+      }
+    };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        state = Object.assign(state, parsed);
+      } catch (e) {
+        console.error("Failed to load state", e);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("Failed to save state", e);
+      }
+    }
+
+    function makeId(prefix = "id") {
+      return prefix + "_" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function ingredientKey(name) {
+      return name.trim().toLowerCase();
+    }
+
+    function groceryItemKey(name, store) {
+      return ingredientKey(name) + "::" + (store || "Unassigned");
+    }
+
+    // ---------- TABS ----------
+    const tabSections = {
+      meals: document.getElementById("tab-meals"),
+      planner: document.getElementById("tab-planner"),
+      pantry: document.getElementById("tab-pantry"),
+      stores: document.getElementById("tab-stores"),
+      groceries: document.getElementById("tab-groceries")
+    };
+
+    function switchTab(tabName) {
+      Object.entries(tabSections).forEach(([name, el]) => {
+        if (name === tabName) el.classList.remove("hidden");
+        else el.classList.add("hidden");
+      });
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+      if (tabName === "pantry") renderPantry();
+      if (tabName === "planner") renderPlanner();
+      if (tabName === "groceries") renderGroceryList();
+      if (tabName === "stores") renderStores();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        switchTab(btn.dataset.tab);
+      });
+    });
+
+    // ---------- MEALS ----------
+    const mealNameInput = document.getElementById("meal-name");
+    const mealNotesInput = document.getElementById("meal-notes");
+    const addMealBtn = document.getElementById("add-meal-btn");
+    const mealListEl = document.getElementById("meal-list");
+    const mealCountBadge = document.getElementById("meal-count-badge");
+    const mealsEmptyState = document.getElementById("meals-empty-state");
+
+    addMealBtn.addEventListener("click", () => {
+      const name = mealNameInput.value.trim();
+      const notes = mealNotesInput.value.trim();
+      if (!name) {
+        alert("Please enter a meal name.");
+        mealNameInput.focus();
+        return;
+      }
+      const newMeal = {
+        id: makeId("meal"),
+        name,
+        notes,
+        ingredients: [] // {id, name, qty, unit, store}
+      };
+      state.meals.push(newMeal);
+      mealNameInput.value = "";
+      mealNotesInput.value = "";
+      saveState();
+      renderMeals();
+      renderPlanner();
+      renderPantry();
+    });
+
+    function renderMeals() {
+      mealListEl.innerHTML = "";
+      if (!state.meals.length) {
+        mealsEmptyState.classList.remove("hidden");
+        mealCountBadge.textContent = "0 meals";
+        return;
+      }
+      mealsEmptyState.classList.add("hidden");
+      mealCountBadge.textContent =
+        state.meals.length === 1
+          ? "1 meal"
+          : state.meals.length + " meals";
+
+      state.meals.forEach((meal) => {
+        const mealEl = document.createElement("div");
+        mealEl.className = "meal-item";
+
+        const header = document.createElement("div");
+        header.className = "meal-header";
+
+        const left = document.createElement("div");
+        const nameEl = document.createElement("div");
+        nameEl.className = "meal-name";
+        nameEl.textContent = meal.name;
+        left.appendChild(nameEl);
+
+        if (meal.notes) {
+          const notesEl = document.createElement("div");
+          notesEl.className = "meal-notes";
+          notesEl.textContent = meal.notes;
+          left.appendChild(notesEl);
+        }
+
+        header.appendChild(left);
+
+        const actions = document.createElement("div");
+        actions.className = "meal-actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-ghost btn-sm";
+        editBtn.innerHTML = "✏️";
+        editBtn.title = "Edit meal name / notes";
+        editBtn.addEventListener("click", () => editMeal(meal.id));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-ghost btn-sm";
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.title = "Delete meal";
+        deleteBtn.addEventListener("click", () => deleteMeal(meal.id));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        header.appendChild(actions);
+
+        mealEl.appendChild(header);
+
+        const ingSummary = document.createElement("div");
+        ingSummary.className = "section-note";
+        ingSummary.textContent =
+          meal.ingredients.length === 0
+            ? "No ingredients yet."
+            : meal.ingredients.length + " ingredients defined.";
+        mealEl.appendChild(ingSummary);
+
+        const ingredientsContainer = document.createElement("div");
+        ingredientsContainer.className = "ingredients-list";
+
+        meal.ingredients.forEach((ing) => {
+          const row = document.createElement("div");
+          row.className = "ingredient-row";
+
+          const main = document.createElement("div");
+          main.className = "ingredient-main";
+
+          const name = document.createElement("div");
+          name.className = "ingredient-name";
+          name.textContent = ing.name;
+          main.appendChild(name);
+
+          const meta = document.createElement("div");
+          meta.className = "ingredient-meta";
+          const parts = [];
+          if (ing.qty) parts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
+          if (ing.store) parts.push("🛒 " + ing.store);
+          meta.textContent = parts.join(" • ") || "No quantity / store set";
+          main.appendChild(meta);
+
+          row.appendChild(main);
+
+          const actions = document.createElement("div");
+          actions.className = "ingredient-actions";
+
+          const editBtn = document.createElement("button");
+          editBtn.className = "btn btn-ghost btn-sm";
+          editBtn.innerHTML = "✏️";
+          editBtn.addEventListener("click", () =>
+            editIngredient(meal.id, ing.id)
+          );
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "btn btn-ghost btn-sm";
+          delBtn.innerHTML = "🗑️";
+          delBtn.addEventListener("click", () =>
+            deleteIngredient(meal.id, ing.id)
+          );
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          row.appendChild(actions);
+          ingredientsContainer.appendChild(row);
+        });
+
+        mealEl.appendChild(ingredientsContainer);
+
+        const addIngBtn = document.createElement("button");
+        addIngBtn.className = "btn btn-outline btn-sm mt-4";
+        addIngBtn.textContent = "＋ Add Ingredient";
+        addIngBtn.addEventListener("click", () => addIngredientPrompt(meal.id));
+        mealEl.appendChild(addIngBtn);
+
+        mealListEl.appendChild(mealEl);
+      });
+    }
+
+    function editMeal(mealId) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      const newName = prompt("Meal name:", meal.name) ?? meal.name;
+      const newNotes = prompt(
+        "Notes (optional):",
+        meal.notes || ""
+      ) ?? meal.notes;
+      meal.name = newName.trim() || meal.name;
+      meal.notes = (newNotes || "").trim();
+      saveState();
+      renderMeals();
+      renderPlanner();
+    }
+
+    function deleteMeal(mealId) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      if (
+        !confirm(
+          `Delete "${meal.name}" and all its ingredients? This cannot be undone.`
+        )
+      )
+        return;
+      state.meals = state.meals.filter((m) => m.id !== mealId);
+      state.weekPlan.selectedMealIds =
+        state.weekPlan.selectedMealIds.filter((id) => id !== mealId);
+      saveState();
+      renderMeals();
+      renderPlanner();
+      renderPantry();
+      regenerateGroceryFromPlan(false);
+    }
+
+    function addIngredientPrompt(mealId) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      const name = prompt("Ingredient name (e.g. Chicken breast):");
+      if (!name || !name.trim()) return;
+
+      const qty = prompt("Quantity (optional, e.g. 2, 1.5):", "");
+      const unit = prompt("Unit (optional, e.g. lb, pack, can):", "");
+      const store = prompt(
+        `Store (optional, or leave blank to set later):\n${state.stores.join(
+          ", "
+        )}`,
+        ""
+      );
+
+      const ing = {
+        id: makeId("ing"),
+        name: name.trim(),
+        qty: qty ? qty.trim() : "",
+        unit: unit ? unit.trim() : "",
+        store: store ? store.trim() : ""
+      };
+      meal.ingredients.push(ing);
+      saveState();
+      renderMeals();
+      renderPantry();
+    }
+
+    function editIngredient(mealId, ingId) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      const ing = meal.ingredients.find((i) => i.id === ingId);
+      if (!ing) return;
+
+      const name = prompt("Ingredient name:", ing.name) ?? ing.name;
+      const qty = prompt("Quantity:", ing.qty || "") ?? ing.qty;
+      const unit = prompt("Unit:", ing.unit || "") ?? ing.unit;
+      const store = prompt(
+        `Store (leave blank to keep existing):\n${state.stores.join(", ")}`,
+        ing.store || ""
+      );
+
+      ing.name = name.trim() || ing.name;
+      ing.qty = (qty || "").trim();
+      ing.unit = (unit || "").trim();
+      ing.store = (store || "").trim();
+      saveState();
+      renderMeals();
+      renderPantry();
+    }
+
+    function deleteIngredient(mealId, ingId) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      const ing = meal.ingredients.find((i) => i.id === ingId);
+      if (!ing) return;
+      if (!confirm(`Remove ingredient "${ing.name}" from this meal?`)) return;
+      meal.ingredients = meal.ingredients.filter((i) => i.id !== ingId);
+      saveState();
+      renderMeals();
+      renderPantry();
+    }
+
+    // ---------- PLANNER ----------
+    const plannerMealsEl = document.getElementById("planner-meals");
+    const plannerEmptyEl = document.getElementById("planner-empty");
+    const generateListBtn = document.getElementById("generate-list-btn");
+
+    function renderPlanner() {
+      plannerMealsEl.innerHTML = "";
+      const meals = state.meals;
+      if (!meals.length) {
+        plannerEmptyEl.classList.remove("hidden");
+        return;
+      }
+      plannerEmptyEl.classList.add("hidden");
+
+      meals.forEach((meal) => {
+        const row = document.createElement("div");
+        row.className = "checkbox-row mt-4";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = state.weekPlan.selectedMealIds.includes(meal.id);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            if (!state.weekPlan.selectedMealIds.includes(meal.id)) {
+              state.weekPlan.selectedMealIds.push(meal.id);
+            }
+          } else {
+            state.weekPlan.selectedMealIds =
+              state.weekPlan.selectedMealIds.filter((id) => id !== meal.id);
+          }
+          saveState();
+        });
+
+        const label = document.createElement("div");
+        label.className = "grocery-item-main";
+        const name = document.createElement("div");
+        name.className = "grocery-item-name";
+        name.textContent = meal.name;
+        const meta = document.createElement("div");
+        meta.className = "grocery-item-meta";
+        meta.textContent =
+          meal.ingredients.length === 0
+            ? "No ingredients yet"
+            : meal.ingredients.length + " ingredients";
+
+        label.appendChild(name);
+        label.appendChild(meta);
+
+        row.appendChild(checkbox);
+        row.appendChild(label);
+
+        plannerMealsEl.appendChild(row);
+      });
+    }
+
+    generateListBtn.addEventListener("click", () => {
+      regenerateGroceryFromPlan(true);
+      switchTab("groceries");
+    });
+
+    function regenerateGroceryFromPlan(showAlert = false) {
+      const selectedMeals = state.meals.filter((m) =>
+        state.weekPlan.selectedMealIds.includes(m.id)
+      );
+      if (!selectedMeals.length) {
+        if (showAlert) alert("Select at least one meal for this week first.");
+        return;
+      }
+
+      const items = {};
+
+      selectedMeals.forEach((meal) => {
+        meal.ingredients.forEach((ing) => {
+          if (!ing.name || !ing.name.trim()) return;
+          const key = groceryItemKey(ing.name, ing.store);
+          const current = items[key] || {
+            name: ing.name,
+            store: ing.store || "",
+            qty: 0,
+            unit: ing.unit || "",
+            checked:
+              state.groceryList[key]?.checked || false
+          };
+
+          const qtyNum = parseFloat(ing.qty);
+          if (!isNaN(qtyNum)) {
+            current.qty += qtyNum;
+          } else if (!current.qty && ing.qty) {
+            // For non-numeric quantities, just store the first textual value
+            current.qty = ing.qty;
+          }
+
+          items[key] = current;
+        });
+      });
+
+      // Apply pantry filter: skip items we already have
+      Object.keys(items).forEach((key) => {
+        const ingKey = ingredientKey(items[key].name);
+        const pantryItem = state.pantry[ingKey];
+        if (pantryItem && pantryItem.have) {
+          delete items[key];
+        }
+      });
+
+      state.groceryList = items;
+      saveState();
+      renderGroceryList();
+      if (showAlert) {
+        alert("Grocery list generated from your weekly plan.");
+      }
+    }
+
+    // ---------- PANTRY ----------
+    const pantrySearchInput = document.getElementById("pantry-search");
+    const pantryListEl = document.getElementById("pantry-list");
+    const pantryEmptyEl = document.getElementById("pantry-empty");
+
+    pantrySearchInput.addEventListener("input", () => renderPantry());
+
+    function getAllIngredientsUnique() {
+      const map = {};
+      state.meals.forEach((meal) => {
+        meal.ingredients.forEach((ing) => {
+          if (!ing.name || !ing.name.trim()) return;
+          const key = ingredientKey(ing.name);
+          if (!map[key]) {
+            map[key] = {
+              name: ing.name.trim(),
+              stores: new Set()
+            };
+          }
+          if (ing.store) {
+            map[key].stores.add(ing.store);
+          }
+        });
+      });
+      return map;
+    }
+
+    function renderPantry() {
+      const ingMap = getAllIngredientsUnique();
+      const keys = Object.keys(ingMap);
+      pantryListEl.innerHTML = "";
+
+      if (!keys.length) {
+        pantryEmptyEl.classList.remove("hidden");
+        return;
+      }
+      pantryEmptyEl.classList.add("hidden");
+
+      const filter = pantrySearchInput.value.trim().toLowerCase();
+      const filteredKeys = keys.filter((k) =>
+        ingMap[k].name.toLowerCase().includes(filter)
+      );
+
+      if (!filteredKeys.length) {
+        pantryListEl.innerHTML =
+          '<div class="muted">No matching ingredients.</div>';
+        return;
+      }
+
+      filteredKeys.sort((a, b) =>
+        ingMap[a].name.localeCompare(ingMap[b].name)
+      );
+
+      filteredKeys.forEach((key) => {
+        const data = ingMap[key];
+        const row = document.createElement("div");
+        row.className = "checkbox-row mt-4";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const pantryItem = state.pantry[key];
+        checkbox.checked = pantryItem?.have || false;
+        checkbox.addEventListener("change", () => {
+          state.pantry[key] = {
+            have: checkbox.checked,
+            updated: Date.now()
+          };
+          saveState();
+        });
+
+        const main = document.createElement("div");
+        main.className = "grocery-item-main";
+        const name = document.createElement("div");
+        name.className = "grocery-item-name";
+        name.textContent = data.name;
+        const meta = document.createElement("div");
+        meta.className = "grocery-item-meta";
+        const storesText = Array.from(data.stores).join(", ");
+        meta.textContent = storesText
+          ? "Used in meals • Stores: " + storesText
+          : "Used in meals";
+        main.appendChild(name);
+        main.appendChild(meta);
+
+        row.appendChild(checkbox);
+        row.appendChild(main);
+
+        pantryListEl.appendChild(row);
+      });
+    }
+
+    // ---------- STORES ----------
+    const storeNameInput = document.getElementById("store-name");
+    const addStoreBtn = document.getElementById("add-store-btn");
+    const storeListEl = document.getElementById("store-list");
+    const exportBtn = document.getElementById("export-data-btn");
+    const resetBtn = document.getElementById("reset-app-btn");
+    const exportStatusEl = document.getElementById("export-status");
+
+    addStoreBtn.addEventListener("click", () => {
+      const name = storeNameInput.value.trim();
+      if (!name) {
+        alert("Enter a store name.");
+        return;
+      }
+      if (state.stores.includes(name)) {
+        alert("That store is already in your list.");
+        return;
+      }
+      state.stores.push(name);
+      storeNameInput.value = "";
+      saveState();
+      renderStores();
+    });
+
+    function renderStores() {
+      storeListEl.innerHTML = "";
+      if (!state.stores.length) {
+        storeListEl.innerHTML =
+          '<span class="muted">No stores yet. Add one above.</span>';
+        return;
+      }
+      state.stores.forEach((store, index) => {
+        const pill = document.createElement("div");
+        pill.className = "store-pill" + (index === 0 ? " primary" : "");
+        const icon = document.createElement("span");
+        icon.className = "icon";
+        icon.textContent = "🏬";
+        const label = document.createElement("span");
+        label.textContent = store;
+        const remove = document.createElement("span");
+        remove.className = "remove";
+        remove.textContent = "✕";
+        remove.title = "Remove store";
+        remove.addEventListener("click", () => removeStore(store));
+        pill.appendChild(icon);
+        pill.appendChild(label);
+        if (state.stores.length > 1) {
+          pill.appendChild(remove);
+        }
+        storeListEl.appendChild(pill);
+      });
+    }
+
+    function removeStore(storeName) {
+      if (
+        !confirm(
+          `Remove store "${storeName}"? Ingredients using this store will be set to "Unassigned".`
+        )
+      )
+        return;
+      state.stores = state.stores.filter((s) => s !== storeName);
+      state.meals.forEach((meal) => {
+        meal.ingredients.forEach((ing) => {
+          if (ing.store === storeName) {
+            ing.store = "";
+          }
+        });
+      });
+      saveState();
+      renderStores();
+      renderMeals();
+      renderPantry();
+      regenerateGroceryFromPlan(false);
+    }
+
+    exportBtn.addEventListener("click", () => {
+      try {
+        const blob = new Blob([JSON.stringify(state, null, 2)], {
+          type: "application/json"
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "meal-grocery-planner-backup.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        exportStatusEl.textContent = "Exported data as JSON file.";
+      } catch (e) {
+        exportStatusEl.textContent = "Failed to export data.";
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (
+        !confirm(
+          "This will erase all meals, pantry items, and grocery lists in this browser. Are you sure?"
+        )
+      )
+        return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+
+    // ---------- GROCERY LIST ----------
+    const groceryGroupsEl = document.getElementById("grocery-groups");
+    const groceryEmptyEl = document.getElementById("grocery-empty");
+    const refreshFromPlanBtn = document.getElementById("refresh-from-plan-btn");
+    const clearChecksBtn = document.getElementById("clear-checks-btn");
+
+    refreshFromPlanBtn.addEventListener("click", () => {
+      regenerateGroceryFromPlan(true);
+    });
+
+    clearChecksBtn.addEventListener("click", () => {
+      Object.values(state.groceryList).forEach((item) => {
+        item.checked = false;
+      });
+      saveState();
+      renderGroceryList();
+    });
+
+    function renderGroceryList() {
+      const items = state.groceryList || {};
+      const keys = Object.keys(items);
+      groceryGroupsEl.innerHTML = "";
+
+      if (!keys.length) {
+        groceryEmptyEl.classList.remove("hidden");
+        return;
+      }
+      groceryEmptyEl.classList.add("hidden");
+
+      // Group by store
+      const groups = {};
+      keys.forEach((key) => {
+        const item = items[key];
+        const store = item.store || "Unassigned";
+        if (!groups[store]) groups[store] = [];
+        groups[store].push({ key, ...item });
+      });
+
+      // Sort stores by defined order
+      const sortedStores = Object.keys(groups).sort((a, b) => {
+        const ia = state.stores.indexOf(a);
+        const ib = state.stores.indexOf(b);
+        if (ia === -1 && ib === -1) return a.localeCompare(b);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+
+      sortedStores.forEach((store) => {
+        const groupItems = groups[store];
+        const groupEl = document.createElement("div");
+        groupEl.className = "grocery-group";
+
+        const header = document.createElement("div");
+        header.className = "grocery-group-header";
+
+        const title = document.createElement("div");
+        title.className = "grocery-group-title";
+        title.textContent = store === "Unassigned" ? "Other / Any Store" : store;
+
+        const count = document.createElement("div");
+        count.className = "pill-muted";
+        const total = groupItems.length;
+        const checked = groupItems.filter((i) => i.checked).length;
+        count.textContent = `${checked}/${total} done`;
+
+        header.appendChild(title);
+        header.appendChild(count);
+        groupEl.appendChild(header);
+
+        groupItems.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "grocery-item-row";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = item.checked || false;
+          checkbox.addEventListener("change", () => {
+            state.groceryList[item.key].checked = checkbox.checked;
+            saveState();
+            renderGroceryList();
+          });
+
+          const main = document.createElement("div");
+          main.className = "grocery-item-main";
+
+          const name = document.createElement("div");
+          name.className = "grocery-item-name";
+          name.textContent = item.name;
+
+          const meta = document.createElement("div");
+          meta.className = "grocery-item-meta";
+          const parts = [];
+          if (item.qty) {
+            parts.push(
+              typeof item.qty === "number" && !isNaN(item.qty)
+                ? `${item.qty} ${item.unit || ""}`.trim()
+                : `${item.qty} ${item.unit || ""}`.trim()
+            );
+          } else if (item.unit) {
+            parts.push(item.unit);
+          }
+          meta.textContent = parts.join(" • ") || "No quantity set";
+          main.appendChild(name);
+          main.appendChild(meta);
+
+          row.appendChild(checkbox);
+          row.appendChild(main);
+          groupEl.appendChild(row);
+        });
+
+        groceryGroupsEl.appendChild(groupEl);
+      });
+    }
+
+    // ---------- INIT ----------
+    loadState();
+    renderMeals();
+    renderPlanner();
+    renderPantry();
+    renderStores();
+    renderGroceryList();
+  </script>
+</body>
+</html>
