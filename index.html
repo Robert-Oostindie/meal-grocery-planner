@@ -23,23 +23,14 @@
         <div id="recipesTab" class="tab-page active">
 
             <h1>Recipes</h1>
-            <div id="recipesContainer"></div>
 
-            <h2>Add Recipe</h2>
-            <div class="card">
-                <label>Meal Name:</label>
-                <input id="recipeName" type="text" placeholder="Ex: Chicken Alfredo">
-
-                <label>Category:</label>
-                <select id="recipeCategory"></select>
-
-                <button class="primary" onclick="saveRecipe()">Save Recipe</button>
+            <!-- Button row -->
+            <div style="margin: 0.5rem 0 1rem;">
+                <button class="primary" onclick="openRecipeModalNew()">+ Add Recipe</button>
             </div>
 
-            <h2>Ingredients</h2>
-            <div id="recipeIngredientsContainer"></div>
-
-            <button class="primary" onclick="addIngredientRow()">+ Add Ingredient</button>
+            <!-- Existing recipes -->
+            <div id="recipesContainer"></div>
 
         </div>
 
@@ -89,9 +80,78 @@
 
     </div>
 
-    <!-- FLOATING BUTTON -->
+    <!-- FLOATING BUTTON (still works – on Recipes opens modal) -->
     <div class="fab" onclick="fabAction()">+</div>
 
-    <script src="script.js?v=5" defer></script>
+    <!-- RECIPE MODAL (3-step wizard) -->
+    <div id="recipeModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeRecipeModal()"></div>
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h2 id="recipeModalTitle">Add Recipe</h2>
+                <button class="modal-close" onclick="closeRecipeModal()">×</button>
+            </div>
+
+            <div class="modal-steps">
+                <span id="stepDot1" class="step-dot active"></span>
+                <span id="stepDot2" class="step-dot"></span>
+                <span id="stepDot3" class="step-dot"></span>
+            </div>
+
+            <!-- STEP 1: Basic info -->
+            <div id="modalStep1" class="modal-step">
+                <label>Meal Name:</label>
+                <input id="modalRecipeName" type="text" placeholder="Ex: Chicken Burrito Bowl">
+
+                <label>Category:</label>
+                <select id="modalRecipeCategory"></select>
+
+                <div class="modal-actions">
+                    <button onclick="closeRecipeModal()">Cancel</button>
+                    <button class="primary" onclick="goToStep(2)">Next →</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Ingredients -->
+            <div id="modalStep2" class="modal-step hidden">
+                <h3>Ingredients</h3>
+                <p style="margin-top:0; color:#666; font-size:0.9rem;">
+                    Add all ingredients for this meal. Quantity defaults to 1 and unit to CT.
+                </p>
+
+                <div id="recipeIngredientsContainer"></div>
+
+                <button class="primary" style="margin-top:0.5rem;" onclick="addIngredientRow()">+ Add Ingredient</button>
+
+                <div class="modal-actions">
+                    <button onclick="goToStep(1)">← Back</button>
+                    <button class="primary" onclick="goToStep(3)">Next →</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Review & save -->
+            <div id="modalStep3" class="modal-step hidden">
+                <h3>Review</h3>
+                <div class="review-block">
+                    <strong>Meal:</strong> <span id="reviewMealName"></span><br/>
+                    <strong>Category:</strong> <span id="reviewMealCategory"></span>
+                </div>
+
+                <div class="review-block">
+                    <strong>Ingredients:</strong>
+                    <ul id="reviewIngredientsList"></ul>
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick="goToStep(2)">← Back</button>
+                    <button class="primary" onclick="saveRecipeFromModal()">Save Recipe</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js?v=6" defer></script>
 </body>
 </html>
