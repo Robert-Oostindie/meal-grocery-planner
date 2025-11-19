@@ -1,531 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <title>Grocery Planner</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meal & Grocery Planner</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      /* Minimal FAB styling to work with your existing theme */
-      .fab {
-        position: fixed;
-        right: 18px;
-        bottom: 80px;
-        width: 52px;
-        height: 52px;
-        border-radius: 999px;
-        border: none;
-        background: #f9fafb;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.35);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        color: #111827;
-        cursor: pointer;
-        z-index: 60;
-      }
-      .fab span {
-        margin-top: -2px;
-      }
-      @media (prefers-color-scheme: dark) {
-        .fab {
-          background: #020617;
-          color: #e5e7eb;
-          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app-shell">
-      <!-- HEADER -->
-      <header>
-        <div class="app-title">
-          Grocery Planner
-          <span class="sub">Meals • Planner • Stores • List</span>
+</head>
+
+<body>
+
+    <!-- ========================= -->
+    <!-- TOP NAVIGATION TABS       -->
+    <!-- ========================= -->
+    <header class="top-tabs">
+        <button class="tab-btn active" data-tab="meals" onclick="switchTab('meals')">Recipes</button>
+        <button class="tab-btn" data-tab="planner" onclick="switchTab('planner')">Planner</button>
+        <button class="tab-btn" data-tab="extras" onclick="switchTab('extras')">Other</button>
+        <button class="tab-btn" data-tab="stores" onclick="switchTab('stores')">Stores</button>
+        <button class="tab-btn" data-tab="groceries" onclick="switchTab('groceries')">Grocery List</button>
+    </header>
+
+
+    <!-- ========================= -->
+    <!-- RECIPES TAB               -->
+    <!-- ========================= -->
+    <section id="tab-meals">
+        <h2>Recipes</h2>
+
+        <div id="meals-empty-state" class="empty-state hidden">
+            No meals yet. Tap the + button to add one!
         </div>
-        <div class="pill">Weekly Grocery Assistant</div>
-      </header>
 
-      <!-- MAIN CONTENT -->
-      <main>
-        <!-- RECIPES TAB (MEALS) -->
-        <section id="tab-meals">
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Add a Recipe</div>
-                <div class="card-subtitle">
-                  Save meals with ingredients and categories.
+        <div id="meal-list"></div>
+
+        <!-- Floating Add Meal Button -->
+        <button id="fab-recipes" class="fab">+</button>
+
+        <!-- Add Meal Modal -->
+        <div id="meal-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Add New Meal</h3>
+
+                <label>Meal Name</label>
+                <input id="meal-name" type="text" />
+
+                <label>Category</label>
+                <select id="meal-category" onchange="handleNewCategorySelection()"></select>
+
+                <label>Notes</label>
+                <textarea id="meal-notes"></textarea>
+
+                <div class="modal-actions">
+                    <button id="add-meal-btn" class="btn btn-primary">Save Meal</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('meal-modal').classList.add('hidden')">Cancel</button>
                 </div>
-              </div>
-              <span id="meal-count-badge" class="badge">0 meals</span>
             </div>
+        </div>
+    </section>
 
-            <div class="mt-4">
-              <label for="meal-name">Recipe name</label>
-              <input
-                id="meal-name"
-                type="text"
-                placeholder="e.g. Burrito Bowl, Pancakes"
-              />
-            </div>
 
-            <div class="mt-4">
-              <label for="meal-category">Category (optional)</label>
-              <select id="meal-category"></select>
-              <div class="inline-note">
-                Examples: Low Prep, Medium Prep, Crock Pot, Grilling, Breakfast,
-                Sides, Appetizers, Baby Meals.
-              </div>
-            </div>
+    <!-- ========================= -->
+    <!-- INGREDIENT MODAL          -->
+    <!-- ========================= -->
+    <div id="ingredient-modal" class="modal hidden">
+        <div class="modal-content wide">
+            <h3>Ingredient</h3>
 
-            <div class="mt-4">
-              <label for="meal-notes">Notes (optional)</label>
-              <textarea
-                id="meal-notes"
-                placeholder="Any extra notes, tips, or links for this recipe..."
-              ></textarea>
-            </div>
+            <label>Name</label>
+            <input id="ingredient-name" type="text" />
 
-            <div class="mt-8">
-              <button id="add-meal-btn" class="btn btn-primary">
-                <span>＋</span> Save Recipe
-              </button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Saved Recipes</div>
-              <div class="card-subtitle">
-                Edit ingredients, categories, and default substitutes.
-              </div>
-            </div>
-
-            <div id="meals-empty-state" class="section-note">
-              No recipes yet. Start by adding your first meal above.
-            </div>
-
-            <div id="meal-list" class="meal-list"></div>
-          </div>
-        </section>
-
-        <!-- PLANNER TAB -->
-        <section id="tab-planner" class="hidden">
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Weekly Planner</div>
-                <div class="card-subtitle">
-                  Choose recipes for this week and adjust ingredients.
+            <div class="grid-3">
+                <div>
+                    <label>Qty</label>
+                    <input id="ingredient-qty" type="number" value="1" />
                 </div>
-              </div>
-            </div>
-
-            <div id="planner-empty" class="section-note">
-              No recipes yet. Add some recipes first on the Recipes tab.
-            </div>
-
-            <div id="planner-meals"></div>
-
-            <div class="mt-8">
-              <button id="generate-list-btn" class="btn btn-primary">
-                Generate Grocery List
-              </button>
-              <div class="inline-note">
-                Uses your selected meals, ingredient toggles, comments, pantry,
-                and extras.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- PANTRY TAB (no top tab; reached from Other) -->
-        <section id="tab-pantry" class="hidden">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Pantry</div>
-              <div class="card-subtitle">
-                Mark what you already have to keep it off the grocery list.
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <label for="pantry-search">Search ingredients</label>
-              <input
-                id="pantry-search"
-                type="text"
-                placeholder="Start typing an ingredient name..."
-              />
-            </div>
-
-            <div id="pantry-empty" class="section-note mt-4">
-              No ingredients yet. Add ingredients to your recipes first.
-            </div>
-
-            <div id="pantry-list"></div>
-          </div>
-        </section>
-
-        <!-- STORES TAB (no top tab; reached from Other) -->
-        <section id="tab-stores" class="hidden">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Stores</div>
-              <div class="card-subtitle">
-                Manage your store list (Aldi, Walmart, Festival Foods, Woodmans,
-                etc.).
-              </div>
-            </div>
-
-            <div class="mt-4 row">
-              <div>
-                <label for="store-name">Add a store</label>
-                <input
-                  id="store-name"
-                  type="text"
-                  placeholder="e.g. Aldi, Walmart"
-                />
-              </div>
-              <div style="display:flex;align-items:flex-end;">
-                <button id="add-store-btn" class="btn btn-outline">
-                  ＋ Add
-                </button>
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <div class="section-note">Current stores:</div>
-              <div id="store-list" class="tag-list"></div>
-            </div>
-          </div>
-
-          <div class="card mt-8">
-            <div class="card-header">
-              <div class="card-title">Backup &amp; Reset</div>
-              <div class="card-subtitle">
-                Export all your data or reset this browser only.
-              </div>
-            </div>
-
-            <div class="mt-4 row">
-              <button id="export-data-btn" class="btn btn-outline">
-                ⬇ Export Data (JSON)
-              </button>
-              <button id="reset-app-btn" class="btn btn-danger">
-                Reset App
-              </button>
-            </div>
-            <div id="export-status" class="inline-note mt-4"></div>
-          </div>
-        </section>
-
-        <!-- OTHER TAB (EXTRAS) -->
-        <section id="tab-extras" class="hidden">
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Other Grocery Items</div>
-                <div class="card-subtitle">
-                  Add non-meal items like laundry soap, hairspray, snacks.
+                <div>
+                    <label>Unit</label>
+                    <input id="ingredient-unit" type="text" value="CT" />
                 </div>
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <label for="extra-name">Item name</label>
-              <input
-                id="extra-name"
-                type="text"
-                placeholder="e.g. Laundry soap, Hairspray"
-              />
-            </div>
-
-            <div class="mt-4 row">
-              <div>
-                <label for="extra-qty">Quantity (optional)</label>
-                <input
-                  id="extra-qty"
-                  type="number"
-                  min="1"
-                  placeholder="1"
-                />
-              </div>
-              <div>
-                <label for="extra-unit">Unit</label>
-                <input
-                  id="extra-unit"
-                  type="text"
-                  value="CT"
-                  placeholder="CT, bag, box..."
-                />
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <label for="extra-store">Store (optional)</label>
-              <select id="extra-store"></select>
-            </div>
-
-            <div class="mt-8">
-              <button id="add-extra-btn" class="btn btn-primary">
-                <span>＋</span> Add Item
-              </button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Other Items for This Week</div>
-              <div class="card-subtitle">
-                Toggle which extras belong on this week’s grocery list.
-              </div>
-            </div>
-
-            <div id="extras-empty" class="section-note">
-              No extras yet. Add items above.
-            </div>
-
-            <div id="extras-list"></div>
-          </div>
-
-          <div class="card mt-8">
-            <div class="card-header">
-              <div class="card-title">More Tools</div>
-              <div class="card-subtitle">
-                Quickly access your pantry and store setup.
-              </div>
-            </div>
-            <div class="mt-4 row">
-              <button
-                class="btn btn-outline"
-                onclick="switchTab('pantry')"
-              >
-                🏠 Open Pantry
-              </button>
-              <button
-                class="btn btn-outline"
-                onclick="switchTab('stores')"
-              >
-                🏬 Manage Stores
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- GROCERY LIST TAB -->
-        <section id="tab-groceries" class="hidden">
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Grocery List</div>
-                <div class="card-subtitle">
-                  Grouped by store, built from planner, pantry, and extras.
+                <div>
+                    <label>Store</label>
+                    <select id="ingredient-store"></select>
                 </div>
-              </div>
             </div>
 
-            <div class="mt-4 row">
-              <button id="refresh-from-plan-btn" class="btn btn-outline">
-                🔁 Regenerate from Planner
-              </button>
-              <button id="clear-checks-btn" class="btn btn-outline">
-                ✖ Clear Checkmarks
-              </button>
+            <label>Substitution Group</label>
+            <input id="ingredient-group" type="text" placeholder="Example: chicken type" />
+
+            <label>
+                <input id="ingredient-default" type="checkbox" />
+                Default ingredient in group
+            </label>
+
+            <div class="modal-actions">
+                <button id="ingredient-save" class="btn btn-primary">Save</button>
+                <button id="ingredient-cancel" class="btn btn-secondary">Cancel</button>
             </div>
-
-            <div class="mt-4">
-              <button id="copy-list-btn" class="btn btn-primary">
-                📋 Copy List for iPhone Notes
-              </button>
-              <div class="inline-note">
-                This copies a clean, store-grouped list you can paste into Notes.
-              </div>
-            </div>
-
-            <div id="grocery-empty" class="section-note mt-6">
-              No grocery items yet. Use the Planner tab to generate your list.
-            </div>
-
-            <div id="grocery-groups" class="mt-4"></div>
-          </div>
-        </section>
-      </main>
-
-      <!-- FLOATING ACTION BUTTONS -->
-      <!-- Recipes FAB -->
-      <button
-        class="fab"
-        id="fab-recipes"
-        onclick="document.getElementById('add-meal-btn').click()"
-        style="display:none;"
-      >
-        <span>＋</span>
-      </button>
-
-      <!-- Other (Extras) FAB -->
-      <button
-        class="fab"
-        id="fab-extras"
-        onclick="document.getElementById('add-extra-btn').click()"
-        style="display:none;"
-      >
-        <span>＋</span>
-      </button>
-
-      <!-- BOTTOM TAB BAR -->
-      <nav class="tabbar">
-        <button class="tab-btn active" data-tab="meals">
-          <span class="icon">📖</span>
-          <span>Recipes</span>
-        </button>
-        <button class="tab-btn" data-tab="planner">
-          <span class="icon">📅</span>
-          <span>Planner</span>
-        </button>
-        <button class="tab-btn" data-tab="extras">
-          <span class="icon">➕</span>
-          <span>Other</span>
-        </button>
-        <button class="tab-btn" data-tab="groceries">
-          <span class="icon">🛒</span>
-          <span>Grocery List</span>
-        </button>
-      </nav>
+        </div>
     </div>
 
-    <!-- INGREDIENT MODAL -->
-    <div id="ingredient-modal" class="modal-backdrop hidden">
-      <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header">
-          <div class="modal-title" id="ingredient-modal-title">
-            Add Ingredient
-          </div>
-          <button id="ingredient-cancel" class="btn btn-ghost btn-sm">
-            ✕
-          </button>
+
+    <!-- ========================= -->
+    <!-- PLANNER TAB               -->
+    <!-- ========================= -->
+    <section id="tab-planner" class="hidden">
+        <h2>Meal Planner</h2>
+
+        <div id="planner-empty" class="empty-state hidden">
+            Add meals first to begin planning!
         </div>
 
-        <div class="mt-4">
-          <label for="ingredient-name">Ingredient name</label>
-          <input
-            id="ingredient-name"
-            type="text"
-            placeholder="e.g. Chicken thighs, Frozen chicken"
-          />
+        <!-- Planner Controls -->
+        <div class="planner-controls">
+            <button id="collapse-all-btn" class="btn btn-secondary">Collapse All</button>
+            <button id="expand-selected-btn" class="btn btn-secondary">Expand Selected</button>
+            <button id="generate-list-btn" class="btn btn-primary">Generate Grocery List</button>
         </div>
 
-        <div class="mt-4 row">
-          <div>
-            <label for="ingredient-qty">Quantity</label>
-            <input
-              id="ingredient-qty"
-              type="number"
-              min="1"
-              placeholder="1"
-            />
-          </div>
-          <div>
-            <label for="ingredient-unit">Unit</label>
-            <input
-              id="ingredient-unit"
-              type="text"
-              value="CT"
-              placeholder="CT, lb, bag..."
-            />
-          </div>
+        <div id="planner-meals"></div>
+
+        <!-- Planner-only item entry -->
+        <h3 class="sub-header">Add Additional Items</h3>
+        <div class="extra-form">
+            <input id="extra-name" placeholder="Item name" />
+            <input id="extra-qty" type="number" placeholder="Qty" />
+            <input id="extra-unit" placeholder="Unit" />
+            <select id="extra-store"></select>
+            <button id="add-extra-btn" class="btn btn-primary">Add</button>
+        </div>
+    </section>
+
+
+    <!-- ========================= -->
+    <!-- EXTRAS TAB                -->
+    <!-- ========================= -->
+    <section id="tab-extras" class="hidden">
+        <h2>Other Items</h2>
+
+        <div id="extras-empty" class="empty-state hidden">
+            No items added yet.
         </div>
 
-        <div class="mt-4">
-          <label for="ingredient-store">Store</label>
-          <select id="ingredient-store"></select>
+        <div id="extras-list"></div>
+
+        <!-- Floating Add Extras Button -->
+        <button id="fab-extras" class="fab">+</button>
+
+        <!-- Add Extras Modal -->
+        <div id="extras-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Add Item</h3>
+                <label>Name</label>
+                <input id="extras-name" type="text" />
+                <label>Qty</label>
+                <input id="extras-qty" type="number" value="1" />
+                <label>Unit</label>
+                <input id="extras-unit" type="text" value="CT" />
+                <label>Store</label>
+                <select id="extras-store"></select>
+
+                <div class="modal-actions">
+                    <button id="extras-save" class="btn btn-primary">Save</button>
+                    <button id="extras-cancel" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ========================= -->
+    <!-- STORES TAB                -->
+    <!-- ========================= -->
+    <section id="tab-stores" class="hidden">
+        <h2>Stores</h2>
+
+        <div class="store-input-row">
+            <input id="store-name" placeholder="Add new store" />
+            <button id="add-store-btn" class="btn btn-primary">Add</button>
         </div>
 
-        <div class="mt-4">
-          <label for="ingredient-group">Substitute group (optional)</label>
-          <input
-            id="ingredient-group"
-            list="ingredient-group-suggestions"
-            type="text"
-            placeholder="e.g. Chicken Option"
-          />
-          <datalist id="ingredient-group-suggestions"></datalist>
-          <div class="inline-note">
-            Ingredients with the same group name are substitutes (e.g. fresh vs
-            frozen chicken).
-          </div>
-        </div>
+        <div id="store-list" class="tag-container"></div>
+    </section>
 
-        <div class="mt-4 checkbox-row">
-          <input id="ingredient-default" type="checkbox" />
-          <span class="muted">
-            Make this the default option for its group.
-          </span>
-        </div>
 
-        <div class="modal-actions">
-          <button id="ingredient-cancel-2" class="btn btn-ghost btn-sm">
-            Cancel
-          </button>
-          <button id="ingredient-save" class="btn btn-primary btn-sm">
-            Save Ingredient
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- ========================= -->
+    <!-- GROCERY LIST TAB          -->
+    <!-- ========================= -->
+    <section id="tab-groceries" class="hidden">
+        <h2>Grocery List</h2>
 
-    <!-- SUBSTITUTE SELECTION MODAL -->
-    <div id="subs-modal" class="modal-backdrop hidden">
-      <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header">
-          <div class="modal-title">Choose your ingredient options</div>
-          <button id="subs-cancel" class="btn btn-ghost btn-sm">✕</button>
-        </div>
+        <div id="grocery-groups"></div>
+    </section>
 
-        <div class="section-note">
-          For meals that have multiple options (like fresh vs frozen chicken),
-          choose which ingredient you want to use this time.
-        </div>
 
-        <div id="subs-modal-body" class="mt-4"></div>
-
-        <div class="modal-actions">
-          <button id="subs-cancel-2" class="btn btn-ghost btn-sm">
-            Cancel
-          </button>
-          <button id="subs-apply" class="btn btn-primary btn-sm">
-            Apply &amp; Generate List
-          </button>
-        </div>
-      </div>
-    </div>
-
+    <!-- ========================= -->
+    <!-- SCRIPT                    -->
+    <!-- ========================= -->
     <script src="script.js"></script>
-    <script>
-      // Show the correct FAB per tab (Recipes / Other)
-      document.addEventListener("DOMContentLoaded", function () {
-        const fabRecipes = document.getElementById("fab-recipes");
-        const fabExtras = document.getElementById("fab-extras");
 
-        function updateFab(tab) {
-          fabRecipes.style.display = tab === "meals" ? "flex" : "none";
-          fabExtras.style.display = tab === "extras" ? "flex" : "none";
-        }
-
-        // Patch switchTab to also manage FAB visibility, without changing core logic
-        const originalSwitchTab = window.switchTab;
-        window.switchTab = function (tabName) {
-          originalSwitchTab(tabName);
-          updateFab(tabName);
-        };
-
-        // Initial FAB state
-        updateFab("meals");
-      });
-    </script>
-  </body>
+</body>
 </html>
