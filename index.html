@@ -252,36 +252,6 @@
       box-shadow: none;
     }
 
-    .chip {
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 11px;
-      background: #f3f4f6;
-      color: var(--text-muted);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .chip.store {
-      background: #ecfdf3;
-      color: #15803d;
-    }
-
-    .chip-muted {
-      background: #f3f4f6;
-      color: var(--text-muted);
-    }
-
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
     .section-note {
       font-size: 11px;
       color: var(--text-muted);
@@ -462,17 +432,6 @@
       color: var(--text-muted);
     }
 
-    .badge-soft {
-      border-radius: 999px;
-      padding: 2px 8px;
-      font-size: 11px;
-      background: #ecfdf3;
-      color: #15803d;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
     .muted {
       color: var(--text-muted);
       font-size: 12px;
@@ -629,7 +588,7 @@
           </div>
           <div class="mt-4">
             <label for="meal-name">Meal name</label>
-            <input id="meal-name" type="text" placeholder="e.g. Chicken Tacos" />
+            <input id="meal-name" type="text" placeholder="e.g. Chicken Burrito Bowl" />
           </div>
           <div class="mt-4">
             <label for="meal-notes">Notes (optional)</label>
@@ -641,7 +600,7 @@
             </button>
           </div>
           <div class="inline-note">
-            Tip: After adding a meal, open it below to attach ingredients and stores.
+            Tip: After adding a meal, open it below to attach ingredients, stores, and substitutes.
           </div>
         </div>
 
@@ -649,7 +608,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Saved Meals</div>
-              <div class="card-subtitle">Tap a meal's buttons to manage ingredients, stores, and notes.</div>
+              <div class="card-subtitle">Each substitute group has one default option.</div>
             </div>
             <span class="badge" id="meal-count-badge">0 meals</span>
           </div>
@@ -666,7 +625,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Weekly Plan</div>
-              <div class="card-subtitle">Select meals for this week. The app builds your list.</div>
+              <div class="card-subtitle">Select meals for this week. The app uses each group's default option.</div>
             </div>
             <span class="badge"><span>🗓️</span> Week</span>
           </div>
@@ -680,7 +639,7 @@
             <div>
               <div class="card-title">Generate Grocery List</div>
               <div class="card-subtitle">
-                Uses selected meals, skips ingredients already in your pantry.
+                Uses selected meals, skips pantry items, and uses default substitutes.
               </div>
             </div>
           </div>
@@ -706,7 +665,7 @@
                 Mark what you already have. The app skips these items when building the list.
               </div>
             </div>
-            <span class="badge-soft"><span>✅</span> Have It</span>
+            <span class="badge"><span>✅</span> Have It</span>
           </div>
           <p class="section-note">
             Items come from the ingredients in your meals. Check the box if it's currently stocked.
@@ -843,7 +802,7 @@
         </div>
         <div class="mt-4">
           <label for="ingredient-name">Ingredient name</label>
-          <input id="ingredient-name" type="text" placeholder="e.g. Chicken breast" />
+          <input id="ingredient-name" type="text" placeholder="e.g. Chicken thighs, Frozen chicken" />
         </div>
         <div class="mt-4 row">
           <div>
@@ -863,6 +822,17 @@
           <div class="inline-note">
             Store list comes from the <strong>Stores</strong> tab (Aldi, Walmart, Festival Foods, Woodmans, etc.).
           </div>
+        </div>
+        <div class="mt-4">
+          <label for="ingredient-group">Substitute group (optional)</label>
+          <input id="ingredient-group" type="text" placeholder="e.g. protein, sauce, base" />
+          <div class="inline-note">
+            Ingredients with the same group name are substitutes. One default is used for the grocery list.
+          </div>
+        </div>
+        <div class="mt-4 checkbox-row">
+          <input id="ingredient-default" type="checkbox" />
+          <span class="muted">Use this as the default option for this group</span>
         </div>
         <div class="modal-actions">
           <button class="btn btn-outline btn-sm" id="ingredient-cancel-2">Cancel</button>
@@ -886,7 +856,7 @@
         // ingredientKey: { have: boolean, updated: timestamp }
       },
       groceryList: {
-        // itemKey: { name, store, quantity, unit, checked }
+        // itemKey: { name, store, qty, unit, checked }
       }
     };
 
@@ -919,6 +889,26 @@
 
     function groceryItemKey(name, store) {
       return ingredientKey(name) + "::" + (store || "Unassigned");
+    }
+
+    // Helper for substitute defaults
+    function setDefaultForGroupOnMeal(meal, groupName, ingredientId) {
+      if (!groupName) return;
+      meal.ingredients.forEach((ing) => {
+        if (ing.subGroup === groupName) {
+          ing.isDefault = (ing.id === ingredientId);
+        }
+      });
+    }
+
+    function makeDefaultIngredient(mealId, ingredientId, groupName) {
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+      setDefaultForGroupOnMeal(meal, groupName, ingredientId);
+      saveState();
+      renderMeals();
+      renderPantry();
+      regenerateGroceryFromPlan(false);
     }
 
     // ---------- TABS ----------
@@ -970,7 +960,7 @@
         id: makeId("meal"),
         name,
         notes,
-        ingredients: [] // {id, name, qty, unit, store}
+        ingredients: [] // {id, name, qty, unit, store, subGroup, isDefault}
       };
       state.meals.push(newMeal);
       mealNameInput.value = "";
@@ -1065,6 +1055,13 @@
           const parts = [];
           if (ing.qty) parts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
           if (ing.store) parts.push("🛒 " + ing.store);
+          if (ing.subGroup) {
+            parts.push(
+              "Group: " +
+                ing.subGroup +
+                (ing.isDefault ? " (default)" : "")
+            );
+          }
           meta.textContent = parts.join(" • ") || "No quantity / store set";
           main.appendChild(meta);
 
@@ -1089,6 +1086,17 @@
 
           actions.appendChild(editBtn);
           actions.appendChild(delBtn);
+
+          if (ing.subGroup) {
+            const defaultBtn = document.createElement("button");
+            defaultBtn.className = "btn btn-ghost btn-sm";
+            defaultBtn.textContent = ing.isDefault ? "⭐ Default" : "☆ Make default";
+            defaultBtn.title = "Set as default for group '" + ing.subGroup + "'";
+            defaultBtn.addEventListener("click", () =>
+              makeDefaultIngredient(meal.id, ing.id, ing.subGroup)
+            );
+            actions.appendChild(defaultBtn);
+          }
 
           row.appendChild(actions);
           ingredientsContainer.appendChild(row);
@@ -1150,6 +1158,7 @@
       saveState();
       renderMeals();
       renderPantry();
+      regenerateGroceryFromPlan(false);
     }
 
     // ---------- INGREDIENT MODAL ----------
@@ -1159,6 +1168,8 @@
     const ingredientQtyInput = document.getElementById("ingredient-qty");
     const ingredientUnitInput = document.getElementById("ingredient-unit");
     const ingredientStoreSelect = document.getElementById("ingredient-store");
+    const ingredientGroupInput = document.getElementById("ingredient-group");
+    const ingredientDefaultCheckbox = document.getElementById("ingredient-default");
     const ingredientSaveBtn = document.getElementById("ingredient-save");
     const ingredientCancelBtn = document.getElementById("ingredient-cancel");
     const ingredientCancelBtn2 = document.getElementById("ingredient-cancel-2");
@@ -1198,12 +1209,16 @@
         ingredientQtyInput.value = ing.qty || "";
         ingredientUnitInput.value = ing.unit || "CT";
         populateStoreSelect(ing.store || "");
+        ingredientGroupInput.value = ing.subGroup || "";
+        ingredientDefaultCheckbox.checked = !!ing.isDefault;
       } else {
         ingredientModalTitle.textContent = "Add Ingredient";
         ingredientNameInput.value = "";
         ingredientQtyInput.value = "";
         ingredientUnitInput.value = "CT"; // default count
         populateStoreSelect("");
+        ingredientGroupInput.value = "";
+        ingredientDefaultCheckbox.checked = false;
       }
 
       ingredientModal.classList.remove("hidden");
@@ -1234,6 +1249,8 @@
       const qty = ingredientQtyInput.value.trim();
       let unit = ingredientUnitInput.value.trim();
       const store = ingredientStoreSelect.value.trim();
+      const subGroup = ingredientGroupInput.value.trim();
+      const wantsDefault = ingredientDefaultCheckbox.checked && !!subGroup;
 
       if (!name) {
         alert("Please enter an ingredient name.");
@@ -1241,12 +1258,12 @@
         return;
       }
 
-      // Default unit = CT if left blank
-      if (!unit) unit = "CT";
+      if (!unit) unit = "CT"; // default unit
 
+      let ing;
       if (currentIngredientId) {
         // edit existing
-        const ing = meal.ingredients.find((i) => i.id === currentIngredientId);
+        ing = meal.ingredients.find((i) => i.id === currentIngredientId);
         if (!ing) {
           closeIngredientModal();
           return;
@@ -1255,21 +1272,41 @@
         ing.qty = qty;
         ing.unit = unit;
         ing.store = store;
+        ing.subGroup = subGroup || "";
+        ing.isDefault = false; // we'll recompute below
       } else {
         // add new
-        const ing = {
+        ing = {
           id: makeId("ing"),
           name,
           qty,
           unit,
-          store
+          store,
+          subGroup: subGroup || "",
+          isDefault: false
         };
         meal.ingredients.push(ing);
+      }
+
+      if (!subGroup) {
+        ing.subGroup = "";
+        ing.isDefault = false;
+      } else {
+        const hasOtherDefault = meal.ingredients.some(
+          (i) =>
+            i.subGroup === subGroup &&
+            i.id !== ing.id &&
+            i.isDefault
+        );
+        if (wantsDefault || !hasOtherDefault) {
+          setDefaultForGroupOnMeal(meal, subGroup, ing.id);
+        }
       }
 
       saveState();
       renderMeals();
       renderPantry();
+      regenerateGroceryFromPlan(false);
       closeIngredientModal();
     });
 
@@ -1352,16 +1389,36 @@
       const items = {};
 
       selectedMeals.forEach((meal) => {
+        // Precompute substitute groups for this meal
+        const groupInfo = {};
+        meal.ingredients.forEach((ing) => {
+          if (ing.subGroup) {
+            if (!groupInfo[ing.subGroup]) {
+              groupInfo[ing.subGroup] = { items: [], defaultIds: [] };
+            }
+            groupInfo[ing.subGroup].items.push(ing);
+            if (ing.isDefault) groupInfo[ing.subGroup].defaultIds.push(ing.id);
+          }
+        });
+
         meal.ingredients.forEach((ing) => {
           if (!ing.name || !ing.name.trim()) return;
+
+          // If in a substitute group, only include the default(s) when at least one exists
+          if (ing.subGroup) {
+            const info = groupInfo[ing.subGroup];
+            if (info && info.defaultIds.length > 0 && !info.defaultIds.includes(ing.id)) {
+              return; // skip non-default in this group
+            }
+          }
+
           const key = groceryItemKey(ing.name, ing.store);
           const current = items[key] || {
             name: ing.name,
             store: ing.store || "",
             qty: 0,
             unit: ing.unit || "CT",
-            checked:
-              state.groceryList[key]?.checked || false
+            checked: state.groceryList[key]?.checked || false
           };
 
           const qtyNum = parseFloat(ing.qty);
@@ -1388,7 +1445,7 @@
       saveState();
       renderGroceryList();
       if (showAlert) {
-        alert("Grocery list generated from your weekly plan.");
+        alert("Grocery list generated from your weekly plan (using default substitutes).");
       }
     }
 
