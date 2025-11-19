@@ -1,204 +1,84 @@
 /* ------------------------------
-   GLOBAL LAYOUT
+   MODAL
 ------------------------------ */
 
-body {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-                 Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    background: #f7f7f9;
-    color: #222;
-}
-
-.app-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1rem 1.2rem;
-}
-
-/* ------------------------------
-   TOP NAV TABS
------------------------------- */
-
-.top-tabs {
-    display: flex;
-    justify-content: space-around;
-    background: white;
-    border-bottom: 1px solid #ddd;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-}
-
-.top-tabs button {
-    flex: 1;
-    padding: 1rem;
-    background: transparent;
-    border: none;
-    font-size: 1.05rem;
-    cursor: pointer;
-    color: #444;
-}
-
-.tab-btn.active {
-    font-weight: 600;
-    color: dodgerblue;
-    border-bottom: 3px solid dodgerblue;
-}
-
-/* ------------------------------
-   TAB PAGES — SHOW/HIDE LOGIC
------------------------------- */
-
-.tab-page {
+.hidden {
     display: none;
 }
 
-.tab-page.active {
-    display: block;
-}
-
-/* ------------------------------
-   HEADINGS
------------------------------- */
-
-h1 {
-    font-size: 1.75rem;
-    margin-top: 1.4rem;
-}
-
-h2 {
-    font-size: 1.25rem;
-    margin-top: 1.3rem;
-}
-
-/* ------------------------------
-   CARDS
------------------------------- */
-
-.card {
-    background: white;
-    padding: 1rem 1.2rem;
-    border-radius: 14px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    margin: 1rem 0;
-}
-
-/* ------------------------------
-   FORMS
------------------------------- */
-
-input, select, textarea {
-    width: 100%;
-    padding: 0.65rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    margin-bottom: .6rem;
-}
-
-textarea {
-    height: 90px;
-}
-
-button {
-    padding: 0.55rem 1rem;
-    font-size: 0.9rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-button.primary {
-    background: dodgerblue;
-    color: white;
-}
-
-button.danger {
-    background: #d9534f;
-    color: white;
-}
-
-/* ------------------------------
-   INGREDIENT ROWS
------------------------------- */
-
-.ingredient-row {
-    padding: 0.8rem 0;
-    margin-bottom: 0.6rem;
-    border-bottom: 1px solid #eee;
-}
-
-.default-toggle {
-    display: inline-block;
-    padding: 0.35rem 0.7rem;
-    border-radius: 20px;
-    border: 1px solid dodgerblue;
-    color: dodgerblue;
-    margin-top: 0.4rem;
-    cursor: pointer;
-}
-
-.default-toggle.active {
-    background: dodgerblue;
-    color: white;
-}
-
-/* ------------------------------
-   GROCERY LIST
------------------------------- */
-
-.grocery-store-card {
-    background: white;
-    padding: 1rem 1.2rem;
-    margin: 1rem 0;
-    border-radius: 14px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-}
-
-.grocery-item {
-    padding: 0.4rem 0;
-    font-size: 1rem;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.grocery-item:last-child {
-    border-bottom: none;
-}
-
-/* ------------------------------
-   FLOATING ACTION BUTTON
------------------------------- */
-
-.fab {
+.modal {
     position: fixed;
-    right: 1.6rem;
-    bottom: 1.6rem;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: dodgerblue;
-    color: white;
-    font-size: 2.2rem;
+    inset: 0;
+    z-index: 300;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    z-index: 200;
 }
 
-/* ------------------------------
-   MOBILE RESPONSIVE
------------------------------- */
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+}
 
-@media (max-width: 600px) {
-    .app-container {
-        padding: 0.8rem;
-    }
+.modal-content {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.2rem 1.4rem;
+    max-width: 540px;
+    width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+    z-index: 1;
+}
 
-    h1 {
-        font-size: 1.5rem;
-    }
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+
+.modal-close {
+    border: none;
+    background: transparent;
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+
+.modal-steps {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+}
+
+.step-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.step-dot.active {
+    background: dodgerblue;
+}
+
+.modal-step {
+    margin-top: 0.4rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.review-block {
+    background: #f7f7f9;
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.6rem;
 }
