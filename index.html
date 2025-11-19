@@ -1,71 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Meal & Grocery Planner</title>
-    <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Planner Grocery App</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <!-- Top Navigation -->
-    <nav class="top-nav">
-        <button class="nav-btn active" data-tab="recipesView">Recipes</button>
-        <button class="nav-btn" data-tab="plannerView">Planner</button>
-        <button class="nav-btn" data-tab="otherView">Other</button>
-        <button class="nav-btn" data-tab="storesView">Stores</button>
-        <button class="nav-btn" data-tab="groceryView">Grocery List</button>
-    </nav>
+    <!-- ============================ -->
+    <!-- TOP NAVIGATION TABS          -->
+    <!-- ============================ -->
+    <div class="top-nav">
+        <button class="nav-btn active" data-tab="recipesTab">Recipes</button>
+        <button class="nav-btn" data-tab="plannerTab">Planner</button>
+        <button class="nav-btn" data-tab="otherTab">Other</button>
+        <button class="nav-btn" data-tab="storesTab">Stores</button>
+        <button class="nav-btn" data-tab="groceryTab">Grocery List</button>
+    </div>
 
-    <!-- App Container -->
-    <main>
+    <!-- ============================ -->
+    <!-- RECIPES TAB                  -->
+    <!-- ============================ -->
+    <div id="recipesTab" class="tab-section active">
+        <h1>Recipes</h1>
+        <div id="recipesContainer"></div>
+    </div>
 
-        <!-- RECIPES TAB -->
-        <section id="recipesView" class="tab-section active">
-            <h1>Recipes</h1>
-            <div id="recipesContainer"></div>
-        </section>
+    <!-- ============================ -->
+    <!-- PLANNER TAB                  -->
+    <!-- ============================ -->
+    <div id="plannerTab" class="tab-section">
+        <h1>Meal Planner</h1>
 
-        <!-- PLANNER TAB -->
-        <section id="plannerView" class="tab-section">
-            <h1>Weekly Planner</h1>
-            <div id="plannerMealsContainer"></div>
-            <h2>Additional Items</h2>
-            <div id="plannerExtrasContainer"></div>
-        </section>
+        <button class="btn btn-secondary small" id="collapseAllBtn">Collapse All</button>
 
-        <!-- OTHER TAB -->
-        <section id="otherView" class="tab-section">
-            <h1>Other Items</h1>
-            <div id="otherItemsContainer"></div>
-        </section>
+        <div id="plannerMealsContainer"></div>
 
-        <!-- STORES TAB -->
-        <section id="storesView" class="tab-section">
-            <h1>Stores</h1>
-            <div id="storesContainer"></div>
-        </section>
+        <h2>Other Needed Items</h2>
+        <div id="plannerCustomContainer"></div>
+    </div>
 
-        <!-- GROCERY LIST TAB -->
-        <section id="groceryView" class="tab-section">
-            <h1>Groceries by Store</h1>
-            <div class="grocery-header-actions">
-                <button id="refreshGroceryBtn" class="btn small">Refresh from Plan</button>
-                <button id="clearChecksBtn" class="btn small">Clear Checks</button>
-                <button id="copyListBtn" class="btn small">Copy List</button>
+    <!-- ============================ -->
+    <!-- OTHER ITEMS TAB              -->
+    <!-- ============================ -->
+    <div id="otherTab" class="tab-section">
+        <h1>Other Items</h1>
+        <div id="otherItemsContainer"></div>
+    </div>
+
+    <!-- ============================ -->
+    <!-- STORES TAB                   -->
+    <!-- ============================ -->
+    <div id="storesTab" class="tab-section">
+        <h1>Stores</h1>
+        <div id="storesContainer"></div>
+    </div>
+
+    <!-- ============================ -->
+    <!-- GROCERY LIST TAB             -->
+    <!-- ============================ -->
+    <div id="groceryTab" class="tab-section">
+        <h1>Grocery List</h1>
+        <div id="groceryListContainer"></div>
+        <button id="copyListBtn" class="btn btn-primary">Copy to Clipboard</button>
+    </div>
+
+    <!-- ============================ -->
+    <!-- FLOATING ACTION BUTTON (FAB) -->
+    <!-- Appears only on allowed tabs -->
+    <!-- ============================ -->
+    <button class="fab hidden" id="fabBtn">+</button>
+
+    <!-- ============================ -->
+    <!-- ADD / EDIT MODALS            -->
+    <!-- ============================ -->
+
+    <!-- Add Recipe Modal -->
+    <div id="recipeModal" class="hidden modal-bg">
+        <div class="modal">
+            <h2 id="recipeModalTitle">Add Recipe</h2>
+
+            <label>Meal Name:</label>
+            <input id="recipeNameInput">
+
+            <label>Category:</label>
+            <select id="recipeCategoryInput">
+                <option>Low Prep</option>
+                <option>Medium Prep</option>
+                <option>High Prep / Long Cook</option>
+                <option>Grilling</option>
+                <option>Breakfast</option>
+                <option>Crock Pot</option>
+                <option>Sides</option>
+                <option>Appetizers</option>
+                <option>Baby Meals</option>
+            </select>
+
+            <h3>Ingredients</h3>
+            <div id="ingredientList"></div>
+
+            <button id="addIngredientBtn" class="btn btn-secondary small">Add Ingredient</button>
+
+            <div class="modal-actions">
+                <button id="saveRecipeBtn" class="btn btn-primary">Save</button>
+                <button id="closeRecipeModal" class="btn btn-secondary">Cancel</button>
             </div>
-            <div id="groceryListContainer"></div>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <!-- FAB BUTTONS -->
-    <button id="fab-add-recipe" class="fab" data-tab-target="recipesView">+</button>
-    <button id="fab-add-custom" class="fab hidden" data-tab-target="plannerView">+</button>
-    <button id="fab-add-other" class="fab hidden" data-tab-target="otherView">+</button>
-    <button id="fab-add-store" class="fab hidden" data-tab-target="storesView">+</button>
+    <!-- Add Other Item Modal -->
+    <div id="otherItemModal" class="hidden modal-bg">
+        <div class="modal">
+            <h2>Add Other Item</h2>
 
-    <!-- SCRIPT -->
-    <script src="scipt.js"></script>
+            <label>Item Name:</label>
+            <input id="otherItemNameInput">
+
+            <label>Store:</label>
+            <select id="otherItemStoreInput"></select>
+
+            <div class="modal-actions">
+                <button id="saveOtherItemBtn" class="btn btn-primary">Save</button>
+                <button id="closeOtherItemModal" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Store Modal -->
+    <div id="storeModal" class="hidden modal-bg">
+        <div class="modal">
+            <h2>Add Store</h2>
+
+            <label>Store Name:</label>
+            <input id="storeNameInput">
+
+            <div class="modal-actions">
+                <button id="saveStoreBtn" class="btn btn-primary">Save</button>
+                <button id="closeStoreModal" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Planner Custom Item Modal -->
+    <div id="plannerCustomModal" class="hidden modal-bg">
+        <div class="modal">
+            <h2>Add Custom Item</h2>
+
+            <label>Item Name:</label>
+            <input id="plannerCustomName">
+
+            <label>Store:</label>
+            <select id="plannerCustomStore"></select>
+
+            <div class="modal-actions">
+                <button id="savePlannerCustomBtn" class="btn btn-primary">Save</button>
+                <button id="closePlannerCustomModal" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include JS -->
+    <script src="script.js"></script>
 </body>
 </html>
