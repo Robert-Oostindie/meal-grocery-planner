@@ -41,6 +41,8 @@
       display: flex;
       flex-direction: column;
       background: linear-gradient(180deg, #eef2ff 0, #f9fafb 40%, #f3f4f6 100%);
+      position: relative;
+      overflow: hidden;
     }
 
     header {
@@ -357,10 +359,6 @@
       align-items: center;
     }
 
-    .tiny {
-      font-size: 10px;
-    }
-
     .checkbox-row {
       display: flex;
       align-items: center;
@@ -486,52 +484,73 @@
       margin: 8px 0;
     }
 
-    .pill-warning {
-      background: #fef3c7;
-      color: #92400e;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .pill-success {
-      background: #ecfdf3;
-      color: #166534;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
     .inline-note {
       font-size: 11px;
       color: var(--text-muted);
       margin-top: 4px;
     }
 
-    .mt-4 {
-      margin-top: 4px;
-    }
-
-    .mt-6 {
-      margin-top: 6px;
-    }
-
-    .mt-8 {
-      margin-top: 8px;
-    }
-
-    .mt-10 {
-      margin-top: 10px;
-    }
+    .mt-4 { margin-top: 4px; }
+    .mt-6 { margin-top: 6px; }
+    .mt-8 { margin-top: 8px; }
+    .mt-10 { margin-top: 10px; }
 
     .hidden {
       display: none !important;
+    }
+
+    /* Ingredient modal (bottom sheet) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.35);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 80;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -10px 25px rgba(15, 23, 42, 0.3);
+      padding: 10px 14px 18px;
+      border-top: 1px solid rgba(148, 163, 184, 0.4);
+      animation: slideUp 0.18s ease-out;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      margin: 0 auto 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
 
     @media (prefers-color-scheme: dark) {
@@ -576,6 +595,14 @@
 
       .grocery-group {
         background: #020617;
+      }
+
+      .modal-sheet {
+        background: #020617;
+      }
+
+      .modal-handle {
+        background: #4b5563;
       }
     }
   </style>
@@ -622,7 +649,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Saved Meals</div>
-              <div class="card-subtitle">Tap a meal to manage ingredients, stores, and notes.</div>
+              <div class="card-subtitle">Tap a meal's buttons to manage ingredients, stores, and notes.</div>
             </div>
             <span class="badge" id="meal-count-badge">0 meals</span>
           </div>
@@ -805,6 +832,44 @@
         <span>Groceries</span>
       </button>
     </nav>
+
+    <!-- Ingredient modal (add/edit) -->
+    <div id="ingredient-modal" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <div class="modal-title" id="ingredient-modal-title">Add Ingredient</div>
+          <button class="btn btn-ghost btn-sm" id="ingredient-cancel">Close ✕</button>
+        </div>
+        <div class="mt-4">
+          <label for="ingredient-name">Ingredient name</label>
+          <input id="ingredient-name" type="text" placeholder="e.g. Chicken breast" />
+        </div>
+        <div class="mt-4 row">
+          <div>
+            <label for="ingredient-qty">Quantity (optional)</label>
+            <input id="ingredient-qty" type="text" placeholder="e.g. 2, 1.5" />
+          </div>
+          <div>
+            <label for="ingredient-unit">Unit</label>
+            <input id="ingredient-unit" type="text" value="CT" />
+          </div>
+        </div>
+        <div class="mt-4">
+          <label for="ingredient-store">Store (optional)</label>
+          <select id="ingredient-store">
+            <!-- options filled by JS from state.stores -->
+          </select>
+          <div class="inline-note">
+            Store list comes from the <strong>Stores</strong> tab (Aldi, Walmart, Festival Foods, Woodmans, etc.).
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline btn-sm" id="ingredient-cancel-2">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="ingredient-save">Save Ingredient</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1012,7 +1077,7 @@
           editBtn.className = "btn btn-ghost btn-sm";
           editBtn.innerHTML = "✏️";
           editBtn.addEventListener("click", () =>
-            editIngredient(meal.id, ing.id)
+            openIngredientModal(meal.id, ing.id)
           );
 
           const delBtn = document.createElement("button");
@@ -1034,7 +1099,7 @@
         const addIngBtn = document.createElement("button");
         addIngBtn.className = "btn btn-outline btn-sm mt-4";
         addIngBtn.textContent = "＋ Add Ingredient";
-        addIngBtn.addEventListener("click", () => addIngredientPrompt(meal.id));
+        addIngBtn.addEventListener("click", () => openIngredientModal(meal.id));
         mealEl.appendChild(addIngBtn);
 
         mealListEl.appendChild(mealEl);
@@ -1075,57 +1140,6 @@
       regenerateGroceryFromPlan(false);
     }
 
-    function addIngredientPrompt(mealId) {
-      const meal = state.meals.find((m) => m.id === mealId);
-      if (!meal) return;
-      const name = prompt("Ingredient name (e.g. Chicken breast):");
-      if (!name || !name.trim()) return;
-
-      const qty = prompt("Quantity (optional, e.g. 2, 1.5):", "");
-      const unit = prompt("Unit (optional, e.g. lb, pack, can):", "");
-      const store = prompt(
-        `Store (optional, or leave blank to set later):\n${state.stores.join(
-          ", "
-        )}`,
-        ""
-      );
-
-      const ing = {
-        id: makeId("ing"),
-        name: name.trim(),
-        qty: qty ? qty.trim() : "",
-        unit: unit ? unit.trim() : "",
-        store: store ? store.trim() : ""
-      };
-      meal.ingredients.push(ing);
-      saveState();
-      renderMeals();
-      renderPantry();
-    }
-
-    function editIngredient(mealId, ingId) {
-      const meal = state.meals.find((m) => m.id === mealId);
-      if (!meal) return;
-      const ing = meal.ingredients.find((i) => i.id === ingId);
-      if (!ing) return;
-
-      const name = prompt("Ingredient name:", ing.name) ?? ing.name;
-      const qty = prompt("Quantity:", ing.qty || "") ?? ing.qty;
-      const unit = prompt("Unit:", ing.unit || "") ?? ing.unit;
-      const store = prompt(
-        `Store (leave blank to keep existing):\n${state.stores.join(", ")}`,
-        ing.store || ""
-      );
-
-      ing.name = name.trim() || ing.name;
-      ing.qty = (qty || "").trim();
-      ing.unit = (unit || "").trim();
-      ing.store = (store || "").trim();
-      saveState();
-      renderMeals();
-      renderPantry();
-    }
-
     function deleteIngredient(mealId, ingId) {
       const meal = state.meals.find((m) => m.id === mealId);
       if (!meal) return;
@@ -1137,6 +1151,134 @@
       renderMeals();
       renderPantry();
     }
+
+    // ---------- INGREDIENT MODAL ----------
+    const ingredientModal = document.getElementById("ingredient-modal");
+    const ingredientModalTitle = document.getElementById("ingredient-modal-title");
+    const ingredientNameInput = document.getElementById("ingredient-name");
+    const ingredientQtyInput = document.getElementById("ingredient-qty");
+    const ingredientUnitInput = document.getElementById("ingredient-unit");
+    const ingredientStoreSelect = document.getElementById("ingredient-store");
+    const ingredientSaveBtn = document.getElementById("ingredient-save");
+    const ingredientCancelBtn = document.getElementById("ingredient-cancel");
+    const ingredientCancelBtn2 = document.getElementById("ingredient-cancel-2");
+
+    let currentMealForIngredient = null;
+    let currentIngredientId = null;
+
+    function populateStoreSelect(selectedStore = "") {
+      ingredientStoreSelect.innerHTML = "";
+      const noneOption = document.createElement("option");
+      noneOption.value = "";
+      noneOption.textContent = "No specific store";
+      ingredientStoreSelect.appendChild(noneOption);
+
+      state.stores.forEach((store) => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        ingredientStoreSelect.appendChild(opt);
+      });
+
+      ingredientStoreSelect.value = selectedStore || "";
+    }
+
+    function openIngredientModal(mealId, ingId = null) {
+      currentMealForIngredient = mealId;
+      currentIngredientId = ingId;
+
+      const meal = state.meals.find((m) => m.id === mealId);
+      if (!meal) return;
+
+      if (ingId) {
+        ingredientModalTitle.textContent = "Edit Ingredient";
+        const ing = meal.ingredients.find((i) => i.id === ingId);
+        if (!ing) return;
+        ingredientNameInput.value = ing.name || "";
+        ingredientQtyInput.value = ing.qty || "";
+        ingredientUnitInput.value = ing.unit || "CT";
+        populateStoreSelect(ing.store || "");
+      } else {
+        ingredientModalTitle.textContent = "Add Ingredient";
+        ingredientNameInput.value = "";
+        ingredientQtyInput.value = "";
+        ingredientUnitInput.value = "CT"; // default count
+        populateStoreSelect("");
+      }
+
+      ingredientModal.classList.remove("hidden");
+      ingredientNameInput.focus();
+    }
+
+    function closeIngredientModal() {
+      ingredientModal.classList.add("hidden");
+      currentMealForIngredient = null;
+      currentIngredientId = null;
+    }
+
+    ingredientCancelBtn.addEventListener("click", closeIngredientModal);
+    ingredientCancelBtn2.addEventListener("click", closeIngredientModal);
+
+    ingredientSaveBtn.addEventListener("click", () => {
+      if (!currentMealForIngredient) {
+        closeIngredientModal();
+        return;
+      }
+      const meal = state.meals.find((m) => m.id === currentMealForIngredient);
+      if (!meal) {
+        closeIngredientModal();
+        return;
+      }
+
+      const name = ingredientNameInput.value.trim();
+      const qty = ingredientQtyInput.value.trim();
+      let unit = ingredientUnitInput.value.trim();
+      const store = ingredientStoreSelect.value.trim();
+
+      if (!name) {
+        alert("Please enter an ingredient name.");
+        ingredientNameInput.focus();
+        return;
+      }
+
+      // Default unit = CT if left blank
+      if (!unit) unit = "CT";
+
+      if (currentIngredientId) {
+        // edit existing
+        const ing = meal.ingredients.find((i) => i.id === currentIngredientId);
+        if (!ing) {
+          closeIngredientModal();
+          return;
+        }
+        ing.name = name;
+        ing.qty = qty;
+        ing.unit = unit;
+        ing.store = store;
+      } else {
+        // add new
+        const ing = {
+          id: makeId("ing"),
+          name,
+          qty,
+          unit,
+          store
+        };
+        meal.ingredients.push(ing);
+      }
+
+      saveState();
+      renderMeals();
+      renderPantry();
+      closeIngredientModal();
+    });
+
+    // Close modal when tapping backdrop (but not sheet)
+    ingredientModal.addEventListener("click", (e) => {
+      if (e.target === ingredientModal) {
+        closeIngredientModal();
+      }
+    });
 
     // ---------- PLANNER ----------
     const plannerMealsEl = document.getElementById("planner-meals");
@@ -1217,7 +1359,7 @@
             name: ing.name,
             store: ing.store || "",
             qty: 0,
-            unit: ing.unit || "",
+            unit: ing.unit || "CT",
             checked:
               state.groceryList[key]?.checked || false
           };
@@ -1226,7 +1368,6 @@
           if (!isNaN(qtyNum)) {
             current.qty += qtyNum;
           } else if (!current.qty && ing.qty) {
-            // For non-numeric quantities, just store the first textual value
             current.qty = ing.qty;
           }
 
