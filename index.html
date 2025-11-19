@@ -10,7 +10,7 @@
 
     <!-- TOP NAV -->
     <div class="top-tabs">
-        <button class="tab-btn" data-tab="recipesTab">Recipes</button>
+        <button class="tab-btn active" data-tab="recipesTab">Recipes</button>
         <button class="tab-btn" data-tab="plannerTab">Planner</button>
         <button class="tab-btn" data-tab="otherTab">Other</button>
         <button class="tab-btn" data-tab="storesTab">Stores</button>
@@ -23,7 +23,6 @@
         <div id="recipesTab" class="tab-page active">
 
             <h1>Recipes</h1>
-
             <div id="recipesContainer"></div>
 
             <h2>Add Recipe</h2>
@@ -39,6 +38,7 @@
 
             <h2>Ingredients</h2>
             <div id="recipeIngredientsContainer"></div>
+
             <button class="primary" onclick="addIngredientRow()">+ Add Ingredient</button>
 
         </div>
@@ -50,7 +50,7 @@
 
             <h2>Add Custom Item</h2>
             <div class="card">
-                <input id="customPlannerItem" type="text" placeholder="Ex: Aluminum foil">
+                <input id="customPlannerItem" type="text" placeholder="Ex: Paper towels">
                 <button class="primary" onclick="addCustomPlannerItem()">Add</button>
             </div>
 
@@ -89,7 +89,7 @@
 
     </div>
 
-    <!-- FAB -->
+    <!-- FLOATING BUTTON -->
     <div class="fab" onclick="fabAction()">+</div>
 
     <script src="script.js"></script>
