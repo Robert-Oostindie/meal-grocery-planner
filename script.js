@@ -1,26 +1,39 @@
-// ---------- DATA MODEL ----------
-const STORAGE_KEY = "mealGroceryPlanner_v2";
+// ---------- CONSTANTS ----------
+const STORAGE_KEY = "mealGroceryPlanner_v3";
 
+const DEFAULT_CATEGORIES = [
+  "Low Prep",
+  "Medium Prep",
+  "High Prep / Longer Cook Times",
+  "Grilling",
+  "Breakfast",
+  "Crock Pot",
+  "Sides",
+  "Appetizers",
+  "Baby Meals"
+];
+
+// ---------- DATA MODEL ----------
 let state = {
   stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans", "Other"],
-  meals: [],          // {id, name, notes, ingredients[]}
-  weekPlan: {         // which meals are selected for this week
+  meals: [],          // {id, name, notes, category, ingredients[]}
+  weekPlan: {         // selected meals
     selectedMealIds: []
   },
-  pantry: {           // ingredientKey -> {have, updated}
-  },
-  groceryList: {      // key -> {name, store, qty, unit, checked}
-  },
-  extras: []          // [{id, name, qty, unit, store, include}]
+  pantry: {},         // ingredientKey -> {have, updated}
+  groceryList: {},    // key -> {name, store, qty, unit, checked, comments[]}
+  extras: [],         // [{id, name, qty, unit, store, include}]
+  mealCategories: [], // custom categories
+  plannerOverrides: {} // {mealId: {ingredientId: {include, comment}}}
 };
 
-// DOM refs (assigned in init)
+// DOM refs
 let tabSections = {};
-let mealNameInput, mealNotesInput, addMealBtn, mealListEl, mealCountBadge, mealsEmptyState;
+let mealNameInput, mealCategoryInput, mealCategoryDatalist, mealNotesInput, addMealBtn, mealListEl, mealCountBadge, mealsEmptyState;
 let plannerMealsEl, plannerEmptyEl, generateListBtn;
 let pantrySearchInput, pantryListEl, pantryEmptyEl;
 let storeNameInput, addStoreBtn, storeListEl, exportBtn, resetBtn, exportStatusEl;
-let groceryGroupsEl, groceryEmptyEl, refreshFromPlanBtn, clearChecksBtn;
+let groceryGroupsEl, groceryEmptyEl, refreshFromPlanBtn, clearChecksBtn, copyListBtn;
 let extraNameInput, extraQtyInput, extraUnitInput, extraStoreSelect, addExtraBtn, extrasListEl, extrasEmptyEl;
 let ingredientModal, ingredientModalTitle, ingredientNameInput, ingredientQtyInput,
     ingredientUnitInput, ingredientStoreSelect, ingredientGroupInput, ingredientGroupDatalist,
@@ -84,6 +97,10 @@ function makeDefaultIngredient(mealId, ingredientId, groupName) {
   regenerateGroceryFromPlan(false);
 }
 
+function getMealCategoryName(meal) {
+  return (meal.category && meal.category.trim()) || "Uncategorized";
+}
+
 // ---------- TABS ----------
 function switchTab(tabName) {
   Object.entries(tabSections).forEach(([name, el]) => {
@@ -103,37 +120,57 @@ function switchTab(tabName) {
 // ---------- MEALS ----------
 function addMeal() {
   const name = mealNameInput.value.trim();
+  const category = mealCategoryInput.value.trim();
   const notes = mealNotesInput.value.trim();
   if (!name) {
     alert("Please enter a meal name.");
     mealNameInput.focus();
     return;
   }
+
+  if (category) {
+    if (!state.mealCategories.includes(category)) {
+      state.mealCategories.push(category);
+    }
+  }
+
   const newMeal = {
     id: makeId("meal"),
     name,
     notes,
+    category: category || "",
     ingredients: [] // {id, name, qty, unit, store, subGroup, isDefault}
   };
   state.meals.push(newMeal);
   mealNameInput.value = "";
+  mealCategoryInput.value = "";
   mealNotesInput.value = "";
   saveState();
   renderMeals();
   renderPlanner();
   renderPantry();
+  renderMealCategorySuggestions();
 }
 
 function editMeal(mealId) {
   const meal = state.meals.find((m) => m.id === mealId);
   if (!meal) return;
   const newName = prompt("Meal name:", meal.name) ?? meal.name;
+  const newCategory = prompt("Category (optional):", meal.category || "") ?? meal.category;
   const newNotes = prompt("Notes (optional):", meal.notes || "") ?? meal.notes;
+
   meal.name = newName.trim() || meal.name;
+  meal.category = (newCategory || "").trim();
   meal.notes = (newNotes || "").trim();
+
+  if (meal.category && !state.mealCategories.includes(meal.category)) {
+    state.mealCategories.push(meal.category);
+  }
+
   saveState();
   renderMeals();
   renderPlanner();
+  renderMealCategorySuggestions();
 }
 
 function deleteMeal(mealId) {
@@ -144,6 +181,7 @@ function deleteMeal(mealId) {
   state.meals = state.meals.filter((m) => m.id !== mealId);
   state.weekPlan.selectedMealIds =
     state.weekPlan.selectedMealIds.filter((id) => id !== mealId);
+  delete state.plannerOverrides[mealId];
   saveState();
   renderMeals();
   renderPlanner();
@@ -158,10 +196,26 @@ function deleteIngredient(mealId, ingId) {
   if (!ing) return;
   if (!confirm(`Remove ingredient "${ing.name}" from this meal?`)) return;
   meal.ingredients = meal.ingredients.filter((i) => i.id !== ingId);
+  if (state.plannerOverrides[mealId]) {
+    delete state.plannerOverrides[mealId][ingId];
+  }
   saveState();
   renderMeals();
   renderPantry();
   regenerateGroceryFromPlan(false);
+}
+
+function renderMealCategorySuggestions() {
+  const set = new Set([...DEFAULT_CATEGORIES, ...(state.mealCategories || [])]);
+  mealCategoryDatalist.innerHTML = "";
+  Array.from(set)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      mealCategoryDatalist.appendChild(opt);
+    });
 }
 
 function renderMeals() {
@@ -188,6 +242,13 @@ function renderMeals() {
     nameEl.textContent = meal.name;
     left.appendChild(nameEl);
 
+    if (meal.category) {
+      const catEl = document.createElement("div");
+      catEl.className = "meal-category-pill";
+      catEl.textContent = meal.category;
+      left.appendChild(catEl);
+    }
+
     if (meal.notes) {
       const notesEl = document.createElement("div");
       notesEl.className = "meal-notes";
@@ -203,7 +264,7 @@ function renderMeals() {
     const editBtn = document.createElement("button");
     editBtn.className = "btn btn-ghost btn-sm";
     editBtn.innerHTML = "✏️";
-    editBtn.title = "Edit meal name / notes";
+    editBtn.title = "Edit meal name / notes / category";
     editBtn.addEventListener("click", () => editMeal(meal.id));
 
     const deleteBtn = document.createElement("button");
@@ -414,7 +475,7 @@ function saveIngredientFromModal() {
     ing.unit = unit;
     ing.store = store;
     ing.subGroup = subGroup || "";
-    ing.isDefault = false; // recompute below
+    ing.isDefault = false;
   } else {
     ing = {
       id: makeId("ing"),
@@ -460,48 +521,175 @@ function renderPlanner() {
   }
   plannerEmptyEl.classList.add("hidden");
 
-  meals.forEach((meal) => {
-    const row = document.createElement("div");
-    row.className = "checkbox-row mt-4";
+  // determine categories in use
+  const categoriesInUse = new Set();
+  meals.forEach((m) => {
+    categoriesInUse.add(getMealCategoryName(m));
+  });
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = state.weekPlan.selectedMealIds.includes(meal.id);
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) {
-        if (!state.weekPlan.selectedMealIds.includes(meal.id)) {
-          state.weekPlan.selectedMealIds.push(meal.id);
-        }
-      } else {
-        state.weekPlan.selectedMealIds =
-          state.weekPlan.selectedMealIds.filter((id) => id !== meal.id);
-      }
-      saveState();
-    });
+  const orderedCategories = [];
 
-    const label = document.createElement("div");
-    label.className = "grocery-item-main";
-    const name = document.createElement("div");
-    name.className = "grocery-item-name";
-    name.textContent = meal.name;
-    const meta = document.createElement("div");
-    meta.className = "grocery-item-meta";
-    meta.textContent =
-      meal.ingredients.length === 0
-        ? "No ingredients yet"
-        : meal.ingredients.length + " ingredients";
+  DEFAULT_CATEGORIES.forEach((cat) => {
+    if (categoriesInUse.has(cat)) orderedCategories.push(cat);
+  });
 
-    label.appendChild(name);
-    label.appendChild(meta);
+  const others = Array.from(categoriesInUse).filter(
+    (c) => !DEFAULT_CATEGORIES.includes(c) && c !== "Uncategorized"
+  );
+  others.sort((a, b) => a.localeCompare(b));
+  orderedCategories.push(...others);
 
-    row.appendChild(checkbox);
-    row.appendChild(label);
+  if (categoriesInUse.has("Uncategorized")) {
+    orderedCategories.push("Uncategorized");
+  }
 
-    plannerMealsEl.appendChild(row);
+  orderedCategories.forEach((catName) => {
+    const catBlock = document.createElement("div");
+    catBlock.className = "planner-category-block";
+
+    const title = document.createElement("div");
+    title.className = "planner-category-title";
+    title.textContent = catName;
+    catBlock.appendChild(title);
+
+    meals
+      .filter((m) => getMealCategoryName(m) === catName)
+      .forEach((meal) => {
+        const row = document.createElement("div");
+        row.className = "planner-meal-row";
+
+        const mainLine = document.createElement("div");
+        mainLine.className = "planner-meal-mainline";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = state.weekPlan.selectedMealIds.includes(meal.id);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            if (!state.weekPlan.selectedMealIds.includes(meal.id)) {
+              state.weekPlan.selectedMealIds.push(meal.id);
+            }
+          } else {
+            state.weekPlan.selectedMealIds =
+              state.weekPlan.selectedMealIds.filter((id) => id !== meal.id);
+          }
+          saveState();
+        });
+
+        const info = document.createElement("div");
+        info.className = "planner-meal-info";
+        const nameEl = document.createElement("div");
+        nameEl.className = "planner-meal-name";
+        nameEl.textContent = meal.name;
+        const metaEl = document.createElement("div");
+        metaEl.className = "planner-meal-meta";
+        metaEl.textContent =
+          meal.ingredients.length === 0
+            ? "No ingredients yet"
+            : meal.ingredients.length + " ingredients";
+
+        info.appendChild(nameEl);
+        info.appendChild(metaEl);
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "planner-meal-toggle";
+        toggle.textContent = "Details ▾";
+
+        mainLine.appendChild(checkbox);
+        mainLine.appendChild(info);
+        mainLine.appendChild(toggle);
+
+        row.appendChild(mainLine);
+
+        const details = document.createElement("div");
+        details.className = "planner-meal-details hidden";
+
+        const overridesForMeal = state.plannerOverrides[meal.id] || {};
+
+        meal.ingredients.forEach((ing) => {
+          const ingRow = document.createElement("div");
+          ingRow.className = "planner-ingredient-row";
+
+          const topLine = document.createElement("div");
+          topLine.className = "planner-ingredient-topline";
+
+          const ingCheckbox = document.createElement("input");
+          ingCheckbox.type = "checkbox";
+          const override = overridesForMeal[ing.id];
+          const include = override ? override.include !== false : true;
+          ingCheckbox.checked = include;
+
+          ingCheckbox.addEventListener("change", () => {
+            if (!state.plannerOverrides[meal.id]) {
+              state.plannerOverrides[meal.id] = {};
+            }
+            if (!state.plannerOverrides[meal.id][ing.id]) {
+              state.plannerOverrides[meal.id][ing.id] = { include: true, comment: "" };
+            }
+            state.plannerOverrides[meal.id][ing.id].include = ingCheckbox.checked;
+            saveState();
+          });
+
+          const label = document.createElement("div");
+          label.className = "grocery-item-main";
+          const n = document.createElement("div");
+          n.className = "grocery-item-name";
+          n.textContent = ing.name || "(no name)";
+
+          const meta = document.createElement("div");
+          meta.className = "grocery-item-meta";
+          const parts = [];
+          if (ing.qty) parts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
+          if (ing.store) parts.push(ing.store);
+          if (ing.subGroup) parts.push("Group: " + ing.subGroup);
+          meta.textContent = parts.join(" • ") || "No quantity set";
+
+          label.appendChild(n);
+          label.appendChild(meta);
+
+          topLine.appendChild(ingCheckbox);
+          topLine.appendChild(label);
+
+          ingRow.appendChild(topLine);
+
+          const commentRow = document.createElement("div");
+          commentRow.className = "planner-ingredient-comment";
+          const commentInput = document.createElement("input");
+          commentInput.type = "text";
+          commentInput.placeholder = "Comment for this week (optional)";
+          commentInput.value = override?.comment || "";
+          commentInput.addEventListener("change", () => {
+            if (!state.plannerOverrides[meal.id]) {
+              state.plannerOverrides[meal.id] = {};
+            }
+            if (!state.plannerOverrides[meal.id][ing.id]) {
+              state.plannerOverrides[meal.id][ing.id] = { include: true, comment: "" };
+            }
+            state.plannerOverrides[meal.id][ing.id].comment = commentInput.value.trim();
+            saveState();
+          });
+          commentRow.appendChild(commentInput);
+          ingRow.appendChild(commentRow);
+
+          details.appendChild(ingRow);
+        });
+
+        toggle.addEventListener("click", () => {
+          const isHidden = details.classList.contains("hidden");
+          details.classList.toggle("hidden", !isHidden);
+          toggle.textContent = isHidden ? "Details ▴" : "Details ▾";
+        });
+
+        row.appendChild(details);
+        catBlock.appendChild(row);
+      });
+
+    plannerMealsEl.appendChild(catBlock);
   });
 }
 
-// ---------- SUBSTITUTE SELECTION MODAL (OPTION B, GROUPED BY MEAL) ----------
+// ---------- SUBSTITUTE SELECTION MODAL (grouped by meal) ----------
 function buildSubstituteGroupsForSelectedMeals() {
   const selectedMeals = state.meals.filter((m) =>
     state.weekPlan.selectedMealIds.includes(m.id)
@@ -516,7 +704,6 @@ function buildSubstituteGroupsForSelectedMeals() {
         groups[ing.subGroup].push(ing);
       }
     });
-    // only keep groups with actual substitutes (>1 ingredient)
     const filtered = {};
     Object.entries(groups).forEach(([gname, arr]) => {
       if (arr.length > 1) filtered[gname] = arr;
@@ -536,7 +723,6 @@ function openSubsModal() {
   const groupsByMeal = buildSubstituteGroupsForSelectedMeals();
   const mealIds = Object.keys(groupsByMeal);
   if (mealIds.length === 0) {
-    // no substitutes to choose -> go straight to list generation
     regenerateGroceryFromPlan(true, null);
     return;
   }
@@ -672,9 +858,12 @@ function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
       }
     });
 
+    const overridesForMeal = state.plannerOverrides[meal.id] || {};
+
     meal.ingredients.forEach((ing) => {
       if (!ing.name || !ing.name.trim()) return;
 
+      // substitute selection logic
       if (ing.subGroup) {
         const groupName = ing.subGroup;
         const mealSubs = subSelections ? subSelections[meal.id] : null;
@@ -688,13 +877,20 @@ function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
         }
       }
 
+      // planner overrides: include / exclude
+      const ov = overridesForMeal[ing.id];
+      if (ov && ov.include === false) {
+        return;
+      }
+
       const key = groceryItemKey(ing.name, ing.store);
       const current = items[key] || {
         name: ing.name,
         store: ing.store || "",
         qty: 0,
         unit: ing.unit || "CT",
-        checked: state.groceryList[key]?.checked || false
+        checked: state.groceryList[key]?.checked || false,
+        comments: []
       };
 
       const qtyNum = parseFloat(ing.qty);
@@ -702,6 +898,13 @@ function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
         current.qty += qtyNum;
       } else if (!current.qty && ing.qty) {
         current.qty = ing.qty;
+      }
+
+      if (ov && ov.comment && ov.comment.trim()) {
+        const c = ov.comment.trim();
+        if (!current.comments.includes(c)) {
+          current.comments.push(c);
+        }
       }
 
       items[key] = current;
@@ -727,7 +930,8 @@ function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
       store: extra.store || "",
       qty: 0,
       unit: extra.unit || "CT",
-      checked: state.groceryList[key]?.checked || false
+      checked: state.groceryList[key]?.checked || false,
+      comments: []
     };
 
     const qtyNum = parseFloat(extra.qty);
@@ -744,7 +948,7 @@ function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
   saveState();
   renderGroceryList();
   if (showAlert) {
-    alert("Grocery list generated from your weekly plan, substitutes, and extras.");
+    alert("Grocery list generated from your weekly plan, substitutes, overrides, and extras.");
   }
 }
 
@@ -1076,21 +1280,33 @@ function renderGroceryList() {
 
       const name = document.createElement("div");
       name.className = "grocery-item-name";
-      name.textContent = item.name;
+      const commentText = (item.comments && item.comments.length)
+        ? " (" + item.comments.join("; ") + ")"
+        : "";
+      name.textContent = item.name + commentText;
 
       const meta = document.createElement("div");
       meta.className = "grocery-item-meta";
       const parts = [];
-      if (item.qty) {
-        parts.push(
-          typeof item.qty === "number" && !isNaN(item.qty)
-            ? `${item.qty} ${item.unit || ""}`.trim()
-            : `${item.qty} ${item.unit || ""}`.trim()
-        );
-      } else if (item.unit) {
-        parts.push(item.unit);
+
+      // Quantity formatting: show count only if > 1, keep unit
+      let qtyDisplay = "";
+      if (typeof item.qty === "number" && !isNaN(item.qty)) {
+        if (item.qty !== 1) {
+          qtyDisplay = item.qty.toString();
+        }
+      } else if (typeof item.qty === "string" && item.qty.trim() !== "") {
+        if (item.qty.trim() !== "1") {
+          qtyDisplay = item.qty.trim();
+        }
       }
-      meta.textContent = parts.join(" • ") || "No quantity set";
+
+      if (item.unit) {
+        const label = (qtyDisplay ? qtyDisplay + " " : "") + item.unit;
+        parts.push(label);
+      }
+
+      meta.textContent = parts.join(" • ") || "";
       main.appendChild(name);
       main.appendChild(meta);
 
@@ -1103,9 +1319,58 @@ function renderGroceryList() {
   });
 }
 
+// Build plain text version for iPhone Notes
+function buildPlainTextGroceryList() {
+  const items = state.groceryList || {};
+  const keys = Object.keys(items);
+  if (!keys.length) return "";
+
+  const groups = {};
+  keys.forEach((key) => {
+    const item = items[key];
+    const store = item.store || "Other / Any Store";
+    if (!groups[store]) groups[store] = [];
+    groups[store].push({ key, ...item });
+  });
+
+  const sortedStores = Object.keys(groups).sort((a, b) => {
+    const ia = state.stores.indexOf(a);
+    const ib = state.stores.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  const lines = [];
+
+  sortedStores.forEach((store) => {
+    lines.push(store === "Unassigned" ? "Other / Any Store" : store);
+    groups[store].forEach((item) => {
+      const comments = (item.comments && item.comments.length)
+        ? " (" + item.comments.join("; ") + ")"
+        : "";
+
+      let qtyText = "";
+      if (typeof item.qty === "number" && !isNaN(item.qty)) {
+        if (item.qty !== 1) {
+          qtyText = ` - ${item.qty} ${item.unit || ""}`.trim();
+        }
+      } else if (typeof item.qty === "string" && item.qty.trim() !== "" && item.qty.trim() !== "1") {
+        qtyText = ` - ${item.qty.trim()} ${item.unit || ""}`.trim();
+      }
+
+      const line = `- ${item.name}${comments}${qtyText}`;
+      lines.push(line);
+    });
+    lines.push(""); // blank line between stores
+  });
+
+  return lines.join("\n").trim();
+}
+
 // ---------- INIT ----------
 function init() {
-  // tab sections
   tabSections = {
     meals: document.getElementById("tab-meals"),
     planner: document.getElementById("tab-planner"),
@@ -1123,6 +1388,8 @@ function init() {
 
   // meals
   mealNameInput = document.getElementById("meal-name");
+  mealCategoryInput = document.getElementById("meal-category");
+  mealCategoryDatalist = document.getElementById("meal-category-suggestions");
   mealNotesInput = document.getElementById("meal-notes");
   addMealBtn = document.getElementById("add-meal-btn");
   mealListEl = document.getElementById("meal-list");
@@ -1201,6 +1468,7 @@ function init() {
   groceryEmptyEl = document.getElementById("grocery-empty");
   refreshFromPlanBtn = document.getElementById("refresh-from-plan-btn");
   clearChecksBtn = document.getElementById("clear-checks-btn");
+  copyListBtn = document.getElementById("copy-list-btn");
 
   refreshFromPlanBtn.addEventListener("click", () => {
     openSubsModal();
@@ -1212,6 +1480,21 @@ function init() {
     });
     saveState();
     renderGroceryList();
+  });
+
+  copyListBtn.addEventListener("click", async () => {
+    const text = buildPlainTextGroceryList();
+    if (!text) {
+      alert("No grocery list to copy yet.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Grocery list copied! Paste it into Notes on your iPhone.");
+    } catch (e) {
+      console.error("Clipboard error", e);
+      alert("Could not copy automatically, but you can select and copy the text on this page.");
+    }
   });
 
   // extras
@@ -1262,9 +1545,14 @@ function init() {
   // load state & initial render
   loadState();
 
+  // ensure plannerOverrides + mealCategories exist
+  state.plannerOverrides = state.plannerOverrides || {};
+  state.mealCategories = state.mealCategories || [];
+
   // make sure dropdowns are populated before first render
   populateStoreSelect(ingredientStoreSelect, "");
   populateStoreSelect(extraStoreSelect, "");
+  renderMealCategorySuggestions();
 
   renderMeals();
   renderPlanner();
@@ -1275,3 +1563,4 @@ function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
+
