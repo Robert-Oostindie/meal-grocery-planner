@@ -1,166 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meal Planner Grocery App</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Meal & Grocery Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Top nav tabs -->
+  <nav class="top-nav">
+    <button class="nav-btn active" data-tab="recipesTab">Recipes</button>
+    <button class="nav-btn" data-tab="plannerTab">Planner</button>
+    <button class="nav-btn" data-tab="otherTab">Other</button>
+    <button class="nav-btn" data-tab="storesTab">Stores</button>
+    <button class="nav-btn" data-tab="groceryTab">Grocery List</button>
+  </nav>
 
-    <!-- ============================ -->
-    <!-- TOP NAVIGATION TABS          -->
-    <!-- ============================ -->
-    <div class="top-nav">
-        <button class="nav-btn active" data-tab="recipesTab">Recipes</button>
-        <button class="nav-btn" data-tab="plannerTab">Planner</button>
-        <button class="nav-btn" data-tab="otherTab">Other</button>
-        <button class="nav-btn" data-tab="storesTab">Stores</button>
-        <button class="nav-btn" data-tab="groceryTab">Grocery List</button>
+  <main>
+    <!-- RECIPES TAB -->
+    <section id="recipesTab" class="tab-section active">
+      <h1>Recipes</h1>
+      <div id="recipesContainer"></div>
+
+      <h2>Meal Categories</h2>
+      <div id="categoriesContainer"></div>
+    </section>
+
+    <!-- PLANNER TAB -->
+    <section id="plannerTab" class="tab-section">
+      <h1>Meal Planner</h1>
+      <button id="collapseAllBtn" class="btn btn-secondary small">Collapse All</button>
+
+      <div id="plannerMealsContainer"></div>
+
+      <h2>Other Needed Items</h2>
+      <div id="plannerCustomContainer"></div>
+    </section>
+
+    <!-- OTHER ITEMS TAB -->
+    <section id="otherTab" class="tab-section">
+      <h1>Other Items</h1>
+      <div id="otherItemsContainer"></div>
+    </section>
+
+    <!-- STORES TAB -->
+    <section id="storesTab" class="tab-section">
+      <h1>Stores</h1>
+      <div id="storesContainer"></div>
+    </section>
+
+    <!-- GROCERY LIST TAB -->
+    <section id="groceryTab" class="tab-section">
+      <h1>Grocery List</h1>
+      <div id="groceryListContainer"></div>
+      <button id="copyListBtn" class="btn btn-primary">Copy to Clipboard</button>
+    </section>
+  </main>
+
+  <!-- Floating Action Button -->
+  <button id="fabBtn" class="fab">+</button>
+
+  <!-- RECIPE MODAL -->
+  <div id="recipeModal" class="modal-bg hidden">
+    <div class="modal">
+      <h2 id="recipeModalTitle">Add Recipe</h2>
+
+      <label>Meal Name:</label>
+      <input id="recipeNameInput" type="text" />
+
+      <label>Category:</label>
+      <select id="recipeCategoryInput"></select>
+
+      <h3>Ingredients</h3>
+      <div id="ingredientList"></div>
+      <button id="addIngredientBtn" class="btn btn-secondary small">Add Ingredient</button>
+
+      <div class="modal-actions">
+        <button id="saveRecipeBtn" class="btn btn-primary">Save</button>
+        <button id="closeRecipeModal" class="btn btn-secondary">Cancel</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ============================ -->
-    <!-- RECIPES TAB                  -->
-    <!-- ============================ -->
-    <div id="recipesTab" class="tab-section active">
-        <h1>Recipes</h1>
-        <div id="recipesContainer"></div>
+  <!-- OTHER ITEM MODAL -->
+  <div id="otherItemModal" class="modal-bg hidden">
+    <div class="modal">
+      <h2>Add Other Item</h2>
+
+      <label>Item Name:</label>
+      <input id="otherItemNameInput" type="text" />
+
+      <label>Store:</label>
+      <select id="otherItemStoreInput"></select>
+
+      <div class="modal-actions">
+        <button id="saveOtherItemBtn" class="btn btn-primary">Save</button>
+        <button id="closeOtherItemModal" class="btn btn-secondary">Cancel</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ============================ -->
-    <!-- PLANNER TAB                  -->
-    <!-- ============================ -->
-    <div id="plannerTab" class="tab-section">
-        <h1>Meal Planner</h1>
+  <!-- STORE MODAL -->
+  <div id="storeModal" class="modal-bg hidden">
+    <div class="modal">
+      <h2>Add Store</h2>
 
-        <button class="btn btn-secondary small" id="collapseAllBtn">Collapse All</button>
+      <label>Store Name:</label>
+      <input id="storeNameInput" type="text" />
 
-        <div id="plannerMealsContainer"></div>
-
-        <h2>Other Needed Items</h2>
-        <div id="plannerCustomContainer"></div>
+      <div class="modal-actions">
+        <button id="saveStoreBtn" class="btn btn-primary">Save</button>
+        <button id="closeStoreModal" class="btn btn-secondary">Cancel</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ============================ -->
-    <!-- OTHER ITEMS TAB              -->
-    <!-- ============================ -->
-    <div id="otherTab" class="tab-section">
-        <h1>Other Items</h1>
-        <div id="otherItemsContainer"></div>
+  <!-- PLANNER CUSTOM ITEM MODAL -->
+  <div id="plannerCustomModal" class="modal-bg hidden">
+    <div class="modal">
+      <h2>Add Custom Item</h2>
+
+      <label>Item Name:</label>
+      <input id="plannerCustomName" type="text" />
+
+      <label>Store:</label>
+      <select id="plannerCustomStore"></select>
+
+      <div class="modal-actions">
+        <button id="savePlannerCustomBtn" class="btn btn-primary">Save</button>
+        <button id="closePlannerCustomModal" class="btn btn-secondary">Cancel</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ============================ -->
-    <!-- STORES TAB                   -->
-    <!-- ============================ -->
-    <div id="storesTab" class="tab-section">
-        <h1>Stores</h1>
-        <div id="storesContainer"></div>
-    </div>
-
-    <!-- ============================ -->
-    <!-- GROCERY LIST TAB             -->
-    <!-- ============================ -->
-    <div id="groceryTab" class="tab-section">
-        <h1>Grocery List</h1>
-        <div id="groceryListContainer"></div>
-        <button id="copyListBtn" class="btn btn-primary">Copy to Clipboard</button>
-    </div>
-
-    <!-- ============================ -->
-    <!-- FLOATING ACTION BUTTON (FAB) -->
-    <!-- Appears only on allowed tabs -->
-    <!-- ============================ -->
-    <button class="fab hidden" id="fabBtn">+</button>
-
-    <!-- ============================ -->
-    <!-- ADD / EDIT MODALS            -->
-    <!-- ============================ -->
-
-    <!-- Add Recipe Modal -->
-    <div id="recipeModal" class="hidden modal-bg">
-        <div class="modal">
-            <h2 id="recipeModalTitle">Add Recipe</h2>
-
-            <label>Meal Name:</label>
-            <input id="recipeNameInput">
-
-            <label>Category:</label>
-            <select id="recipeCategoryInput">
-                <option>Low Prep</option>
-                <option>Medium Prep</option>
-                <option>High Prep / Long Cook</option>
-                <option>Grilling</option>
-                <option>Breakfast</option>
-                <option>Crock Pot</option>
-                <option>Sides</option>
-                <option>Appetizers</option>
-                <option>Baby Meals</option>
-            </select>
-
-            <h3>Ingredients</h3>
-            <div id="ingredientList"></div>
-
-            <button id="addIngredientBtn" class="btn btn-secondary small">Add Ingredient</button>
-
-            <div class="modal-actions">
-                <button id="saveRecipeBtn" class="btn btn-primary">Save</button>
-                <button id="closeRecipeModal" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Other Item Modal -->
-    <div id="otherItemModal" class="hidden modal-bg">
-        <div class="modal">
-            <h2>Add Other Item</h2>
-
-            <label>Item Name:</label>
-            <input id="otherItemNameInput">
-
-            <label>Store:</label>
-            <select id="otherItemStoreInput"></select>
-
-            <div class="modal-actions">
-                <button id="saveOtherItemBtn" class="btn btn-primary">Save</button>
-                <button id="closeOtherItemModal" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Store Modal -->
-    <div id="storeModal" class="hidden modal-bg">
-        <div class="modal">
-            <h2>Add Store</h2>
-
-            <label>Store Name:</label>
-            <input id="storeNameInput">
-
-            <div class="modal-actions">
-                <button id="saveStoreBtn" class="btn btn-primary">Save</button>
-                <button id="closeStoreModal" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Planner Custom Item Modal -->
-    <div id="plannerCustomModal" class="hidden modal-bg">
-        <div class="modal">
-            <h2>Add Custom Item</h2>
-
-            <label>Item Name:</label>
-            <input id="plannerCustomName">
-
-            <label>Store:</label>
-            <select id="plannerCustomStore"></select>
-
-            <div class="modal-actions">
-                <button id="savePlannerCustomBtn" class="btn btn-primary">Save</button>
-                <button id="closePlannerCustomModal" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Include JS -->
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
