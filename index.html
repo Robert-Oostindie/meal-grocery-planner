@@ -8,25 +8,25 @@
 </head>
 <body>
 
-    <!-- NAV TABS -->
+    <!-- TOP NAV -->
     <div class="top-tabs">
-        <button id="tab-recipes" onclick="showTab('recipes')">Recipes</button>
-        <button id="tab-planner" onclick="showTab('planner')">Planner</button>
-        <button id="tab-other" onclick="showTab('other')">Other</button>
-        <button id="tab-stores" onclick="showTab('stores')">Stores</button>
-        <button id="tab-grocery" onclick="showTab('grocery')">Grocery List</button>
+        <button class="tab-btn" data-tab="recipesTab">Recipes</button>
+        <button class="tab-btn" data-tab="plannerTab">Planner</button>
+        <button class="tab-btn" data-tab="otherTab">Other</button>
+        <button class="tab-btn" data-tab="storesTab">Stores</button>
+        <button class="tab-btn" data-tab="groceryTab">Grocery List</button>
     </div>
 
     <div class="app-container">
 
-        <!-- ---------------------- RECIPES TAB ---------------------- -->
-        <div id="recipes" class="tab-page">
+        <!-- RECIPES TAB -->
+        <div id="recipesTab" class="tab-page active">
 
             <h1>Recipes</h1>
+
             <div id="recipesContainer"></div>
 
             <h2>Add Recipe</h2>
-
             <div class="card">
                 <label>Meal Name:</label>
                 <input id="recipeName" type="text" placeholder="Ex: Chicken Alfredo">
@@ -34,20 +34,18 @@
                 <label>Category:</label>
                 <select id="recipeCategory"></select>
 
-                <button class="primary" onclick="addRecipe()">Save Recipe</button>
+                <button class="primary" onclick="saveRecipe()">Save Recipe</button>
             </div>
 
             <h2>Ingredients</h2>
             <div id="recipeIngredientsContainer"></div>
-
             <button class="primary" onclick="addIngredientRow()">+ Add Ingredient</button>
+
         </div>
 
-        <!-- ---------------------- PLANNER TAB ---------------------- -->
-        <div id="planner" class="tab-page" style="display:none;">
-
+        <!-- PLANNER TAB -->
+        <div id="plannerTab" class="tab-page">
             <h1>Meal Planner</h1>
-
             <div id="plannerMeals"></div>
 
             <h2>Add Custom Item</h2>
@@ -59,9 +57,8 @@
             <button onclick="collapseAllPlanner()">Collapse All</button>
         </div>
 
-        <!-- ---------------------- OTHER TAB ---------------------- -->
-        <div id="other" class="tab-page" style="display:none;">
-
+        <!-- OTHER TAB -->
+        <div id="otherTab" class="tab-page">
             <h1>Meal Categories</h1>
             <div id="categoryList"></div>
 
@@ -72,9 +69,8 @@
             </div>
         </div>
 
-        <!-- ---------------------- STORES TAB ---------------------- -->
-        <div id="stores" class="tab-page" style="display:none;">
-
+        <!-- STORES TAB -->
+        <div id="storesTab" class="tab-page">
             <h1>Stores</h1>
             <div id="storeList"></div>
 
@@ -85,16 +81,16 @@
             </div>
         </div>
 
-        <!-- ---------------------- GROCERY LIST TAB ---------------------- -->
-        <div id="grocery" class="tab-page" style="display:none;">
+        <!-- GROCERY TAB -->
+        <div id="groceryTab" class="tab-page">
             <h1>Grocery List</h1>
             <div id="groceryContainer"></div>
         </div>
 
     </div>
 
-    <!-- FLOATING ACTION BUTTON -->
-    <div class="fab" onclick="openAddMenu()">+</div>
+    <!-- FAB -->
+    <div class="fab" onclick="fabAction()">+</div>
 
     <script src="script.js"></script>
 </body>
