@@ -2,7 +2,7 @@
 // STORAGE SETUP
 // ----------------------
 const LS_KEY = "mealPlanner_v1";
-
+let ingredientRows = [];
 let state = {
     meals: [],
     categories: [
