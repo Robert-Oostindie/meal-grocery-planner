@@ -232,3 +232,13 @@ textarea {
         font-size: 1.15rem;
     }
 }
+/* Hide all tabs by default */
+.tab-page {
+    display: none;
+}
+
+/* Show only the active one */
+.tab-page.active {
+    display: block;
+}
+
