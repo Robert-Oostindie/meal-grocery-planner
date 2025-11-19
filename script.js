@@ -1,1594 +1,629 @@
-// ---------- CONSTANTS ----------
-const STORAGE_KEY = "mealGroceryPlanner_v3";
+/****************************************************
+ * GROCERY PLANNER v2.0
+ * Full Script.js — Generated for your custom app
+ * 
+ * Features:
+ * - Recipes w/ categories & ingredients
+ * - Ingredient groups (substitutions)
+ * - Planner with collapse/expand
+ * - Planner-only items
+ * - Store management
+ * - Extras (non-meal items)
+ * - Grocery list generation
+ * - Versioned data structures
+ ****************************************************/
 
-const DEFAULT_CATEGORIES = [
-  "Low Prep",
-  "Medium Prep",
-  "High Prep / Longer Cook Times",
-  "Grilling",
-  "Breakfast",
-  "Crock Pot",
-  "Sides",
-  "Appetizers",
-  "Baby Meals"
-];
+// ==================================================
+// VERSIONED STORAGE
+// ==================================================
+const STORAGE_KEY = "mealPlannerData_v2";
 
-// ---------- DATA MODEL ----------
-let state = {
-  stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans", "Other"],
-  meals: [],          // {id, name, notes, category, ingredients[]}
-  weekPlan: {         // selected meals
-    selectedMealIds: []
-  },
-  pantry: {},         // ingredientKey -> {have, updated}
-  groceryList: {},    // key -> {name, store, qty, unit, checked, comments[]}
-  extras: [],         // [{id, name, qty, unit, store, include}]
-  mealCategories: [], // custom categories
-  plannerOverrides: {} // {mealId: {ingredientId: {include, comment}}}
+let appData = {
+    version: 2,
+    meals: [],
+    categories: [
+        "Low Prep",
+        "Medium Prep",
+        "High Prep / Longer Cook Times",
+        "Grilling",
+        "Breakfast",
+        "Crock Pot",
+        "Sides",
+        "Appetizers",
+        "Baby Meals"
+    ],
+    customCategories: [],
+    stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
+    extras: [],
+    planner: {
+        selectedMeals: [],
+        ingredientsState: {},
+        plannerOnlyItems: []
+    }
 };
 
-// DOM refs
-let tabSections = {};
-let mealNameInput, mealCategorySelect, mealNotesInput, addMealBtn, mealListEl, mealCountBadge, mealsEmptyState;
-let plannerMealsEl, plannerEmptyEl, generateListBtn;
-let pantrySearchInput, pantryListEl, pantryEmptyEl;
-let storeNameInput, addStoreBtn, storeListEl, exportBtn, resetBtn, exportStatusEl;
-let groceryGroupsEl, groceryEmptyEl, refreshFromPlanBtn, clearChecksBtn, copyListBtn;
-let extraNameInput, extraQtyInput, extraUnitInput, extraStoreSelect, addExtraBtn, extrasListEl, extrasEmptyEl;
-let ingredientModal, ingredientModalTitle, ingredientNameInput, ingredientQtyInput,
-    ingredientUnitInput, ingredientStoreSelect, ingredientGroupInput, ingredientGroupDatalist,
-    ingredientDefaultCheckbox, ingredientSaveBtn;
-let ingredientCancelBtn, ingredientCancelBtn2;
-let subsModal, subsBody, subsApplyBtn, subsCancelBtn, subsCancelBtn2;
-
-let currentMealForIngredient = null;
-let currentIngredientId = null;
-
-// ---------- STORAGE HELPERS ----------
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    // Merge with defaults so new fields exist
-    state = Object.assign(state, parsed);
-  } catch (e) {
-    console.error("Failed to load state", e);
-  }
+function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 }
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.error("Failed to save state", e);
-  }
-}
-
-// ---------- UTILS ----------
-function makeId(prefix = "id") {
-  return prefix + "_" + Math.random().toString(36).slice(2, 10);
-}
-
-function ingredientKey(name) {
-  return name.trim().toLowerCase();
-}
-
-function groceryItemKey(name, store) {
-  return ingredientKey(name) + "::" + (store || "Unassigned");
-}
-
-// ensure only one default per group per meal
-function setDefaultForGroupOnMeal(meal, groupName, ingredientId) {
-  if (!groupName) return;
-  meal.ingredients.forEach((ing) => {
-    if (ing.subGroup === groupName) {
-      ing.isDefault = (ing.id === ingredientId);
+function loadData() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            appData = { ...appData, ...parsed };
+        } catch (e) { console.error("Corrupted data:", e); }
     }
-  });
 }
+loadData();
 
-function makeDefaultIngredient(mealId, ingredientId, groupName) {
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
-  setDefaultForGroupOnMeal(meal, groupName, ingredientId);
-  saveState();
-  renderMeals();
-  renderPantry();
-  regenerateGroceryFromPlan(false);
-}
+// ==================================================
+// TAB SWITCHING + FAB CONTROL
+// ==================================================
+function switchTab(tab) {
+    const sections = ["meals", "planner", "extras", "stores", "groceries", "pantry"];
+    sections.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add("hidden");
+    });
+    document.getElementById(`tab-${tab}`).classList.remove("hidden");
 
-function getMealCategoryName(meal) {
-  return (meal.category && meal.category.trim()) || "Uncategorized";
-}
-
-// ---------- TABS ----------
-function switchTab(tabName) {
-  Object.entries(tabSections).forEach(([name, el]) => {
-    if (name === tabName) el.classList.remove("hidden");
-    else el.classList.add("hidden");
-  });
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.tab === tabName);
-  });
-  if (tabName === "pantry") renderPantry();
-  if (tabName === "planner") renderPlanner();
-  if (tabName === "groceries") renderGroceryList();
-  if (tabName === "stores") renderStores();
-  if (tabName === "extras") renderExtras();
-}
-
-// ---------- MEALS ----------
-function addMeal() {
-  const name = mealNameInput.value.trim();
-  let category = mealCategorySelect.value;
-  const notes = mealNotesInput.value.trim();
-
-  if (!name) {
-    alert("Please enter a meal name.");
-    mealNameInput.focus();
-    return;
-  }
-
-  if (category === "__new__") {
-    category = "";
-  }
-
-  if (category && !DEFAULT_CATEGORIES.includes(category) && !state.mealCategories.includes(category)) {
-    state.mealCategories.push(category);
-  }
-
-  const newMeal = {
-    id: makeId("meal"),
-    name,
-    notes,
-    category: category || "",
-    ingredients: [] // {id, name, qty, unit, store, subGroup, isDefault}
-  };
-  state.meals.push(newMeal);
-
-  mealNameInput.value = "";
-  mealNotesInput.value = "";
-  mealCategorySelect.value = "";
-
-  saveState();
-  renderMeals();
-  renderPlanner();
-  renderPantry();
-  renderMealCategoryOptions();
-}
-
-function editMeal(mealId) {
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
-  const newName = prompt("Meal name:", meal.name) ?? meal.name;
-  const newCategory = prompt("Category (optional):", meal.category || "") ?? meal.category;
-  const newNotes = prompt("Notes (optional):", meal.notes || "") ?? meal.notes;
-
-  meal.name = newName.trim() || meal.name;
-  meal.category = (newCategory || "").trim();
-  meal.notes = (newNotes || "").trim();
-
-  if (meal.category && !DEFAULT_CATEGORIES.includes(meal.category) && !state.mealCategories.includes(meal.category)) {
-    state.mealCategories.push(meal.category);
-  }
-
-  saveState();
-  renderMeals();
-  renderPlanner();
-  renderMealCategoryOptions();
-}
-
-function deleteMeal(mealId) {
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
-  if (!confirm(`Delete "${meal.name}" and all its ingredients? This cannot be undone.`))
-    return;
-  state.meals = state.meals.filter((m) => m.id !== mealId);
-  state.weekPlan.selectedMealIds =
-    state.weekPlan.selectedMealIds.filter((id) => id !== mealId);
-  delete state.plannerOverrides[mealId];
-  saveState();
-  renderMeals();
-  renderPlanner();
-  renderPantry();
-  regenerateGroceryFromPlan(false);
-}
-
-function deleteIngredient(mealId, ingId) {
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
-  const ing = meal.ingredients.find((i) => i.id === ingId);
-  if (!ing) return;
-  if (!confirm(`Remove ingredient "${ing.name}" from this meal?`)) return;
-  meal.ingredients = meal.ingredients.filter((i) => i.id !== ingId);
-  if (state.plannerOverrides[mealId]) {
-    delete state.plannerOverrides[mealId][ingId];
-  }
-  saveState();
-  renderMeals();
-  renderPantry();
-  regenerateGroceryFromPlan(false);
-}
-
-// Build options for category dropdown
-function renderMealCategoryOptions() {
-  const set = new Set([...DEFAULT_CATEGORIES, ...(state.mealCategories || [])]);
-  const sorted = Array.from(set)
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
-
-  mealCategorySelect.innerHTML = "";
-
-  const emptyOpt = document.createElement("option");
-  emptyOpt.value = "";
-  emptyOpt.textContent = "No category";
-  mealCategorySelect.appendChild(emptyOpt);
-
-  sorted.forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat;
-    opt.textContent = cat;
-    mealCategorySelect.appendChild(opt);
-  });
-
-  const newOpt = document.createElement("option");
-  newOpt.value = "__new__";
-  newOpt.textContent = "Add new category…";
-  mealCategorySelect.appendChild(newOpt);
-}
-
-function renderMeals() {
-  mealListEl.innerHTML = "";
-  if (!state.meals.length) {
-    mealsEmptyState.classList.remove("hidden");
-    mealCountBadge.textContent = "0 meals";
-    return;
-  }
-  mealsEmptyState.classList.add("hidden");
-  mealCountBadge.textContent =
-    state.meals.length === 1 ? "1 meal" : state.meals.length + " meals";
-
-  state.meals.forEach((meal) => {
-    const mealEl = document.createElement("div");
-    mealEl.className = "meal-item";
-
-    const header = document.createElement("div");
-    header.className = "meal-header";
-
-    const left = document.createElement("div");
-    const nameEl = document.createElement("div");
-    nameEl.className = "meal-name";
-    nameEl.textContent = meal.name;
-    left.appendChild(nameEl);
-
-    if (meal.category) {
-      const catEl = document.createElement("div");
-      catEl.className = "meal-category-pill";
-      catEl.textContent = meal.category;
-      left.appendChild(catEl);
-    }
-
-    if (meal.notes) {
-      const notesEl = document.createElement("div");
-      notesEl.className = "meal-notes";
-      notesEl.textContent = meal.notes;
-      left.appendChild(notesEl);
-    }
-
-    header.appendChild(left);
-
-    const actions = document.createElement("div");
-    actions.className = "meal-actions";
-
-    const editBtn = document.createElement("button");
-    editBtn.className = "btn btn-ghost btn-sm";
-    editBtn.innerHTML = "✏️";
-    editBtn.title = "Edit meal name / notes / category";
-    editBtn.addEventListener("click", () => editMeal(meal.id));
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-ghost btn-sm";
-    deleteBtn.innerHTML = "🗑️";
-    deleteBtn.title = "Delete meal";
-    deleteBtn.addEventListener("click", () => deleteMeal(meal.id));
-
-    actions.appendChild(editBtn);
-    actions.appendChild(deleteBtn);
-    header.appendChild(actions);
-
-    mealEl.appendChild(header);
-
-    const ingSummary = document.createElement("div");
-    ingSummary.className = "section-note";
-    ingSummary.textContent =
-      meal.ingredients.length === 0
-        ? "No ingredients yet."
-        : meal.ingredients.length + " ingredients defined.";
-    mealEl.appendChild(ingSummary);
-
-    const ingredientsContainer = document.createElement("div");
-    ingredientsContainer.className = "ingredients-list";
-
-    meal.ingredients.forEach((ing) => {
-      const row = document.createElement("div");
-      row.className = "ingredient-row";
-
-      const main = document.createElement("div");
-      main.className = "ingredient-main";
-
-      const name = document.createElement("div");
-      name.className = "ingredient-name";
-      name.textContent = ing.name;
-      main.appendChild(name);
-
-      const meta = document.createElement("div");
-      meta.className = "ingredient-meta";
-      const parts = [];
-
-      const qtyStr = (ing.qty || "").toString().trim();
-      if (qtyStr && qtyStr !== "1") {
-        parts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
-      }
-      if (ing.store) parts.push("🛒 " + ing.store);
-      if (ing.subGroup) {
-        parts.push("Group: " + ing.subGroup + (ing.isDefault ? " (default)" : ""));
-      }
-      meta.textContent = parts.join(" • ") || "No quantity / store set";
-      main.appendChild(meta);
-
-      row.appendChild(main);
-
-      const actions = document.createElement("div");
-      actions.className = "ingredient-actions";
-
-      const editBtn = document.createElement("button");
-      editBtn.className = "btn btn-ghost btn-sm";
-      editBtn.innerHTML = "✏️";
-      editBtn.addEventListener("click", () =>
-        openIngredientModal(meal.id, ing.id)
-      );
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "btn btn-ghost btn-sm";
-      delBtn.innerHTML = "🗑️";
-      delBtn.addEventListener("click", () =>
-        deleteIngredient(meal.id, ing.id)
-      );
-
-      actions.appendChild(editBtn);
-      actions.appendChild(delBtn);
-
-      if (ing.subGroup) {
-        const defaultBtn = document.createElement("button");
-        defaultBtn.className = "btn btn-ghost btn-sm";
-        defaultBtn.textContent = ing.isDefault ? "⭐ Default" : "☆ Make default";
-        defaultBtn.title = "Set as default for group '" + ing.subGroup + "'";
-        defaultBtn.addEventListener("click", () =>
-          makeDefaultIngredient(meal.id, ing.id, ing.subGroup)
-        );
-        actions.appendChild(defaultBtn);
-      }
-
-      row.appendChild(actions);
-      ingredientsContainer.appendChild(row);
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        if (btn.dataset.tab === tab) btn.classList.add("active");
+        else btn.classList.remove("active");
     });
 
-    mealEl.appendChild(ingredientsContainer);
+    document.getElementById("fab-recipes").style.display =
+        tab === "meals" ? "flex" : "none";
 
-    const addIngBtn = document.createElement("button");
-    addIngBtn.className = "btn btn-outline btn-sm mt-4";
-    addIngBtn.textContent = "＋ Add Ingredient";
-    addIngBtn.addEventListener("click", () => openIngredientModal(meal.id));
-    mealEl.appendChild(addIngBtn);
-
-    mealListEl.appendChild(mealEl);
-  });
+    document.getElementById("fab-extras").style.display =
+        tab === "extras" ? "flex" : "none";
 }
+window.switchTab = switchTab;
 
-// ---------- INGREDIENT MODAL ----------
-function populateStoreSelect(selectEl, selectedStore = "") {
-  selectEl.innerHTML = "";
-  const noneOption = document.createElement("option");
-  noneOption.value = "";
-  noneOption.textContent = "No specific store";
-  selectEl.appendChild(noneOption);
+// ==================================================
+// CATEGORY MANAGEMENT
+// ==================================================
+function populateCategoryDropdown() {
+    const dropdown = document.getElementById("meal-category");
+    dropdown.innerHTML = "";
 
-  state.stores.forEach((store) => {
+    const sortedCategories = [...appData.categories, ...appData.customCategories]
+        .sort((a, b) => a.localeCompare(b));
+
+    sortedCategories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        dropdown.appendChild(opt);
+    });
+
+    // Add "New Category…" option
     const opt = document.createElement("option");
-    opt.value = store;
-    opt.textContent = store;
-    selectEl.appendChild(opt);
-  });
-
-  selectEl.value = selectedStore || "";
+    opt.value = "__new__";
+    opt.textContent = "➕ Add New Category…";
+    dropdown.appendChild(opt);
 }
 
-function populateGroupSuggestions(meal) {
-  ingredientGroupDatalist.innerHTML = "";
-  if (!meal) return;
-  const groups = new Set();
-  meal.ingredients.forEach((ing) => {
-    if (ing.subGroup) groups.add(ing.subGroup);
-  });
-  groups.forEach((g) => {
-    const opt = document.createElement("option");
-    opt.value = g;
-    ingredientGroupDatalist.appendChild(opt);
-  });
+function handleNewCategorySelection() {
+    const sel = document.getElementById("meal-category");
+    if (sel.value === "__new__") {
+        const name = prompt("Enter new category name:");
+        if (name && name.trim() !== "") {
+            appData.customCategories.push(name.trim());
+            saveData();
+            populateCategoryDropdown();
+            sel.value = name.trim();
+        } else {
+            populateCategoryDropdown();
+        }
+    }
 }
 
-function openIngredientModal(mealId, ingId = null) {
-  currentMealForIngredient = mealId;
-  currentIngredientId = ingId;
+// ==================================================
+// STORE MANAGEMENT
+// ==================================================
+function populateStoreDropdowns() {
+    const storeDropdowns = [
+        document.getElementById("ingredient-store"),
+        document.getElementById("extra-store")
+    ];
 
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
+    storeDropdowns.forEach(dd => {
+        dd.innerHTML = "";
+        appData.stores.sort().forEach(store => {
+            const opt = document.createElement("option");
+            opt.value = store;
+            opt.textContent = store;
+            dd.appendChild(opt);
+        });
+    });
+}
 
-  populateGroupSuggestions(meal);
+document.getElementById("add-store-btn").addEventListener("click", () => {
+    const input = document.getElementById("store-name");
+    const name = input.value.trim();
+    if (!name) return;
 
-  if (ingId) {
-    ingredientModalTitle.textContent = "Edit Ingredient";
-    const ing = meal.ingredients.find((i) => i.id === ingId);
-    if (!ing) return;
-    ingredientNameInput.value = ing.name || "";
-    ingredientQtyInput.value = ing.qty || "1";
-    ingredientUnitInput.value = ing.unit || "CT";
-    populateStoreSelect(ingredientStoreSelect, ing.store || "");
-    ingredientGroupInput.value = ing.subGroup || "";
-    ingredientDefaultCheckbox.checked = !!ing.isDefault;
-  } else {
-    ingredientModalTitle.textContent = "Add Ingredient";
-    ingredientNameInput.value = "";
-    ingredientQtyInput.value = "1";   // default count
-    ingredientUnitInput.value = "CT";
-    populateStoreSelect(ingredientStoreSelect, "");
-    ingredientGroupInput.value = "";
-    ingredientDefaultCheckbox.checked = false;
-  }
+    if (!appData.stores.includes(name)) {
+        appData.stores.push(name);
+        saveData();
+        input.value = "";
+        populateStoreList();
+        populateStoreDropdowns();
+    }
+});
 
-  ingredientModal.classList.remove("hidden");
-  ingredientNameInput.focus();
+function populateStoreList() {
+    const container = document.getElementById("store-list");
+    container.innerHTML = "";
+
+    appData.stores.sort().forEach(store => {
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = store;
+        container.appendChild(tag);
+    });
+}
+
+// ==================================================
+// MEAL MANAGEMENT
+// ==================================================
+document.getElementById("add-meal-btn").addEventListener("click", () => {
+    const name = document.getElementById("meal-name").value.trim();
+    const category = document.getElementById("meal-category").value;
+    const notes = document.getElementById("meal-notes").value.trim();
+
+    if (!name) return;
+
+    const meal = {
+        id: crypto.randomUUID(),
+        name,
+        category,
+        notes,
+        ingredients: []
+    };
+
+    appData.meals.push(meal);
+    saveData();
+
+    document.getElementById("meal-name").value = "";
+    document.getElementById("meal-notes").value = "";
+
+    renderMealList();
+    renderPlannerMeals();
+});
+
+// ==================================================
+// INGREDIENT MODAL
+// ==================================================
+let currentMealId = null;
+let editingIngredientIndex = null;
+
+function openIngredientModal(mealId, ingredientIndex = null) {
+    currentMealId = mealId;
+    editingIngredientIndex = ingredientIndex;
+
+    const modal = document.getElementById("ingredient-modal");
+    modal.classList.remove("hidden");
+
+    const meal = appData.meals.find(m => m.id === mealId);
+
+    if (ingredientIndex !== null) {
+        const ing = meal.ingredients[ingredientIndex];
+        document.getElementById("ingredient-name").value = ing.name;
+        document.getElementById("ingredient-qty").value = ing.qty;
+        document.getElementById("ingredient-unit").value = ing.unit;
+        document.getElementById("ingredient-store").value = ing.store;
+        document.getElementById("ingredient-group").value = ing.group || "";
+        document.getElementById("ingredient-default").checked = ing.isDefault || false;
+    } else {
+        document.getElementById("ingredient-name").value = "";
+        document.getElementById("ingredient-qty").value = "1";
+        document.getElementById("ingredient-unit").value = "CT";
+        document.getElementById("ingredient-store").selectedIndex = 0;
+        document.getElementById("ingredient-group").value = "";
+        document.getElementById("ingredient-default").checked = false;
+    }
 }
 
 function closeIngredientModal() {
-  ingredientModal.classList.add("hidden");
-  currentMealForIngredient = null;
-  currentIngredientId = null;
+    const modal = document.getElementById("ingredient-modal");
+    modal.classList.add("hidden");
 }
 
-function saveIngredientFromModal() {
-  if (!currentMealForIngredient) {
+document.getElementById("ingredient-save").addEventListener("click", () => {
+    const meal = appData.meals.find(m => m.id === currentMealId);
+    const name = document.getElementById("ingredient-name").value.trim();
+    if (!name) return;
+
+    const qty = Number(document.getElementById("ingredient-qty").value || 1);
+    const unit = document.getElementById("ingredient-unit").value.trim() || "";
+    const store = document.getElementById("ingredient-store").value;
+    const group = document.getElementById("ingredient-group").value.trim();
+    const isDefault = document.getElementById("ingredient-default").checked;
+
+    const newIngredient = { name, qty, unit, store, group, isDefault };
+
+    if (editingIngredientIndex !== null) {
+        meal.ingredients[editingIngredientIndex] = newIngredient;
+    } else {
+        meal.ingredients.push(newIngredient);
+    }
+
+    // Ensure only one default per group
+    if (group && isDefault) {
+        meal.ingredients.forEach(ing => {
+            if (ing.group === group && ing.name !== name) {
+                ing.isDefault = false;
+            }
+        });
+    }
+
+    saveData();
     closeIngredientModal();
-    return;
-  }
-  const meal = state.meals.find((m) => m.id === currentMealForIngredient);
-  if (!meal) {
-    closeIngredientModal();
-    return;
-  }
-
-  const name = ingredientNameInput.value.trim();
-  const qty = ingredientQtyInput.value.trim() || "1"; // default 1
-  let unit = ingredientUnitInput.value.trim();
-  const store = ingredientStoreSelect.value.trim();
-  const subGroup = ingredientGroupInput.value.trim();
-  const wantsDefault = ingredientDefaultCheckbox.checked && !!subGroup;
-
-  if (!name) {
-    alert("Please enter an ingredient name.");
-    ingredientNameInput.focus();
-    return;
-  }
-
-  if (!unit) unit = "CT";
-
-  let ing;
-  if (currentIngredientId) {
-    ing = meal.ingredients.find((i) => i.id === currentIngredientId);
-    if (!ing) {
-      closeIngredientModal();
-      return;
-    }
-    ing.name = name;
-    ing.qty = qty;
-    ing.unit = unit;
-    ing.store = store;
-    ing.subGroup = subGroup || "";
-    ing.isDefault = false;
-  } else {
-    ing = {
-      id: makeId("ing"),
-      name,
-      qty,
-      unit,
-      store,
-      subGroup: subGroup || "",
-      isDefault: false
-    };
-    meal.ingredients.push(ing);
-  }
-
-  if (!subGroup) {
-    ing.subGroup = "";
-    ing.isDefault = false;
-  } else {
-    const hasOtherDefault = meal.ingredients.some(
-      (i) =>
-        i.subGroup === subGroup &&
-        i.id !== ing.id &&
-        i.isDefault
-    );
-    if (wantsDefault || !hasOtherDefault) {
-      setDefaultForGroupOnMeal(meal, subGroup, ing.id);
-    }
-  }
-
-  saveState();
-  renderMeals();
-  renderPantry();
-  regenerateGroceryFromPlan(false);
-  closeIngredientModal();
-}
-
-// ---------- PLANNER ----------
-function renderPlanner() {
-  plannerMealsEl.innerHTML = "";
-  const meals = state.meals;
-  if (!meals.length) {
-    plannerEmptyEl.classList.remove("hidden");
-    return;
-  }
-  plannerEmptyEl.classList.add("hidden");
-
-  // determine categories in use
-  const categoriesInUse = new Set();
-  meals.forEach((m) => {
-    categoriesInUse.add(getMealCategoryName(m));
-  });
-
-  // lock by alphabetical order
-  const orderedCategories = Array.from(categoriesInUse).sort((a, b) =>
-    a.localeCompare(b)
-  );
-
-  orderedCategories.forEach((catName) => {
-    const catBlock = document.createElement("div");
-    catBlock.className = "planner-category-block";
-
-    const title = document.createElement("div");
-    title.className = "planner-category-title";
-    title.textContent = catName;
-    catBlock.appendChild(title);
-
-    meals
-      .filter((m) => getMealCategoryName(m) === catName)
-      .forEach((meal) => {
-        const row = document.createElement("div");
-        row.className = "planner-meal-row";
-
-        const mainLine = document.createElement("div");
-        mainLine.className = "planner-meal-mainline";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = state.weekPlan.selectedMealIds.includes(meal.id);
-        checkbox.addEventListener("change", () => {
-          if (checkbox.checked) {
-            if (!state.weekPlan.selectedMealIds.includes(meal.id)) {
-              state.weekPlan.selectedMealIds.push(meal.id);
-            }
-          } else {
-            state.weekPlan.selectedMealIds =
-              state.weekPlan.selectedMealIds.filter((id) => id !== meal.id);
-          }
-          saveState();
-        });
-
-        const info = document.createElement("div");
-        info.className = "planner-meal-info";
-        const nameEl = document.createElement("div");
-        nameEl.className = "planner-meal-name";
-        nameEl.textContent = meal.name;
-        const metaEl = document.createElement("div");
-        metaEl.className = "planner-meal-meta";
-        metaEl.textContent =
-          meal.ingredients.length === 0
-            ? "No ingredients yet"
-            : meal.ingredients.length + " ingredients";
-
-        info.appendChild(nameEl);
-        info.appendChild(metaEl);
-
-        const toggle = document.createElement("button");
-        toggle.type = "button";
-        toggle.className = "planner-meal-toggle";
-        toggle.textContent = "Hide details ▴"; // auto-expanded
-
-        mainLine.appendChild(checkbox);
-        mainLine.appendChild(info);
-        mainLine.appendChild(toggle);
-
-        row.appendChild(mainLine);
-
-        const details = document.createElement("div");
-        details.className = "planner-meal-details"; // NOT hidden by default (auto expanded)
-
-        const overridesForMeal = state.plannerOverrides[meal.id] || {};
-
-        meal.ingredients.forEach((ing) => {
-          const ingRow = document.createElement("div");
-          ingRow.className = "planner-ingredient-row";
-
-          const ingCheckbox = document.createElement("input");
-          ingCheckbox.type = "checkbox";
-          const override = overridesForMeal[ing.id];
-          const include = override ? override.include !== false : true;
-          ingCheckbox.checked = include;
-
-          ingCheckbox.addEventListener("change", () => {
-            if (!state.plannerOverrides[meal.id]) {
-              state.plannerOverrides[meal.id] = {};
-            }
-            if (!state.plannerOverrides[meal.id][ing.id]) {
-              state.plannerOverrides[meal.id][ing.id] = { include: true, comment: "" };
-            }
-            state.plannerOverrides[meal.id][ing.id].include = ingCheckbox.checked;
-            saveState();
-          });
-
-          const labelWrap = document.createElement("div");
-          const nameSpan = document.createElement("span");
-          nameSpan.className = "planner-ingredient-name";
-          nameSpan.textContent = ing.name || "(no name)";
-
-          const metaSpan = document.createElement("span");
-          metaSpan.className = "planner-ingredient-meta";
-
-          const metaParts = [];
-          const qtyStr = (ing.qty || "").toString().trim();
-          if (qtyStr && qtyStr !== "1") {
-            metaParts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
-          }
-          if (ing.store) metaParts.push(ing.store);
-          if (ing.subGroup) metaParts.push("Group: " + ing.subGroup);
-
-          metaSpan.textContent = metaParts.length ? " – " + metaParts.join(" • ") : "";
-
-          labelWrap.appendChild(nameSpan);
-          labelWrap.appendChild(metaSpan);
-
-          const commentInput = document.createElement("input");
-          commentInput.type = "text";
-          commentInput.className = "planner-ingredient-comment-input";
-          commentInput.placeholder = "Comment (optional)";
-          commentInput.value = override?.comment || "";
-          commentInput.addEventListener("change", () => {
-            if (!state.plannerOverrides[meal.id]) {
-              state.plannerOverrides[meal.id] = {};
-            }
-            if (!state.plannerOverrides[meal.id][ing.id]) {
-              state.plannerOverrides[meal.id][ing.id] = { include: true, comment: "" };
-            }
-            state.plannerOverrides[meal.id][ing.id].comment = commentInput.value.trim();
-            saveState();
-          });
-
-          ingRow.appendChild(ingCheckbox);
-          ingRow.appendChild(labelWrap);
-          ingRow.appendChild(commentInput);
-
-          details.appendChild(ingRow);
-        });
-
-        toggle.addEventListener("click", () => {
-          const isHidden = details.classList.contains("hidden");
-          details.classList.toggle("hidden", isHidden); // reverse
-          toggle.textContent = isHidden ? "Hide details ▴" : "Show details ▾";
-        });
-
-        row.appendChild(details);
-        catBlock.appendChild(row);
-      });
-
-    plannerMealsEl.appendChild(catBlock);
-  });
-}
-
-// ---------- SUBSTITUTE SELECTION MODAL (grouped by meal) ----------
-function buildSubstituteGroupsForSelectedMeals() {
-  const selectedMeals = state.meals.filter((m) =>
-    state.weekPlan.selectedMealIds.includes(m.id)
-  );
-  const result = {};
-
-  selectedMeals.forEach((meal) => {
-    const groups = {};
-    meal.ingredients.forEach((ing) => {
-      if (ing.subGroup) {
-        if (!groups[ing.subGroup]) groups[ing.subGroup] = [];
-        groups[ing.subGroup].push(ing);
-      }
-    });
-    const filtered = {};
-    Object.entries(groups).forEach(([gname, arr]) => {
-      if (arr.length > 1) filtered[gname] = arr;
-    });
-    if (Object.keys(filtered).length > 0) {
-      result[meal.id] = {
-        meal,
-        groups: filtered
-      };
-    }
-  });
-
-  return result;
-}
-
-function openSubsModal() {
-  const groupsByMeal = buildSubstituteGroupsForSelectedMeals();
-  const mealIds = Object.keys(groupsByMeal);
-  if (mealIds.length === 0) {
-    regenerateGroceryFromPlan(true, null);
-    return;
-  }
-
-  subsBody.innerHTML = "";
-
-  mealIds.forEach((mealId) => {
-    const { meal, groups } = groupsByMeal[mealId];
-    const mealBlock = document.createElement("div");
-    mealBlock.className = "subs-meal-block";
-    const mealTitle = document.createElement("div");
-    mealTitle.className = "subs-meal-title";
-    mealTitle.textContent = meal.name;
-    mealBlock.appendChild(mealTitle);
-
-    Object.entries(groups).forEach(([groupName, ings]) => {
-      const groupTitle = document.createElement("div");
-      groupTitle.className = "subs-group-title";
-      groupTitle.textContent = groupName;
-      mealBlock.appendChild(groupTitle);
-
-      const defaultIds = ings.filter(i => i.isDefault).map(i => i.id);
-
-      ings.forEach((ing, idx) => {
-        const row = document.createElement("label");
-        row.className = "subs-option-row sub-group-block";
-        row.dataset.mealId = mealId;
-        row.dataset.group = groupName;
-
-        const radio = document.createElement("input");
-        radio.type = "radio";
-        radio.name = mealId + "__" + groupName;
-        radio.value = ing.id;
-        radio.dataset.mealId = mealId;
-        radio.dataset.group = groupName;
-        radio.dataset.subRadio = "1";
-
-        if (defaultIds.length > 0) {
-          radio.checked = defaultIds.includes(ing.id);
-        } else if (idx === 0) {
-          radio.checked = true;
-        }
-
-        const text = document.createElement("span");
-        text.textContent = ing.name;
-
-        const meta = document.createElement("span");
-        meta.className = "muted";
-        const metaParts = [];
-        const qtyStr = (ing.qty || "").toString().trim();
-        if (qtyStr && qtyStr !== "1") {
-          metaParts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
-        }
-        if (ing.store) metaParts.push(ing.store);
-        meta.textContent = metaParts.length ? "• " + metaParts.join(" • ") : "";
-
-        row.appendChild(radio);
-        row.appendChild(text);
-        row.appendChild(meta);
-
-        mealBlock.appendChild(row);
-      });
-    });
-
-    subsBody.appendChild(mealBlock);
-  });
-
-  subsModal.classList.remove("hidden");
-}
-
-function closeSubsModal() {
-  subsModal.classList.add("hidden");
-}
-
-function collectSubSelectionsAndGenerate() {
-  const groupBlocks = subsBody.querySelectorAll(".sub-group-block");
-  if (!groupBlocks.length) {
-    closeSubsModal();
-    regenerateGroceryFromPlan(true, null);
-    return;
-  }
-
-  const groupKeys = new Set();
-  groupBlocks.forEach((block) => {
-    const mealId = block.dataset.mealId;
-    const group = block.dataset.group;
-    groupKeys.add(mealId + "__" + group);
-  });
-
-  const selections = {};
-  let missing = false;
-
-  groupKeys.forEach((key) => {
-    const [mealId, group] = key.split("__");
-    const radio = subsBody.querySelector(
-      `input[type="radio"][name="${mealId}__${group}"]:checked`
-    );
-    if (!radio) {
-      missing = true;
-      return;
-    }
-    if (!selections[mealId]) selections[mealId] = {};
-    selections[mealId][group] = radio.value;
-  });
-
-  if (missing) {
-    alert("Please choose an option for each substitute group.");
-    return;
-  }
-
-  closeSubsModal();
-  regenerateGroceryFromPlan(true, selections);
-}
-
-// ---------- GENERATE GROCERY LIST ----------
-function regenerateGroceryFromPlan(showAlert = false, subSelections = null) {
-  const selectedMeals = state.meals.filter((m) =>
-    state.weekPlan.selectedMealIds.includes(m.id)
-  );
-  if (!selectedMeals.length) {
-    if (showAlert) alert("Select at least one meal for this week first.");
-    return;
-  }
-
-  const items = {};
-
-  selectedMeals.forEach((meal) => {
-    const groupInfo = {};
-    meal.ingredients.forEach((ing) => {
-      if (ing.subGroup) {
-        if (!groupInfo[ing.subGroup]) {
-          groupInfo[ing.subGroup] = { items: [], defaultIds: [] };
-        }
-        groupInfo[ing.subGroup].items.push(ing);
-        if (ing.isDefault) groupInfo[ing.subGroup].defaultIds.push(ing.id);
-      }
-    });
-
-    const overridesForMeal = state.plannerOverrides[meal.id] || {};
-
-    meal.ingredients.forEach((ing) => {
-      if (!ing.name || !ing.name.trim()) return;
-
-      // substitute selection logic
-      if (ing.subGroup) {
-        const groupName = ing.subGroup;
-        const mealSubs = subSelections ? subSelections[meal.id] : null;
-        if (mealSubs && mealSubs[groupName]) {
-          if (ing.id !== mealSubs[groupName]) return;
-        } else {
-          const info = groupInfo[groupName];
-          if (info && info.defaultIds.length > 0 && !info.defaultIds.includes(ing.id)) {
-            return;
-          }
-        }
-      }
-
-      // planner overrides: include / exclude
-      const ov = overridesForMeal[ing.id];
-      if (ov && ov.include === false) {
+    renderMealList();
+    renderPlannerMeals();
+});
+
+document.getElementById("ingredient-cancel").onclick = closeIngredientModal;
+document.getElementById("ingredient-cancel-2").onclick = closeIngredientModal;
+
+// ==================================================
+// RENDER MEAL LIST
+// ==================================================
+function renderMealList() {
+    const list = document.getElementById("meal-list");
+    list.innerHTML = "";
+
+    if (appData.meals.length === 0) {
+        document.getElementById("meals-empty-state").classList.remove("hidden");
         return;
-      }
+    } else {
+        document.getElementById("meals-empty-state").classList.add("hidden");
+    }
 
-      const key = groceryItemKey(ing.name, ing.store);
-      const current = items[key] || {
-        name: ing.name,
-        store: ing.store || "",
-        qty: 0,
-        unit: ing.unit || "CT",
-        checked: state.groceryList[key]?.checked || false,
-        comments: []
-      };
+    appData.meals.sort((a, b) => a.name.localeCompare(b.name));
 
-      const qtyNum = parseFloat(ing.qty);
-      if (!isNaN(qtyNum)) {
-        current.qty += qtyNum;
-      } else if (!current.qty && ing.qty) {
-        current.qty = ing.qty;
-      }
+    appData.meals.forEach(meal => {
+        const div = document.createElement("div");
+        div.className = "meal-item";
 
-      if (ov && ov.comment && ov.comment.trim()) {
-        const c = ov.comment.trim();
-        if (!current.comments.includes(c)) {
-          current.comments.push(c);
+        div.innerHTML = `
+            <div class="meal-header">
+                <div class="meal-title">${meal.name}</div>
+                <button class="btn btn-sm btn-outline" onclick="openIngredientModal('${meal.id}')">Add Ingredient</button>
+            </div>
+            <div class="meal-category-label">${meal.category || "Uncategorized"}</div>
+            <div class="meal-ingredients-count">${meal.ingredients.length} ingredients</div>
+            <div class="meal-ingredients-editor">
+                ${meal.ingredients.map((ing, i) => `
+                    <div class="ingredient-row">
+                        <span>${ing.name}</span>
+                        <button class="btn btn-sm" onclick="openIngredientModal('${meal.id}', ${i})">Edit</button>
+                    </div>
+                `).join("")}
+            </div>
+        `;
+
+        list.appendChild(div);
+    });
+
+    document.getElementById("meal-count-badge").textContent =
+        `${appData.meals.length} meals`;
+}
+
+// ==================================================
+// PLANNER
+// ==================================================
+function renderPlannerMeals() {
+    const container = document.getElementById("planner-meals");
+    container.innerHTML = "";
+
+    if (appData.meals.length === 0) {
+        document.getElementById("planner-empty").classList.remove("hidden");
+        return;
+    }
+    document.getElementById("planner-empty").classList.add("hidden");
+
+    const categories = [...appData.categories, ...appData.customCategories]
+        .sort((a, b) => a.localeCompare(b));
+
+    categories.forEach(cat => {
+        const catMeals = appData.meals.filter(m => m.category === cat);
+        if (catMeals.length === 0) return;
+
+        const header = document.createElement("div");
+        header.className = "category-header";
+        header.textContent = cat;
+        container.appendChild(header);
+
+        const divider = document.createElement("div");
+        divider.className = "category-divider";
+        container.appendChild(divider);
+
+        catMeals.forEach(meal => {
+            const mealDiv = document.createElement("div");
+            mealDiv.className = "planner-meal";
+
+            const isSelected = appData.planner.selectedMeals.includes(meal.id);
+
+            mealDiv.innerHTML = `
+                <label class="planner-meal-row">
+                    <input 
+                        type="checkbox" 
+                        data-meal="${meal.id}"
+                        ${isSelected ? "checked" : ""}
+                    />
+                    <span class="planner-meal-name">${meal.name}</span>
+                    <button class="expand-btn" data-expand="${meal.id}">
+                        ${isSelected ? "▾" : "▸"}
+                    </button>
+                </label>
+                <div class="planner-ingredients ${isSelected ? "" : "hidden"}" id="planner-ingredients-${meal.id}">
+                </div>
+            `;
+
+            container.appendChild(mealDiv);
+
+            if (isSelected) renderIngredientsForPlannerMeal(meal);
+        });
+    });
+
+    document.querySelectorAll("input[data-meal]").forEach(cb => {
+        cb.addEventListener("change", e => {
+            const mealId = e.target.dataset.meal;
+            const checked = e.target.checked;
+
+            if (checked) {
+                if (!appData.planner.selectedMeals.includes(mealId)) {
+                    appData.planner.selectedMeals.push(mealId);
+                }
+            } else {
+                appData.planner.selectedMeals =
+                    appData.planner.selectedMeals.filter(id => id !== mealId);
+            }
+
+            saveData();
+            renderPlannerMeals();
+        });
+    });
+
+    document.querySelectorAll("[data-expand]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const mealId = btn.dataset.expand;
+            const container = document.getElementById(`planner-ingredients-${mealId}`);
+            const checked = appData.planner.selectedMeals.includes(mealId);
+
+            if (!checked) return;
+
+            if (container.classList.contains("hidden")) {
+                container.classList.remove("hidden");
+                btn.textContent = "▾";
+            } else {
+                container.classList.add("hidden");
+                btn.textContent = "▸";
+            }
+        });
+    });
+}
+
+function renderIngredientsForPlannerMeal(meal) {
+    const div = document.getElementById(`planner-ingredients-${meal.id}`);
+    div.innerHTML = "";
+
+    const groups = {};
+    meal.ingredients.forEach(ing => {
+        const key = ing.group || "__none__";
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(ing);
+    });
+
+    Object.keys(groups).forEach(groupName => {
+        const groupList = groups[groupName];
+
+        let chosen = groupList.find(i => i.isDefault) || groupList[0];
+
+        const stateKey = `${meal.id}_${chosen.name}`;
+        if (!appData.planner.ingredientsState[stateKey]) {
+            appData.planner.ingredientsState[stateKey] = {
+                included: true,
+                comment: "",
+                selectedGroupIngredient: chosen.name
+            };
+            saveData();
         }
-      }
 
-      items[key] = current;
-    });
-  });
+        const state = appData.planner.ingredientsState[stateKey];
 
-  // pantry filter
-  Object.keys(items).forEach((key) => {
-    const ingKey = ingredientKey(items[key].name);
-    const pantryItem = state.pantry[ingKey];
-    if (pantryItem && pantryItem.have) {
-      delete items[key];
-    }
-  });
+        const qtyDisplay = chosen.qty > 1 ? `(${chosen.qty} ${chosen.unit})` : "";
+        const storeDisplay = chosen.qty > 1 ? chosen.store : chosen.store; 
 
-  // extras
-  (state.extras || []).forEach((extra) => {
-    if (!extra.include) return;
-    if (!extra.name || !extra.name.trim()) return;
-    const key = groceryItemKey(extra.name, extra.store);
-    const current = items[key] || {
-      name: extra.name,
-      store: extra.store || "",
-      qty: 0,
-      unit: extra.unit || "CT",
-      checked: state.groceryList[key]?.checked || false,
-      comments: []
-    };
+        const ingDiv = document.createElement("div");
+        ingDiv.className = "planner-ing-row";
 
-    const qtyNum = parseFloat(extra.qty);
-    if (!isNaN(qtyNum)) {
-      current.qty += qtyNum;
-    } else if (!current.qty && extra.qty) {
-      current.qty = extra.qty;
-    }
+        ingDiv.innerHTML = `
+            <label class="checkbox-row">
+                <input 
+                    type="checkbox"
+                    data-ing="${stateKey}"
+                    ${state.included ? "checked" : ""}
+                />
+                <span>${chosen.name}${qtyDisplay ? " " + qtyDisplay : ""} – ${storeDisplay}</span>
+            </label>
+            <input 
+                type="text"
+                class="comment-input"
+                placeholder="Add note"
+                value="${state.comment || ""}"
+                data-comment="${stateKey}"
+            />
+        `;
 
-    items[key] = current;
-  });
-
-  state.groceryList = items;
-  saveState();
-  renderGroceryList();
-  if (showAlert) {
-    alert("Grocery list generated from your weekly plan, substitutes, overrides, and extras.");
-  }
-}
-
-// ---------- PANTRY ----------
-function getAllIngredientsUnique() {
-  const map = {};
-  state.meals.forEach((meal) => {
-    meal.ingredients.forEach((ing) => {
-      if (!ing.name || !ing.name.trim()) return;
-      const key = ingredientKey(ing.name);
-      if (!map[key]) {
-        map[key] = {
-          name: ing.name.trim(),
-          stores: new Set()
-        };
-      }
-      if (ing.store) {
-        map[key].stores.add(ing.store);
-      }
-    });
-  });
-  return map;
-}
-
-function renderPantry() {
-  const ingMap = getAllIngredientsUnique();
-  const keys = Object.keys(ingMap);
-  pantryListEl.innerHTML = "";
-
-  if (!keys.length) {
-    pantryEmptyEl.classList.remove("hidden");
-    return;
-  }
-  pantryEmptyEl.classList.add("hidden");
-
-  const filter = pantrySearchInput.value.trim().toLowerCase();
-  const filteredKeys = keys.filter((k) =>
-    ingMap[k].name.toLowerCase().includes(filter)
-  );
-
-  if (!filteredKeys.length) {
-    pantryListEl.innerHTML =
-      '<div class="muted">No matching ingredients.</div>';
-    return;
-  }
-
-  filteredKeys.sort((a, b) =>
-    ingMap[a].name.localeCompare(ingMap[b].name)
-  );
-
-  filteredKeys.forEach((key) => {
-    const data = ingMap[key];
-    const row = document.createElement("div");
-    row.className = "checkbox-row mt-4";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    const pantryItem = state.pantry[key];
-    checkbox.checked = pantryItem?.have || false;
-    checkbox.addEventListener("change", () => {
-      state.pantry[key] = {
-        have: checkbox.checked,
-        updated: Date.now()
-      };
-      saveState();
+        div.appendChild(ingDiv);
     });
 
-    const main = document.createElement("div");
-    main.className = "grocery-item-main";
-    const name = document.createElement("div");
-    name.className = "grocery-item-name";
-    name.textContent = data.name;
-    const meta = document.createElement("div");
-    meta.className = "grocery-item-meta";
-    const storesText = Array.from(data.stores).join(", ");
-    meta.textContent = storesText
-      ? "Used in meals • Stores: " + storesText
-      : "Used in meals";
-    main.appendChild(name);
-    main.appendChild(meta);
-
-    row.appendChild(checkbox);
-    row.appendChild(main);
-
-    pantryListEl.appendChild(row);
-  });
-}
-
-// ---------- STORES ----------
-function renderStores() {
-  storeListEl.innerHTML = "";
-  if (!state.stores.length) {
-    storeListEl.innerHTML =
-      '<span class="muted">No stores yet. Add one above.</span>';
-    return;
-  }
-  state.stores.forEach((store, index) => {
-    const pill = document.createElement("div");
-    pill.className = "store-pill" + (index === 0 ? " primary" : "");
-    const icon = document.createElement("span");
-    icon.className = "icon";
-    icon.textContent = "🏬";
-    const label = document.createElement("span");
-    label.textContent = store;
-    const remove = document.createElement("span");
-    remove.className = "remove";
-    remove.textContent = "✕";
-    remove.title = "Remove store";
-    remove.addEventListener("click", () => removeStore(store));
-    pill.appendChild(icon);
-    pill.appendChild(label);
-    if (state.stores.length > 1) {
-      pill.appendChild(remove);
-    }
-    storeListEl.appendChild(pill);
-  });
-
-  // keep store dropdowns up to date
-  populateStoreSelect(ingredientStoreSelect, ingredientStoreSelect.value);
-  populateStoreSelect(extraStoreSelect, extraStoreSelect.value);
-}
-
-function removeStore(storeName) {
-  if (!confirm(
-    `Remove store "${storeName}"? Ingredients and extras using this store will be set to "Unassigned".`
-  )) return;
-  state.stores = state.stores.filter((s) => s !== storeName);
-  state.meals.forEach((meal) => {
-    meal.ingredients.forEach((ing) => {
-      if (ing.store === storeName) ing.store = "";
+    div.querySelectorAll("input[data-ing]").forEach(cb => {
+        cb.addEventListener("change", e => {
+            const key = e.target.dataset.ing;
+            appData.planner.ingredientsState[key].included = e.target.checked;
+            saveData();
+        });
     });
-  });
-  state.extras.forEach((ex) => {
-    if (ex.store === storeName) ex.store = "";
-  });
-  saveState();
-  renderStores();
-  renderMeals();
-  renderPantry();
-  regenerateGroceryFromPlan(false);
+
+    div.querySelectorAll("input[data-comment]").forEach(inp => {
+        inp.addEventListener("input", e => {
+            const key = e.target.dataset.comment;
+            appData.planner.ingredientsState[key].comment = e.target.value;
+            saveData();
+        });
+    });
 }
 
-// ---------- EXTRAS ----------
-function addExtra() {
-  const name = extraNameInput.value.trim();
-  const qty = extraQtyInput.value.trim();
-  let unit = extraUnitInput.value.trim();
-  const store = extraStoreSelect.value.trim();
+// ==================================================
+// PLANNER-ONLY ITEMS
+// ==================================================
+document.getElementById("add-extra-btn").addEventListener("click", () => {
+    const name = document.getElementById("extra-name").value.trim();
+    const qty = Number(document.getElementById("extra-qty").value || 1);
+    const unit = document.getElementById("extra-unit").value.trim() || "";
+    const store = document.getElementById("extra-store").value;
 
-  if (!name) {
-    alert("Please enter an item name.");
-    extraNameInput.focus();
-    return;
-  }
-  if (!unit) unit = "CT";
+    if (!name) return;
 
-  const ex = {
-    id: makeId("extra"),
-    name,
-    qty: qty || "1", // default to 1 if blank
-    unit,
-    store,
-    include: true
-  };
-  state.extras.push(ex);
+    appData.extras.push({ name, qty, unit, store });
+    saveData();
 
-  extraNameInput.value = "";
-  extraQtyInput.value = "";
-  extraUnitInput.value = "CT";
-  extraStoreSelect.value = "";
+    document.getElementById("extra-name").value = "";
+    document.getElementById("extra-qty").value = "";
+    renderExtras();
+});
 
-  saveState();
-  renderExtras();
-}
-
-function toggleExtraInclude(extraId, checked) {
-  const ex = state.extras.find((e) => e.id === extraId);
-  if (!ex) return;
-  ex.include = checked;
-  saveState();
-}
-
-function deleteExtra(extraId) {
-  const ex = state.extras.find((e) => e.id === extraId);
-  if (!ex) return;
-  if (!confirm(`Remove extra item "${ex.name}"?`)) return;
-  state.extras = state.extras.filter((e) => e.id !== extraId);
-  saveState();
-  renderExtras();
-  regenerateGroceryFromPlan(false);
-}
-
-function editExtra(extraId) {
-  const ex = state.extras.find((e) => e.id === extraId);
-  if (!ex) return;
-  const newName = prompt("Item name:", ex.name) ?? ex.name;
-  const newQty = prompt("Quantity (optional):", ex.qty || "") ?? ex.qty;
-  const newUnit = prompt("Unit:", ex.unit || "CT") ?? ex.unit;
-  ex.name = newName.trim() || ex.name;
-  ex.qty = (newQty || "").trim() || "1";
-  ex.unit = (newUnit || "CT").trim();
-  saveState();
-  renderExtras();
-  regenerateGroceryFromPlan(false);
-}
-
+// ==================================================
+// EXTRAS RENDER
+// ==================================================
 function renderExtras() {
-  extrasListEl.innerHTML = "";
-  const extras = state.extras || [];
-  if (!extras.length) {
-    extrasEmptyEl.classList.remove("hidden");
-    return;
-  }
-  extrasEmptyEl.classList.add("hidden");
+    const container = document.getElementById("extras-list");
+    container.innerHTML = "";
 
-  extras.forEach((ex) => {
-    const row = document.createElement("div");
-    row.className = "grocery-item-row";
-
-    const includeBox = document.createElement("input");
-    includeBox.type = "checkbox";
-    includeBox.checked = ex.include;
-    includeBox.addEventListener("change", () =>
-      toggleExtraInclude(ex.id, includeBox.checked)
-    );
-
-    const main = document.createElement("div");
-    main.className = "grocery-item-main";
-    const name = document.createElement("div");
-    name.className = "grocery-item-name";
-    name.textContent = ex.name;
-
-    const meta = document.createElement("div");
-    meta.className = "grocery-item-meta";
-    const parts = [];
-    const qtyStr = (ex.qty || "").toString().trim();
-    if (qtyStr && qtyStr !== "1") {
-      parts.push(qtyStr + (ex.unit ? " " + ex.unit : ""));
+    if (appData.extras.length === 0) {
+        document.getElementById("extras-empty").classList.remove("hidden");
+        return;
     }
-    if (ex.store) parts.push(ex.store);
-    meta.textContent = parts.join(" • ") || "No quantity set";
-    main.appendChild(name);
-    main.appendChild(meta);
+    document.getElementById("extras-empty").classList.add("hidden");
 
-    const actions = document.createElement("div");
-    actions.className = "ingredient-actions";
-    const editBtn = document.createElement("button");
-    editBtn.className = "btn btn-ghost btn-sm";
-    editBtn.innerHTML = "✏️";
-    editBtn.addEventListener("click", () => editExtra(ex.id));
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn btn-ghost btn-sm";
-    delBtn.innerHTML = "🗑️";
-    delBtn.addEventListener("click", () => deleteExtra(ex.id));
-    actions.appendChild(editBtn);
-    actions.appendChild(delBtn);
+    appData.extras.forEach((ex, i) => {
+        const div = document.createElement("div");
+        div.className = "extras-row";
 
-    row.appendChild(includeBox);
-    row.appendChild(main);
-    row.appendChild(actions);
+        const qtyDisplay =
+            ex.qty > 1 ? `(${ex.qty} ${ex.unit || ""})` : "";
 
-    extrasListEl.appendChild(row);
-  });
-}
+        div.innerHTML = `
+            <label class="checkbox-row">
+                <input type="checkbox" data-extra="${i}" checked />
+                <span>${ex.name} ${qtyDisplay}</span>
+            </label>
+            <button class="btn btn-sm btn-danger" data-remove="${i}">✕</button>
+        `;
 
-// ---------- GROCERY LIST ----------
-function renderGroceryList() {
-  const items = state.groceryList || {};
-  const keys = Object.keys(items);
-  groceryGroupsEl.innerHTML = "";
-
-  if (!keys.length) {
-    groceryEmptyEl.classList.remove("hidden");
-    return;
-  }
-  groceryEmptyEl.classList.add("hidden");
-
-  const groups = {};
-  keys.forEach((key) => {
-    const item = items[key];
-    const store = item.store || "Unassigned";
-    if (!groups[store]) groups[store] = [];
-    groups[store].push({ key, ...item });
-  });
-
-  // We keep store ordering as defined in state.stores (NOT alphabetical),
-  // with any unknown stores at the end.
-  const sortedStores = Object.keys(groups).sort((a, b) => {
-    const ia = state.stores.indexOf(a);
-    const ib = state.stores.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-
-  sortedStores.forEach((store) => {
-    const groupItems = groups[store];
-    const groupEl = document.createElement("div");
-    groupEl.className = "grocery-group";
-
-    const header = document.createElement("div");
-    header.className = "grocery-group-header";
-
-    const title = document.createElement("div");
-    title.className = "grocery-group-title";
-    title.textContent = store === "Unassigned" ? "Other / Any Store" : store;
-
-    const count = document.createElement("div");
-    count.className = "pill-muted";
-    const total = groupItems.length;
-    const checked = groupItems.filter((i) => i.checked).length;
-    count.textContent = `${checked}/${total} done`;
-
-    header.appendChild(title);
-    header.appendChild(count);
-    groupEl.appendChild(header);
-
-    groupItems.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "grocery-item-row";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = item.checked || false;
-      checkbox.addEventListener("change", () => {
-        state.groceryList[item.key].checked = checkbox.checked;
-        saveState();
-        renderGroceryList();
-      });
-
-      const main = document.createElement("div");
-      main.className = "grocery-item-main";
-
-      const name = document.createElement("div");
-      name.className = "grocery-item-name";
-      const commentText = (item.comments && item.comments.length)
-        ? " (" + item.comments.join("; ") + ")"
-        : "";
-      name.textContent = item.name + commentText;
-
-      const meta = document.createElement("div");
-      meta.className = "grocery-item-meta";
-      const parts = [];
-
-      let qtyDisplay = "";
-      if (typeof item.qty === "number" && !isNaN(item.qty)) {
-        if (item.qty !== 1) {
-          qtyDisplay = item.qty.toString();
-        }
-      } else if (typeof item.qty === "string" && item.qty.trim() !== "") {
-        if (item.qty.trim() !== "1") {
-          qtyDisplay = item.qty.trim();
-        }
-      }
-
-      if (qtyDisplay) {
-        const label = qtyDisplay + (item.unit ? " " + item.unit : "");
-        parts.push(label);
-      }
-
-      meta.textContent = parts.join(" • ") || "";
-      main.appendChild(name);
-      main.appendChild(meta);
-
-      row.appendChild(checkbox);
-      row.appendChild(main);
-      groupEl.appendChild(row);
+        container.appendChild(div);
     });
 
-    groceryGroupsEl.appendChild(groupEl);
-  });
+    container.querySelectorAll("[data-remove]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.remove);
+            appData.extras.splice(idx, 1);
+            saveData();
+            renderExtras();
+        });
+    });
 }
 
-// Build plain text version for iPhone Notes
-function buildPlainTextGroceryList() {
-  const items = state.groceryList || {};
-  const keys = Object.keys(items);
-  if (!keys.length) return "";
+// ==================================================
+// GROCERY LIST
+// ==================================================
+document.getElementById("generate-list-btn").addEventListener("click", () => {
+    generateGroceryList();
+    switchTab("groceries");
+});
 
-  const groups = {};
-  keys.forEach((key) => {
-    const item = items[key];
-    const store = item.store || "Other / Any Store";
-    if (!groups[store]) groups[store] = [];
-    groups[store].push({ key, ...item });
-  });
+function generateGroceryList() {
+    const groups = {};
+    appData.stores.forEach(store => groups[store] = []);
 
-  const sortedStores = Object.keys(groups).sort((a, b) => {
-    const ia = state.stores.indexOf(a);
-    const ib = state.stores.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
+    Object.keys(appData.planner.ingredientsState).forEach(key => {
+        const state = appData.planner.ingredientsState[key];
+        if (!state.included) return;
 
-  const lines = [];
+        const [mealId, ingName] = key.split("_");
+        const meal = appData.meals.find(m => m.id === mealId);
+        const ing = meal.ingredients.find(i => i.name === ingName);
 
-  sortedStores.forEach((store) => {
-    lines.push(store === "Unassigned" ? "Other / Any Store" : store);
-    groups[store].forEach((item) => {
-      const comments = (item.comments && item.comments.length)
-        ? " (" + item.comments.join("; ") + ")"
-        : "";
+        const qtyDisplay =
+            ing.qty > 1 ? `(${ing.qty} ${ing.unit})` : "";
 
-      let qtyText = "";
-      if (typeof item.qty === "number" && !isNaN(item.qty)) {
-        if (item.qty !== 1) {
-          qtyText = ` (${item.qty} ${item.unit || ""})`.trim();
+        groups[ing.store].push({
+            name: ing.name,
+            qtyDisplay,
+            comment: state.comment
+        });
+    });
+
+    appData.extras.forEach((ex, i) => {
+        if (ex.qty > 1) {
+            groups[ex.store].push({
+                name: ex.name,
+                qtyDisplay: `(${ex.qty} ${ex.unit})`,
+                comment: ""
+            });
+        } else {
+            groups[ex.store].push({
+                name: ex.name,
+                qtyDisplay: "",
+                comment: ""
+            });
         }
-      } else if (typeof item.qty === "string" && item.qty.trim() !== "" && item.qty.trim() !== "1") {
-        qtyText = ` (${item.qty.trim()} ${item.unit || ""})`.trim();
-      }
-
-      const line = `• ${item.name}${comments}${qtyText}`;
-      lines.push(line);
     });
-    lines.push(""); // blank line between stores
-  });
 
-  return lines.join("\n").trim();
+    renderGrocery(groups);
 }
 
-// ---------- INIT ----------
-function init() {
-  tabSections = {
-    meals: document.getElementById("tab-meals"),
-    planner: document.getElementById("tab-planner"),
-    pantry: document.getElementById("tab-pantry"),
-    stores: document.getElementById("tab-stores"),
-    extras: document.getElementById("tab-extras"),
-    groceries: document.getElementById("tab-groceries")
-  };
+function renderGrocery(groups) {
+    const container = document.getElementById("grocery-groups");
+    container.innerHTML = "";
 
-  document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      switchTab(btn.dataset.tab);
+    Object.keys(groups).forEach(store => {
+        if (groups[store].length === 0) return;
+
+        const header = document.createElement("div");
+        header.className = "category-header";
+        header.textContent = store;
+        container.appendChild(header);
+
+        const divider = document.createElement("div");
+        divider.className = "category-divider";
+        container.appendChild(divider);
+
+        groups[store].forEach(item => {
+            const div = document.createElement("div");
+            div.className = "grocery-item";
+
+            const comment = item.comment ? ` (${item.comment})` : "";
+            const qtyText = item.qtyDisplay ? ` ${item.qtyDisplay}` : "";
+
+            div.textContent = `• ${item.name}${qtyText}${comment}`;
+            container.appendChild(div);
+        });
     });
-  });
-
-  // meals
-  mealNameInput = document.getElementById("meal-name");
-  mealCategorySelect = document.getElementById("meal-category");
-  mealNotesInput = document.getElementById("meal-notes");
-  addMealBtn = document.getElementById("add-meal-btn");
-  mealListEl = document.getElementById("meal-list");
-  mealCountBadge = document.getElementById("meal-count-badge");
-  mealsEmptyState = document.getElementById("meals-empty-state");
-  addMealBtn.addEventListener("click", addMeal);
-
-  mealCategorySelect.addEventListener("change", () => {
-    if (mealCategorySelect.value === "__new__") {
-      const newCat = prompt("New category name:");
-      if (newCat && newCat.trim()) {
-        const trimmed = newCat.trim();
-        if (!state.mealCategories.includes(trimmed) && !DEFAULT_CATEGORIES.includes(trimmed)) {
-          state.mealCategories.push(trimmed);
-          saveState();
-        }
-        renderMealCategoryOptions();
-        mealCategorySelect.value = trimmed;
-      } else {
-        mealCategorySelect.value = "";
-      }
-    }
-  });
-
-  // planner
-  plannerMealsEl = document.getElementById("planner-meals");
-  plannerEmptyEl = document.getElementById("planner-empty");
-  generateListBtn = document.getElementById("generate-list-btn");
-  generateListBtn.addEventListener("click", openSubsModal);
-
-  // pantry
-  pantrySearchInput = document.getElementById("pantry-search");
-  pantryListEl = document.getElementById("pantry-list");
-  pantryEmptyEl = document.getElementById("pantry-empty");
-  pantrySearchInput.addEventListener("input", renderPantry);
-
-  // stores + data
-  storeNameInput = document.getElementById("store-name");
-  addStoreBtn = document.getElementById("add-store-btn");
-  storeListEl = document.getElementById("store-list");
-  exportBtn = document.getElementById("export-data-btn");
-  resetBtn = document.getElementById("reset-app-btn");
-  exportStatusEl = document.getElementById("export-status");
-
-  addStoreBtn.addEventListener("click", () => {
-    const name = storeNameInput.value.trim();
-    if (!name) {
-      alert("Enter a store name.");
-      return;
-    }
-    if (state.stores.includes(name)) {
-      alert("That store is already in your list.");
-      return;
-    }
-    state.stores.push(name);
-    storeNameInput.value = "";
-    saveState();
-    renderStores();
-  });
-
-  exportBtn.addEventListener("click", () => {
-    try {
-      const blob = new Blob([JSON.stringify(state, null, 2)], {
-        type: "application/json"
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "meal-grocery-planner-backup.json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      exportStatusEl.textContent = "Exported data as JSON file.";
-    } catch (e) {
-      exportStatusEl.textContent = "Failed to export data.";
-    }
-  });
-
-  resetBtn.addEventListener("click", () => {
-    if (
-      !confirm(
-        "This will erase all meals, extras, pantry items, and grocery lists in this browser. Are you sure?"
-      )
-    )
-      return;
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  });
-
-  // grocery list
-  groceryGroupsEl = document.getElementById("grocery-groups");
-  groceryEmptyEl = document.getElementById("grocery-empty");
-  refreshFromPlanBtn = document.getElementById("refresh-from-plan-btn");
-  clearChecksBtn = document.getElementById("clear-checks-btn");
-  copyListBtn = document.getElementById("copy-list-btn");
-
-  refreshFromPlanBtn.addEventListener("click", () => {
-    openSubsModal();
-  });
-
-  clearChecksBtn.addEventListener("click", () => {
-    Object.values(state.groceryList).forEach((item) => {
-      item.checked = false;
-    });
-    saveState();
-    renderGroceryList();
-  });
-
-  copyListBtn.addEventListener("click", async () => {
-    const text = buildPlainTextGroceryList();
-    if (!text) {
-      alert("No grocery list to copy yet.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-      alert("Grocery list copied! Paste it into Notes on your iPhone.");
-    } catch (e) {
-      console.error("Clipboard error", e);
-      alert("Could not copy automatically, but you can select and copy the text on this page.");
-    }
-  });
-
-  // extras
-  extraNameInput = document.getElementById("extra-name");
-  extraQtyInput = document.getElementById("extra-qty");
-  extraUnitInput = document.getElementById("extra-unit");
-  extraStoreSelect = document.getElementById("extra-store");
-  addExtraBtn = document.getElementById("add-extra-btn");
-  extrasListEl = document.getElementById("extras-list");
-  extrasEmptyEl = document.getElementById("extras-empty");
-  addExtraBtn.addEventListener("click", addExtra);
-
-  // ingredient modal
-  ingredientModal = document.getElementById("ingredient-modal");
-  ingredientModalTitle = document.getElementById("ingredient-modal-title");
-  ingredientNameInput = document.getElementById("ingredient-name");
-  ingredientQtyInput = document.getElementById("ingredient-qty");
-  ingredientUnitInput = document.getElementById("ingredient-unit");
-  ingredientStoreSelect = document.getElementById("ingredient-store");
-  ingredientGroupInput = document.getElementById("ingredient-group");
-  ingredientGroupDatalist = document.getElementById("ingredient-group-suggestions");
-  ingredientDefaultCheckbox = document.getElementById("ingredient-default");
-  ingredientSaveBtn = document.getElementById("ingredient-save");
-  ingredientCancelBtn = document.getElementById("ingredient-cancel");
-  ingredientCancelBtn2 = document.getElementById("ingredient-cancel-2");
-
-  ingredientCancelBtn.addEventListener("click", closeIngredientModal);
-  ingredientCancelBtn2.addEventListener("click", closeIngredientModal);
-  ingredientSaveBtn.addEventListener("click", saveIngredientFromModal);
-  ingredientModal.addEventListener("click", (e) => {
-    if (e.target === ingredientModal) closeIngredientModal();
-  });
-
-  // substitute modal
-  subsModal = document.getElementById("subs-modal");
-  subsBody = document.getElementById("subs-modal-body");
-  subsApplyBtn = document.getElementById("subs-apply");
-  subsCancelBtn = document.getElementById("subs-cancel");
-  subsCancelBtn2 = document.getElementById("subs-cancel-2");
-
-  subsApplyBtn.addEventListener("click", collectSubSelectionsAndGenerate);
-  subsCancelBtn.addEventListener("click", closeSubsModal);
-  subsCancelBtn2.addEventListener("click", closeSubsModal);
-  subsModal.addEventListener("click", (e) => {
-    if (e.target === subsModal) closeSubsModal();
-  });
-
-  // load state & initial render
-  loadState();
-
-  // ensure plannerOverrides + mealCategories exist
-  state.plannerOverrides = state.plannerOverrides || {};
-  state.mealCategories = state.mealCategories || [];
-
-  // make sure dropdowns are populated before first render
-  populateStoreSelect(ingredientStoreSelect, "");
-  populateStoreSelect(extraStoreSelect, "");
-  renderMealCategoryOptions();
-
-  renderMeals();
-  renderPlanner();
-  renderPantry();
-  renderStores();
-  renderExtras();
-  renderGroceryList();
 }
 
-window.addEventListener("DOMContentLoaded", init);
+// ==================================================
+// STARTUP
+// ==================================================
+document.addEventListener("DOMContentLoaded", () => {
+    populateCategoryDropdown();
+    populateStoreDropdowns();
+    populateStoreList();
+    renderMealList();
+    renderPlannerMeals();
+    renderExtras();
+});
