@@ -1,1189 +1,445 @@
-// ===============================
-// Meal & Grocery Planner - script.js
-// ===============================
-
-const STORAGE_KEY = "mealPlannerApp_v1";
-
-const DEFAULT_CATEGORIES = [
-  "Low Prep",
-  "Medium Prep",
-  "High Prep / Longer Cook Times",
-  "Grilling",
-  "Breakfast",
-  "Crock Pot",
-  "Sides",
-  "Appetizers",
-  "Baby Meals"
-];
-
-const DEFAULT_STORES = ["Aldi", "Walmart", "Festival Foods", "Woodmans"];
+// ----------------------
+// STORAGE SETUP
+// ----------------------
+const LS_KEY = "mealPlanner_v1";
 
 let state = {
-  version: 1,
-  categoriesDefault: [...DEFAULT_CATEGORIES],
-  categoriesCustom: [],
-  stores: [...DEFAULT_STORES],
-  meals: [], // {id,name,category,ingredients:[{id,name,qty,unit,store,group,isDefault}]}
-  otherItems: [], // {id,name,store}
-  planner: {
-    selectedMealIds: [],
-    mealGroupStates: {}, // mealId -> groupKey -> {selectedIngredientId,included,comment}
-    selectedOtherItemIds: []
-  }
+    meals: [],
+    categories: [
+        "Low Prep",
+        "Medium Prep",
+        "High Prep / Longer Cook Times",
+        "Grilling",
+        "Breakfast",
+        "Crock Pot",
+        "Sides",
+        "Appetizers",
+        "Baby Meals"
+    ],
+    stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
+    plannerMeals: [],
+    plannerExtras: []
 };
 
-const byName = (a, b) => a.name.localeCompare(b.name);
-const byString = (a, b) => a.localeCompare(b);
-const makeId = () =>
-  "id_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.error("Save error", e);
-  }
-}
-
+loadState();
 function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(LS_KEY);
     if (!raw) return;
-    const parsed = JSON.parse(raw);
-    state = {
-      ...state,
-      ...parsed,
-      categoriesDefault: [...DEFAULT_CATEGORIES],
-      categoriesCustom: parsed.categoriesCustom || []
-    };
-  } catch (e) {
-    console.error("Load error", e);
-  }
-}
-
-function getAllCategories() {
-  const set = new Set([...state.categoriesDefault, ...state.categoriesCustom]);
-  return Array.from(set).sort(byString);
-}
-
-// DOM refs
-let navButtons, tabs, fabBtn;
-let recipesContainer,
-  categoriesContainer,
-  plannerMealsContainer,
-  plannerCustomContainer,
-  otherItemsContainer,
-  storesContainer,
-  groceryListContainer;
-let collapseAllBtn, copyListBtn;
-
-// Modals & fields
-let recipeModal,
-  recipeModalTitle,
-  recipeNameInput,
-  recipeCategoryInput,
-  ingredientList,
-  addIngredientBtn,
-  saveRecipeBtn,
-  closeRecipeModalBtn;
-
-let otherItemModal,
-  otherItemNameInput,
-  otherItemStoreInput,
-  saveOtherItemBtn,
-  closeOtherItemModalBtn;
-
-let storeModal,
-  storeNameInput,
-  saveStoreBtn,
-  closeStoreModalBtn;
-
-let plannerCustomModal,
-  plannerCustomNameInput,
-  plannerCustomStoreSelect,
-  savePlannerCustomBtn,
-  closePlannerCustomModalBtn;
-
-let currentTabId = "recipesTab";
-let editingMealId = null;
-
-// ---------- INIT ----------
-
-document.addEventListener("DOMContentLoaded", () => {
-  loadState();
-
-  navButtons = document.querySelectorAll(".nav-btn");
-  tabs = {
-    recipesTab: document.getElementById("recipesTab"),
-    plannerTab: document.getElementById("plannerTab"),
-    otherTab: document.getElementById("otherTab"),
-    storesTab: document.getElementById("storesTab"),
-    groceryTab: document.getElementById("groceryTab")
-  };
-
-  fabBtn = document.getElementById("fabBtn");
-
-  recipesContainer = document.getElementById("recipesContainer");
-  categoriesContainer = document.getElementById("categoriesContainer");
-  plannerMealsContainer = document.getElementById("plannerMealsContainer");
-  plannerCustomContainer = document.getElementById("plannerCustomContainer");
-  otherItemsContainer = document.getElementById("otherItemsContainer");
-  storesContainer = document.getElementById("storesContainer");
-  groceryListContainer = document.getElementById("groceryListContainer");
-
-  collapseAllBtn = document.getElementById("collapseAllBtn");
-  copyListBtn = document.getElementById("copyListBtn");
-
-  recipeModal = document.getElementById("recipeModal");
-  recipeModalTitle = document.getElementById("recipeModalTitle");
-  recipeNameInput = document.getElementById("recipeNameInput");
-  recipeCategoryInput = document.getElementById("recipeCategoryInput");
-  ingredientList = document.getElementById("ingredientList");
-  addIngredientBtn = document.getElementById("addIngredientBtn");
-  saveRecipeBtn = document.getElementById("saveRecipeBtn");
-  closeRecipeModalBtn = document.getElementById("closeRecipeModal");
-
-  otherItemModal = document.getElementById("otherItemModal");
-  otherItemNameInput = document.getElementById("otherItemNameInput");
-  otherItemStoreInput = document.getElementById("otherItemStoreInput");
-  saveOtherItemBtn = document.getElementById("saveOtherItemBtn");
-  closeOtherItemModalBtn = document.getElementById("closeOtherItemModal");
-
-  storeModal = document.getElementById("storeModal");
-  storeNameInput = document.getElementById("storeNameInput");
-  saveStoreBtn = document.getElementById("saveStoreBtn");
-  closeStoreModalBtn = document.getElementById("closeStoreModal");
-
-  plannerCustomModal = document.getElementById("plannerCustomModal");
-  plannerCustomNameInput = document.getElementById("plannerCustomName");
-  plannerCustomStoreSelect = document.getElementById("plannerCustomStore");
-  savePlannerCustomBtn = document.getElementById("savePlannerCustomBtn");
-  closePlannerCustomModalBtn = document.getElementById(
-    "closePlannerCustomModal"
-  );
-
-  navButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tabId = btn.dataset.tab;
-      switchTab(tabId);
-    });
-  });
-
-  fabBtn.addEventListener("click", handleFabClick);
-
-  collapseAllBtn.addEventListener("click", () => {
-    // just hide ingredient blocks, keep selections
-    const blocks = plannerMealsContainer.querySelectorAll(".planner-ingredients");
-    blocks.forEach((b) => (b.style.display = "none"));
-  });
-
-  copyListBtn.addEventListener("click", () => {
-    const text = buildGroceryText();
-    if (!text.trim()) {
-      alert("Your grocery list is empty.");
-      return;
+    try {
+        const saved = JSON.parse(raw);
+        state = { ...state, ...saved };
+    } catch (e) {
+        console.error("Corrupt state, resetting.");
     }
-    navigator.clipboard
-      .writeText(text)
-      .then(() => alert("Grocery list copied. Paste into Notes."))
-      .catch(() =>
-        alert("Copy failed. You can still select and copy manually.")
-      );
-  });
+}
+function saveState() {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+}
 
-  addIngredientBtn.addEventListener("click", () =>
-    addIngredientRowToModal()
-  );
-  saveRecipeBtn.addEventListener("click", saveRecipeFromModal);
-  closeRecipeModalBtn.addEventListener("click", () =>
-    hideModal(recipeModal)
-  );
+// ----------------------
+// TABS
+// ----------------------
+const tabButtons = document.querySelectorAll(".tab-btn");
+const tabPages = document.querySelectorAll(".tab-page");
 
-  saveOtherItemBtn.addEventListener("click", saveOtherItemFromModal);
-  closeOtherItemModalBtn.addEventListener("click", () =>
-    hideModal(otherItemModal)
-  );
-
-  saveStoreBtn.addEventListener("click", saveStoreFromModal);
-  closeStoreModalBtn.addEventListener("click", () =>
-    hideModal(storeModal)
-  );
-
-  savePlannerCustomBtn.addEventListener("click", savePlannerCustomFromModal);
-  closePlannerCustomModalBtn.addEventListener("click", () =>
-    hideModal(plannerCustomModal)
-  );
-
-  syncCategoryDropdown();
-  syncStoreSelects();
-
-  renderRecipes();
-  renderCategories();
-  renderPlanner();
-  renderOtherItems();
-  renderStores();
-  renderGroceryList();
-  updateFabVisibility();
+tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const tabId = btn.dataset.tab;
+        showTab(tabId);
+    });
 });
 
-// ---------- Tabs & FAB ----------
+function showTab(tabId) {
+    tabPages.forEach(p => p.classList.remove("active"));
+    tabButtons.forEach(b => b.classList.remove("active"));
 
-function switchTab(tabId) {
-  currentTabId = tabId;
+    document.getElementById(tabId).classList.add("active");
+    document.querySelector(`[data-tab='${tabId}']`).classList.add("active");
 
-  Object.entries(tabs).forEach(([id, el]) => {
-    el.classList.toggle("active", id === tabId);
-  });
-  navButtons.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.tab === tabId);
-  });
+    renderAll();
+}
 
-  if (tabId === "plannerTab") {
-    renderPlanner();
-  } else if (tabId === "otherTab") {
-    renderOtherItems();
-  } else if (tabId === "storesTab") {
-    renderStores();
-  } else if (tabId === "recipesTab") {
+renderAll();
+function renderAll() {
     renderRecipes();
-    renderCategories();
-  } else if (tabId === "groceryTab") {
+    renderRecipeCategoryDropdown();
+    renderIngredientsEditor();
+    renderCategoryList();
+    renderStoreList();
+    renderPlanner();
     renderGroceryList();
-  }
-
-  updateFabVisibility();
 }
 
-function updateFabVisibility() {
-  if (
-    currentTabId === "recipesTab" ||
-    currentTabId === "plannerTab" ||
-    currentTabId === "otherTab" ||
-    currentTabId === "storesTab"
-  ) {
-    fabBtn.style.display = "flex";
-  } else {
-    fabBtn.style.display = "none";
-  }
-}
-
-function handleFabClick() {
-  if (currentTabId === "recipesTab") {
-    openRecipeModal();
-  } else if (currentTabId === "plannerTab") {
-    openPlannerCustomModal();
-  } else if (currentTabId === "otherTab") {
-    openOtherItemModal();
-  } else if (currentTabId === "storesTab") {
-    openStoreModal();
-  }
-}
-
-// ---------- Modal helpers ----------
-
-function showModal(el) {
-  el.classList.remove("hidden");
-}
-
-function hideModal(el) {
-  el.classList.add("hidden");
-}
-
-// ---------- Categories ----------
-
-function syncCategoryDropdown() {
-  const cats = getAllCategories();
-  recipeCategoryInput.innerHTML = "";
-  cats.forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat;
-    opt.textContent = cat;
-    recipeCategoryInput.appendChild(opt);
-  });
-  const optNew = document.createElement("option");
-  optNew.value = "__new__";
-  optNew.textContent = "➕ Add new category…";
-  recipeCategoryInput.appendChild(optNew);
-
-  recipeCategoryInput.onchange = () => {
-    if (recipeCategoryInput.value === "__new__") {
-      const name = prompt("New category name:");
-      if (name && name.trim()) {
-        const trimmed = name.trim();
-        if (
-          !state.categoriesDefault.includes(trimmed) &&
-          !state.categoriesCustom.includes(trimmed)
-        ) {
-          state.categoriesCustom.push(trimmed);
-          saveState();
-        }
-        syncCategoryDropdown();
-        recipeCategoryInput.value = trimmed;
-        renderCategories();
-      } else {
-        syncCategoryDropdown();
-      }
-    }
-  };
-}
-
-function renderCategories() {
-  categoriesContainer.innerHTML = "";
-  const all = getAllCategories();
-  all.forEach((cat) => {
-    const pill = document.createElement("div");
-    pill.className = "category-pill";
-
-    const span = document.createElement("span");
-    span.textContent = cat;
-    pill.appendChild(span);
-
-    if (state.categoriesCustom.includes(cat)) {
-      const btn = document.createElement("button");
-      btn.textContent = "✕";
-      btn.title = "Delete custom category";
-      btn.addEventListener("click", () => {
-        if (
-          !confirm(
-            `Delete custom category "${cat}"? Meals will show as Uncategorized.`
-          )
-        )
-          return;
-        state.categoriesCustom = state.categoriesCustom.filter(
-          (c) => c !== cat
-        );
-        state.meals.forEach((m) => {
-          if (m.category === cat) m.category = "";
-        });
-        saveState();
-        syncCategoryDropdown();
-        renderCategories();
-        renderRecipes();
-        renderPlanner();
-      });
-      pill.appendChild(btn);
-    }
-
-    categoriesContainer.appendChild(pill);
-  });
-}
-
-// ---------- Stores ----------
-
-function syncStoreSelects() {
-  const selects = [otherItemStoreInput, plannerCustomStoreSelect];
-  selects.forEach((sel) => {
-    if (!sel) return;
-    sel.innerHTML = "";
-    state.stores
-      .slice()
-      .sort(byString)
-      .forEach((store) => {
-        const opt = document.createElement("option");
-        opt.value = store;
-        opt.textContent = store;
-        sel.appendChild(opt);
-      });
-  });
-}
-
-function openStoreModal() {
-  storeNameInput.value = "";
-  showModal(storeModal);
-}
-
-function saveStoreFromModal() {
-  const name = storeNameInput.value.trim();
-  if (!name) return;
-  if (state.stores.includes(name)) {
-    alert("Store already exists.");
-    return;
-  }
-  state.stores.push(name);
-  saveState();
-  syncStoreSelects();
-  renderStores();
-  hideModal(storeModal);
-}
-
-function renderStores() {
-  storesContainer.innerHTML = "";
-  const sorted = state.stores.slice().sort(byString);
-  if (!sorted.length) {
-    storesContainer.textContent = "No stores yet.";
-    return;
-  }
-
-  sorted.forEach((store) => {
-    const card = document.createElement("div");
-    card.className = "store-card";
-
-    const label = document.createElement("span");
-    label.textContent = store;
-
-    const btn = document.createElement("button");
-    btn.className = "btn btn-secondary small";
-    btn.textContent = "Delete";
-    btn.addEventListener("click", () => {
-      const usedInMeals = state.meals.some((m) =>
-        m.ingredients.some((ing) => ing.store === store)
-      );
-      const usedInOthers = state.otherItems.some(
-        (it) => it.store === store
-      );
-
-      if (usedInMeals || usedInOthers) {
-        alert(
-          `Cannot delete "${store}" because it is used in recipes or other items.`
-        );
-        return;
-      }
-      if (!confirm(`Delete store "${store}"?`)) return;
-      state.stores = state.stores.filter((s) => s !== store);
-      saveState();
-      syncStoreSelects();
-      renderStores();
-    });
-
-    card.appendChild(label);
-    card.appendChild(btn);
-    storesContainer.appendChild(card);
-  });
-}
-
-// ---------- Recipes ----------
-
+// ----------------------
+// RECIPE UI
+// ----------------------
 function renderRecipes() {
-  recipesContainer.innerHTML = "";
+    const c = document.getElementById("recipesContainer");
+    c.innerHTML = "";
 
-  if (!state.meals.length) {
-    const empty = document.createElement("div");
-    empty.textContent = "No recipes yet. Tap + to add one.";
-    recipesContainer.appendChild(empty);
-    return;
-  }
+    if (state.meals.length === 0) {
+        c.innerHTML = "<p>No recipes yet.</p>";
+        return;
+    }
 
-  const sorted = state.meals.slice().sort(byName);
-  sorted.forEach((meal) => {
-    const card = document.createElement("div");
-    card.className = "recipe-card";
+    state.meals.forEach(meal => {
+        const div = document.createElement("div");
+        div.className = "card";
 
-    const title = document.createElement("div");
-    title.className = "recipe-title";
-    title.textContent = meal.name;
+        div.innerHTML = `
+            <div class="recipe-header">
+                <div>
+                    <div class="recipe-title">${meal.name}</div>
+                    <div class="recipe-meta">${meal.category}</div>
+                </div>
+                <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
+            </div>
+        `;
 
-    const cat = document.createElement("div");
-    cat.className = "recipe-category";
-    cat.textContent = meal.category || "Uncategorized";
-
-    const meta = document.createElement("div");
-    meta.className = "recipe-meta";
-    meta.textContent = `${meal.ingredients.length} ingredient${
-      meal.ingredients.length === 1 ? "" : "s"
-    }`;
-
-    const actions = document.createElement("div");
-    actions.className = "recipe-actions";
-
-    const editBtn = document.createElement("button");
-    editBtn.className = "btn btn-secondary small";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => openRecipeModal(meal.id));
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn btn-secondary small";
-    delBtn.textContent = "Delete";
-    delBtn.addEventListener("click", () => deleteMeal(meal.id));
-
-    actions.appendChild(editBtn);
-    actions.appendChild(delBtn);
-
-    card.appendChild(title);
-    card.appendChild(cat);
-    card.appendChild(meta);
-    card.appendChild(actions);
-
-    recipesContainer.appendChild(card);
-  });
+        c.appendChild(div);
+    });
 }
 
-function deleteMeal(mealId) {
-  const meal = state.meals.find((m) => m.id === mealId);
-  if (!meal) return;
-  if (!confirm(`Delete recipe "${meal.name}"?`)) return;
-
-  state.meals = state.meals.filter((m) => m.id !== mealId);
-  delete state.planner.mealGroupStates[mealId];
-  state.planner.selectedMealIds = state.planner.selectedMealIds.filter(
-    (id) => id !== mealId
-  );
-  saveState();
-  renderRecipes();
-  renderPlanner();
+function deleteRecipe(id) {
+    if (!confirm("Delete this recipe?")) return;
+    state.meals = state.meals.filter(m => m.id !== id);
+    saveState();
+    renderRecipes();
 }
 
-function openRecipeModal(mealId = null) {
-  editingMealId = mealId;
-  ingredientList.innerHTML = "";
-  syncCategoryDropdown();
+// ----------------------
+// CATEGORY DROPDOWN & ENFORCEMENT
+// ----------------------
+function renderRecipeCategoryDropdown() {
+    const sel = document.getElementById("recipeCategory");
+    sel.innerHTML = "";
 
-  if (mealId) {
-    recipeModalTitle.textContent = "Edit Recipe";
-    const meal = state.meals.find((m) => m.id === mealId);
-    if (!meal) return;
-    recipeNameInput.value = meal.name;
-    recipeCategoryInput.value = meal.category || DEFAULT_CATEGORIES[0];
-
-    meal.ingredients.forEach((ing) => addIngredientRowToModal(ing));
-  } else {
-    recipeModalTitle.textContent = "Add Recipe";
-    recipeNameInput.value = "";
-    recipeCategoryInput.value = DEFAULT_CATEGORIES[0];
-    addIngredientRowToModal();
-  }
-
-  showModal(recipeModal);
-}
-
-function addIngredientRowToModal(ing = null) {
-  const row = document.createElement("div");
-  row.className = "ingredient-edit-row";
-
-  const main = document.createElement("div");
-  main.className = "ingredient-main-row";
-
-  const nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.placeholder = "Ingredient name";
-
-  const qtyInput = document.createElement("input");
-  qtyInput.type = "number";
-  qtyInput.min = "1";
-  qtyInput.placeholder = "1";
-
-  const unitInput = document.createElement("input");
-  unitInput.type = "text";
-  unitInput.placeholder = "CT";
-
-  const storeSelect = document.createElement("select");
-
-  state.stores
-    .slice()
-    .sort(byString)
-    .forEach((store) => {
-      const opt = document.createElement("option");
-      opt.value = store;
-      opt.textContent = store;
-      storeSelect.appendChild(opt);
+    state.categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        sel.appendChild(opt);
     });
 
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.className = "ing-remove-btn";
-  removeBtn.textContent = "✕";
-  removeBtn.addEventListener("click", () => {
-    row.remove();
-  });
-
-  main.appendChild(nameInput);
-  main.appendChild(qtyInput);
-  main.appendChild(unitInput);
-  main.appendChild(storeSelect);
-  main.appendChild(removeBtn);
-
-  const groupRow = document.createElement("div");
-  groupRow.className = "ingredient-group-row";
-
-  const groupInput = document.createElement("input");
-  groupInput.type = "text";
-  groupInput.placeholder = "Substitute group (optional)";
-  groupInput.className = "ingredient-group-input";
-
-  const defaultBtn = document.createElement("button");
-  defaultBtn.type = "button";
-  defaultBtn.className = "ingredient-default-toggle";
-  defaultBtn.textContent = "☆ Make Default";
-  defaultBtn.dataset.isDefault = "false";
-
-  defaultBtn.addEventListener("click", () => {
-    const isDef = defaultBtn.dataset.isDefault === "true";
-    if (isDef) {
-      defaultBtn.dataset.isDefault = "false";
-      defaultBtn.classList.remove("is-default");
-      defaultBtn.textContent = "☆ Make Default";
-    } else {
-      defaultBtn.dataset.isDefault = "true";
-      defaultBtn.classList.add("is-default");
-      defaultBtn.textContent = "⭐ Default";
-    }
-  });
-
-  groupRow.appendChild(groupInput);
-  groupRow.appendChild(defaultBtn);
-
-  row.appendChild(main);
-  row.appendChild(groupRow);
-  ingredientList.appendChild(row);
-
-  if (ing) {
-    nameInput.value = ing.name || "";
-    qtyInput.value = ing.qty || "";
-    unitInput.value = ing.unit || "";
-    storeSelect.value = ing.store || state.stores[0] || "";
-    groupInput.value = ing.group || "";
-    if (ing.isDefault) {
-      defaultBtn.dataset.isDefault = "true";
-      defaultBtn.classList.add("is-default");
-      defaultBtn.textContent = "⭐ Default";
-    }
-  } else {
-    qtyInput.value = "1";
-    unitInput.value = "CT";
-  }
+    // No “blank” option → category is required
 }
 
-function saveRecipeFromModal() {
-  const name = recipeNameInput.value.trim();
-  let category = recipeCategoryInput.value;
-  if (!name) {
-    alert("Please enter a meal name.");
-    return;
-  }
+// ----------------------
+// INGREDIENT EDITOR
+// ----------------------
+let ingredientRows = [];
 
-  if (
-    category &&
-    category !== "__new__" &&
-    !state.categoriesDefault.includes(category) &&
-    !state.categoriesCustom.includes(category)
-  ) {
-    state.categoriesCustom.push(category);
-  }
+function renderIngredientsEditor() {
+    const container = document.getElementById("recipeIngredientsContainer");
+    container.innerHTML = "";
 
-  const rows = ingredientList.querySelectorAll(".ingredient-edit-row");
-  const ingredients = [];
+    ingredientRows.forEach((row, index) => {
+        const div = document.createElement("div");
+        div.className = "ingredient-row card";
 
-  rows.forEach((row) => {
-    const nameInput = row.querySelector(".ingredient-main-row input[type=text]");
-    const [qtyInput, unitInput, storeSelect] =
-      row.querySelectorAll(".ingredient-main-row input, .ingredient-main-row select");
+        div.innerHTML = `
+            <input class="ingName" placeholder="Ingredient" value="${row.name || ""}">
+            <input class="ingQty" type="number" min="1" placeholder="Qty" value="${row.qty || 1}">
+            <input class="ingUnit" placeholder="Unit" value="${row.unit || "CT"}">
 
-    const groupInput = row.querySelector(".ingredient-group-input");
-    const defaultBtn = row.querySelector(".ingredient-default-toggle");
+            <label>Store:</label>
+            <select class="ingStore">
+                ${state.stores.map(s => `<option ${row.store === s ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
 
-    const ingName = nameInput.value.trim();
-    if (!ingName) return;
+            <label>Substitute Group:</label>
+            <input class="ingGroup" placeholder="Group name" value="${row.group || ""}">
 
-    const qtyVal = qtyInput.value.trim();
-    const unitVal = unitInput.value.trim();
-    const storeVal = storeSelect.value;
-    const groupVal = groupInput.value.trim();
-    const isDefault = defaultBtn.dataset.isDefault === "true";
+            <div class="default-toggle ${row.isDefault ? "active" : ""}" onclick="toggleDefault(${index})">
+                ${row.isDefault ? "⭐ Default" : "☆ Make Default"}
+            </div>
 
-    let qty = parseFloat(qtyVal);
-    if (isNaN(qty) || qty <= 0) qty = 1;
+            <button class="danger" onclick="removeIngredientRow(${index})">Remove</button>
+        `;
 
-    ingredients.push({
-      id: makeId(),
-      name: ingName,
-      qty,
-      unit: unitVal || "CT",
-      store: storeVal || "",
-      group: groupVal,
-      isDefault
+        container.appendChild(div);
     });
-  });
+}
 
-  // normalize defaults: one per group
-  const groups = {};
-  ingredients.forEach((ing) => {
-    const key = ing.group || "__solo__" + ing.id;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(ing);
-  });
-  Object.values(groups).forEach((ings) => {
-    const defIndex = ings.findIndex((i) => i.isDefault);
-    if (defIndex > -1) {
-      ings.forEach((i, idx) => (i.isDefault = idx === defIndex));
+function addIngredientRow() {
+    ingredientRows.push({
+        name: "",
+        qty: 1,
+        unit: "CT",
+        store: state.stores[0],
+        group: "",
+        isDefault: false
+    });
+    renderIngredientsEditor();
+}
+
+function removeIngredientRow(i) {
+    ingredientRows.splice(i, 1);
+    renderIngredientsEditor();
+}
+
+function toggleDefault(i) {
+    const group = ingredientRows[i].group.trim();
+
+    // Only one default per group
+    ingredientRows.forEach(row => {
+        if (row.group.trim() === group) row.isDefault = false;
+    });
+
+    ingredientRows[i].isDefault = true;
+    renderIngredientsEditor();
+}
+
+// ----------------------
+// SAVE RECIPE
+// ----------------------
+function saveRecipe() {
+    const name = document.getElementById("recipeName").value.trim();
+    const category = document.getElementById("recipeCategory").value.trim();
+
+    if (!name) {
+        alert("Meal name required.");
+        return;
     }
-  });
+    if (!category) {
+        alert("Category required.");
+        return;
+    }
 
-  if (editingMealId) {
-    const meal = state.meals.find((m) => m.id === editingMealId);
-    if (!meal) return;
-    meal.name = name;
-    meal.category = category === "__new__" ? "" : category;
-    meal.ingredients = ingredients;
-  } else {
+    // Collect ingredient data
+    const rows = [...document.querySelectorAll("#recipeIngredientsContainer .ingredient-row")];
+    const ingredients = rows.map(row => {
+        return {
+            id: crypto.randomUUID(),
+            name: row.querySelector(".ingName").value,
+            qty: Number(row.querySelector(".ingQty").value) || 1,
+            unit: row.querySelector(".ingUnit").value,
+            store: row.querySelector(".ingStore").value,
+            group: row.querySelector(".ingGroup").value,
+            isDefault: row.querySelector(".default-toggle").classList.contains("active")
+        };
+    });
+
     state.meals.push({
-      id: makeId(),
-      name,
-      category: category === "__new__" ? "" : category,
-      ingredients
-    });
-  }
-
-  saveState();
-  hideModal(recipeModal);
-  renderRecipes();
-  renderCategories();
-  renderPlanner();
-}
-
-// ---------- Other Items ----------
-
-function openOtherItemModal() {
-  otherItemNameInput.value = "";
-  syncStoreSelects();
-  showModal(otherItemModal);
-}
-
-function saveOtherItemFromModal() {
-  const name = otherItemNameInput.value.trim();
-  const store = otherItemStoreInput.value || "";
-  if (!name) {
-    alert("Enter item name.");
-    return;
-  }
-  const id = makeId();
-  state.otherItems.push({ id, name, store });
-  saveState();
-  hideModal(otherItemModal);
-  renderOtherItems();
-  renderPlannerCustomItems();
-}
-
-function renderOtherItems() {
-  otherItemsContainer.innerHTML = "";
-  if (!state.otherItems.length) {
-    otherItemsContainer.textContent = "No other items added yet.";
-    return;
-  }
-  const sorted = state.otherItems.slice().sort(byName);
-  sorted.forEach((item) => {
-    const card = document.createElement("div");
-    card.className = "other-item-card";
-
-    const label = document.createElement("span");
-    label.textContent = item.store
-      ? `${item.name} — ${item.store}`
-      : item.name;
-
-    const btn = document.createElement("button");
-    btn.className = "btn btn-secondary small";
-    btn.textContent = "Delete";
-    btn.addEventListener("click", () => {
-      if (!confirm(`Delete "${item.name}"?`)) return;
-      state.otherItems = state.otherItems.filter((o) => o.id !== item.id);
-      state.planner.selectedOtherItemIds =
-        state.planner.selectedOtherItemIds.filter((id) => id !== item.id);
-      saveState();
-      renderOtherItems();
-      renderPlannerCustomItems();
+        id: crypto.randomUUID(),
+        name,
+        category,
+        ingredients
     });
 
-    card.appendChild(label);
-    card.appendChild(btn);
-    otherItemsContainer.appendChild(card);
-  });
+    ingredientRows = [];
+    saveState();
+    renderAll();
 }
 
-// ---------- Planner Custom Items From FAB ----------
+// ----------------------
+// CATEGORIES TAB
+// ----------------------
+function renderCategoryList() {
+    const list = document.getElementById("categoryList");
+    list.innerHTML = "";
 
-function openPlannerCustomModal() {
-  plannerCustomNameInput.value = "";
-  syncStoreSelects();
-  showModal(plannerCustomModal);
+    state.categories.forEach(cat => {
+        const div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            ${cat}
+            ${!isDefaultCategory(cat) ? `<button class="danger" onclick="deleteCategory('${cat}')">Delete</button>` : ""}
+        `;
+
+        list.appendChild(div);
+    });
 }
 
-function savePlannerCustomFromModal() {
-  const name = plannerCustomNameInput.value.trim();
-  const store = plannerCustomStoreSelect.value || "";
-  if (!name) {
-    alert("Enter item name.");
-    return;
-  }
-  const id = makeId();
-  state.otherItems.push({ id, name, store });
-  // also mark selected in planner
-  state.planner.selectedOtherItemIds.push(id);
-  saveState();
-  hideModal(plannerCustomModal);
-  renderOtherItems();
-  renderPlannerCustomItems();
+function isDefaultCategory(cat) {
+    return [
+        "Low Prep", "Medium Prep", "High Prep / Longer Cook Times", "Grilling",
+        "Breakfast", "Crock Pot", "Sides", "Appetizers", "Baby Meals"
+    ].includes(cat);
 }
 
-// ---------- Planner ----------
+function addCategory() {
+    const value = document.getElementById("newCategory").value.trim();
+    if (!value) return;
 
+    if (state.categories.includes(value)) {
+        alert("Already exists.");
+        return;
+    }
+
+    state.categories.push(value);
+    saveState();
+    renderAll();
+}
+
+function deleteCategory(cat) {
+    if (isDefaultCategory(cat)) return;
+    if (!confirm("Delete category?")) return;
+
+    state.categories = state.categories.filter(c => c !== cat);
+
+    // Unassign meals
+    state.meals.forEach(m => {
+        if (m.category === cat) m.category = "";
+    });
+
+    saveState();
+    renderAll();
+}
+
+// ----------------------
+// STORES TAB
+// ----------------------
+function renderStoreList() {
+    const list = document.getElementById("storeList");
+    list.innerHTML = "";
+
+    state.stores.forEach(store => {
+        const div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            ${store}
+            <button class="danger" onclick="removeStore('${store}')">Delete</button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+function addStore() {
+    const store = document.getElementById("newStore").value.trim();
+    if (!store) return;
+
+    if (state.stores.includes(store)) {
+        alert("Store already exists.");
+        return;
+    }
+
+    state.stores.push(store);
+    saveState();
+    renderAll();
+}
+
+function removeStore(store) {
+    if (!confirm("Delete store?")) return;
+    state.stores = state.stores.filter(s => s !== store);
+    saveState();
+    renderAll();
+}
+
+// ----------------------
+// PLANNER TAB
+// ----------------------
 function renderPlanner() {
-  plannerMealsContainer.innerHTML = "";
+    const c = document.getElementById("plannerMeals");
+    c.innerHTML = "";
 
-  if (!state.meals.length) {
-    plannerMealsContainer.textContent =
-      "Add recipes first in the Recipes tab.";
-    plannerCustomContainer.textContent = "";
-    return;
-  }
+    if (state.meals.length === 0) {
+        c.innerHTML = "<p>No meals yet.</p>";
+        return;
+    }
 
-  // group meals by category
-  const allCats = getAllCategories();
-  const mealsByCat = {};
-  allCats.forEach((c) => (mealsByCat[c] = []));
-  mealsByCat["Uncategorized"] = [];
+    state.meals.forEach(meal => {
+        const div = document.createElement("div");
+        div.className = "card";
 
-  state.meals.forEach((meal) => {
-    const cat = meal.category || "Uncategorized";
-    if (!mealsByCat[cat]) mealsByCat[cat] = [];
-    mealsByCat[cat].push(meal);
-  });
+        div.innerHTML = `
+            <input type="checkbox" ${state.plannerMeals.includes(meal.id) ? "checked" : ""}
+                onclick="togglePlannerMeal('${meal.id}')">
+            <strong>${meal.name}</strong>
+        `;
 
-  Object.keys(mealsByCat)
-    .sort(byString)
-    .forEach((cat) => {
-      const meals = mealsByCat[cat];
-      if (!meals.length) return;
+        c.appendChild(div);
+    });
+}
 
-      const header = document.createElement("div");
-      header.className = "category-header";
-      header.textContent = cat;
-      plannerMealsContainer.appendChild(header);
+function togglePlannerMeal(id) {
+    if (state.plannerMeals.includes(id)) {
+        state.plannerMeals = state.plannerMeals.filter(m => m !== id);
+    } else {
+        state.plannerMeals.push(id);
+    }
+    saveState();
+}
 
-      const line = document.createElement("div");
-      line.className = "category-line";
-      plannerMealsContainer.appendChild(line);
+// Collapse all simply hides expanded-items feature if added; keeping stub
+function collapseAllPlanner() {
+    alert("Collapsed (future expansion area).");
+}
 
-      meals
-        .slice()
-        .sort(byName)
-        .forEach((meal) => {
-          const mealDiv = document.createElement("div");
-          mealDiv.className = "planner-meal";
+// ----------------------
+// EXTRA ITEMS
+// ----------------------
+function addCustomPlannerItem() {
+    const val = document.getElementById("customPlannerItem").value.trim();
+    if (!val) return;
 
-          const row = document.createElement("div");
-          row.className = "planner-meal-row";
+    state.plannerExtras.push(val);
+    saveState();
+    renderGroceryList();
+}
 
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = state.planner.selectedMealIds.includes(meal.id);
+// ----------------------
+// GROCERY LIST
+// ----------------------
+function renderGroceryList() {
+    const c = document.getElementById("groceryContainer");
+    c.innerHTML = "";
 
-          cb.addEventListener("change", () =>
-            handlePlannerMealToggle(meal.id, cb.checked)
-          );
+    const chosenMeals = state.meals.filter(m => state.plannerMeals.includes(m.id));
 
-          const nameSpan = document.createElement("span");
-          nameSpan.className = "planner-meal-name";
-          nameSpan.textContent = meal.name;
+    let itemsByStore = {};
 
-          row.appendChild(cb);
-          row.appendChild(nameSpan);
-          mealDiv.appendChild(row);
+    function addItem(store, text) {
+        if (!itemsByStore[store]) itemsByStore[store] = [];
+        itemsByStore[store].push(text);
+    }
 
-          const ingBlock = document.createElement("div");
-          ingBlock.className = "planner-ingredients";
-          ingBlock.id = `planner-ings-${meal.id}`;
-          mealDiv.appendChild(ingBlock);
-
-          plannerMealsContainer.appendChild(mealDiv);
-
-          if (cb.checked) {
-            renderPlannerMealIngredients(meal, ingBlock);
-          }
+    chosenMeals.forEach(meal => {
+        meal.ingredients.forEach(ing => {
+            let qtyText = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+            let final = `${ing.name}${qtyText}`;
+            addItem(ing.store, final);
         });
     });
 
-  renderPlannerCustomItems();
+    state.plannerExtras.forEach(item => addItem("Other", item));
+
+    Object.keys(itemsByStore).forEach(store => {
+        const div = document.createElement("div");
+        div.className = "grocery-store-card";
+        div.innerHTML = `<h3>${store}</h3>`;
+
+        itemsByStore[store].forEach(item => {
+            div.innerHTML += `<div class="grocery-item">• ${item}</div>`;
+        });
+
+        c.appendChild(div);
+    });
 }
 
-function handlePlannerMealToggle(mealId, checked) {
-  if (checked) {
-    if (!state.planner.selectedMealIds.includes(mealId)) {
-      state.planner.selectedMealIds.push(mealId);
+// ----------------------
+// FAB ACTION
+// ----------------------
+function fabAction() {
+    const active = document.querySelector(".tab-page.active").id;
+
+    if (active === "recipesTab") {
+        ingredientRows = [];
+        document.getElementById("recipeName").value = "";
+        renderIngredientsEditor();
+        window.scrollTo(0,0);
+        alert("Scroll up to add a recipe.");
     }
-    saveState();
-    const meal = state.meals.find((m) => m.id === mealId);
-    const ingBlock = document.getElementById(`planner-ings-${mealId}`);
-    if (meal && ingBlock) {
-      renderPlannerMealIngredients(meal, ingBlock);
+    if (active === "plannerTab") {
+        document.getElementById("customPlannerItem").focus();
     }
-  } else {
-    state.planner.selectedMealIds = state.planner.selectedMealIds.filter(
-      (id) => id !== mealId
-    );
-    // erase comments & reset included for this meal
-    delete state.planner.mealGroupStates[mealId];
-    saveState();
-    const ingBlock = document.getElementById(`planner-ings-${mealId}`);
-    if (ingBlock) ingBlock.innerHTML = "";
-  }
-}
-
-function renderPlannerMealIngredients(meal, container) {
-  container.innerHTML = "";
-
-  if (!state.planner.mealGroupStates[meal.id]) {
-    state.planner.mealGroupStates[meal.id] = {};
-  }
-  const mealStates = state.planner.mealGroupStates[meal.id];
-
-  const groups = {};
-  meal.ingredients.forEach((ing) => {
-    const key = ing.group ? "grp:" + ing.group : "solo:" + ing.id;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(ing);
-  });
-
-  Object.entries(groups).forEach(([groupKey, ingArray]) => {
-    if (!mealStates[groupKey]) {
-      // pick default-ing or first
-      let def = ingArray.find((i) => i.isDefault) || ingArray[0];
-      mealStates[groupKey] = {
-        selectedIngredientId: def.id,
-        included: true,
-        comment: ""
-      };
+    if (active === "otherTab") {
+        document.getElementById("newCategory").focus();
     }
-
-    const gs = mealStates[groupKey];
-    let selectedIng =
-      ingArray.find((i) => i.id === gs.selectedIngredientId) ||
-      ingArray[0];
-    gs.selectedIngredientId = selectedIng.id;
-
-    const row = document.createElement("div");
-    row.className = "planner-ingredient-row";
-
-    const top = document.createElement("div");
-    top.className = "planner-ingredient-top";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = gs.included;
-    cb.addEventListener("change", () => {
-      gs.included = cb.checked;
-      saveState();
-    });
-
-    const label = document.createElement("span");
-    label.className = "planner-ingredient-label";
-
-    let qtyText = "";
-    if (typeof selectedIng.qty === "number" && selectedIng.qty > 1) {
-      qtyText = ` (${selectedIng.qty} ${selectedIng.unit || "CT"})`;
+    if (active === "storesTab") {
+        document.getElementById("newStore").focus();
     }
-    const storeText = selectedIng.store ? ` — ${selectedIng.store}` : "";
-    label.textContent = `${selectedIng.name}${qtyText}${storeText}`;
-
-    top.appendChild(cb);
-    top.appendChild(label);
-
-    if (ingArray.length > 1) {
-      const sel = document.createElement("select");
-      ingArray.forEach((ing) => {
-        const opt = document.createElement("option");
-        opt.value = ing.id;
-        let q = "";
-        if (typeof ing.qty === "number" && ing.qty > 1) {
-          q = ` (${ing.qty} ${ing.unit || "CT"})`;
-        }
-        opt.textContent = `${ing.name}${q}`;
-        if (ing.id === gs.selectedIngredientId) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener("change", () => {
-        gs.selectedIngredientId = sel.value;
-        saveState();
-        renderPlanner();
-      });
-      top.appendChild(sel);
-    }
-
-    const commentInput = document.createElement("input");
-    commentInput.type = "text";
-    commentInput.className = "planner-comment";
-    commentInput.placeholder = "Note (optional)";
-    commentInput.value = gs.comment || "";
-    commentInput.addEventListener("input", () => {
-      gs.comment = commentInput.value.trim();
-      saveState();
-    });
-
-    row.appendChild(top);
-    row.appendChild(commentInput);
-    container.appendChild(row);
-  });
-
-  saveState();
-}
-
-function renderPlannerCustomItems() {
-  plannerCustomContainer.innerHTML = "";
-  if (!state.otherItems.length) {
-    plannerCustomContainer.textContent =
-      "No extra items yet. Use + in Planner or Other tab.";
-    return;
-  }
-
-  const sorted = state.otherItems.slice().sort(byName);
-  sorted.forEach((item) => {
-    const row = document.createElement("div");
-    row.className = "planner-ingredient-row";
-
-    const top = document.createElement("div");
-    top.className = "planner-ingredient-top";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = state.planner.selectedOtherItemIds.includes(item.id);
-    cb.addEventListener("change", () => {
-      if (cb.checked) {
-        if (!state.planner.selectedOtherItemIds.includes(item.id)) {
-          state.planner.selectedOtherItemIds.push(item.id);
-        }
-      } else {
-        state.planner.selectedOtherItemIds =
-          state.planner.selectedOtherItemIds.filter((id) => id !== item.id);
-      }
-      saveState();
-    });
-
-    const label = document.createElement("span");
-    label.className = "planner-ingredient-label";
-    label.textContent = item.store
-      ? `${item.name} — ${item.store}`
-      : item.name;
-
-    top.appendChild(cb);
-    top.appendChild(label);
-    row.appendChild(top);
-
-    plannerCustomContainer.appendChild(row);
-  });
-}
-
-// ---------- Grocery List ----------
-
-function buildGroceryListStructure() {
-  const byStore = {};
-  const ensureBucket = (store) => {
-    const key = store || "Unassigned";
-    if (!byStore[key]) byStore[key] = [];
-    return byStore[key];
-  };
-
-  // from meals
-  state.planner.selectedMealIds.forEach((mealId) => {
-    const meal = state.meals.find((m) => m.id === mealId);
-    if (!meal) return;
-
-    const mealStates = state.planner.mealGroupStates[mealId] || {};
-
-    const groups = {};
-    meal.ingredients.forEach((ing) => {
-      const key = ing.group ? "grp:" + ing.group : "solo:" + ing.id;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(ing);
-    });
-
-    Object.entries(groups).forEach(([groupKey, ingArray]) => {
-      const gs = mealStates[groupKey];
-      if (!gs || !gs.included) return;
-      let selectedIng =
-        ingArray.find((i) => i.id === gs.selectedIngredientId) ||
-        ingArray.find((i) => i.isDefault) ||
-        ingArray[0];
-
-      const bucket = ensureBucket(selectedIng.store);
-      let qty = "";
-      if (typeof selectedIng.qty === "number" && selectedIng.qty > 1) {
-        qty = `${selectedIng.qty} ${selectedIng.unit || "CT"}`;
-      }
-      const comment = gs.comment || "";
-
-      bucket.push({
-        name: selectedIng.name,
-        qty,
-        comment
-      });
-    });
-  });
-
-  // from other items
-  state.planner.selectedOtherItemIds.forEach((id) => {
-    const item = state.otherItems.find((o) => o.id === id);
-    if (!item) return;
-    const bucket = ensureBucket(item.store);
-    bucket.push({
-      name: item.name,
-      qty: "",
-      comment: ""
-    });
-  });
-
-  return byStore;
-}
-
-function renderGroceryList() {
-  groceryListContainer.innerHTML = "";
-  const byStore = buildGroceryListStructure();
-  const keys = Object.keys(byStore);
-  if (!keys.length) {
-    groceryListContainer.textContent =
-      "No grocery items yet. Use Planner to select meals and items.";
-    return;
-  }
-
-  const orderedStores = [...state.stores];
-  if (byStore["Unassigned"]) orderedStores.push("Unassigned");
-
-  orderedStores.forEach((store) => {
-    const items = byStore[store];
-    if (!items || !items.length) return;
-
-    const header = document.createElement("div");
-    header.className = "grocery-store-header";
-    header.textContent =
-      store === "Unassigned" ? "Other / Any Store" : store;
-
-    const line = document.createElement("div");
-    line.className = "grocery-divider";
-
-    groceryListContainer.appendChild(header);
-    groceryListContainer.appendChild(line);
-
-    items.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "grocery-item";
-
-      let text = `• ${item.name}`;
-      if (item.qty) text += ` (${item.qty})`;
-      if (item.comment) text += ` (${item.comment})`;
-
-      row.textContent = text;
-      groceryListContainer.appendChild(row);
-    });
-  });
-}
-
-function buildGroceryText() {
-  const byStore = buildGroceryListStructure();
-  const keys = Object.keys(byStore);
-  if (!keys.length) return "";
-
-  const lines = [];
-  const orderedStores = [...state.stores];
-  if (byStore["Unassigned"]) orderedStores.push("Unassigned");
-
-  orderedStores.forEach((store) => {
-    const items = byStore[store];
-    if (!items || !items.length) return;
-    lines.push(store === "Unassigned" ? "Other / Any Store" : store);
-    items.forEach((item) => {
-      let text = `• ${item.name}`;
-      if (item.qty) text += ` (${item.qty})`;
-      if (item.comment) text += ` (${item.comment})`;
-      lines.push(text);
-    });
-    lines.push("");
-  });
-
-  return lines.join("\n").trim();
 }
