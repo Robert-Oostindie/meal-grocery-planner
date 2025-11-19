@@ -1,5 +1,5 @@
 // ===============================
-// Meal Planner App - script.js
+// Meal & Grocery Planner - script.js
 // ===============================
 
 const STORAGE_KEY = "mealPlannerApp_v1";
@@ -18,22 +18,20 @@ const DEFAULT_CATEGORIES = [
 
 const DEFAULT_STORES = ["Aldi", "Walmart", "Festival Foods", "Woodmans"];
 
-// ---------- STATE ----------
 let state = {
   version: 1,
   categoriesDefault: [...DEFAULT_CATEGORIES],
   categoriesCustom: [],
   stores: [...DEFAULT_STORES],
-  meals: [],
-  otherItems: [],
+  meals: [], // {id,name,category,ingredients:[{id,name,qty,unit,store,group,isDefault}]}
+  otherItems: [], // {id,name,store}
   planner: {
     selectedMealIds: [],
-    mealGroupStates: {}, // mealId -> groupKey -> {selectedIngredientId, included, comment}
+    mealGroupStates: {}, // mealId -> groupKey -> {selectedIngredientId,included,comment}
     selectedOtherItemIds: []
   }
 };
 
-// ---------- UTIL ----------
 const byName = (a, b) => a.name.localeCompare(b.name);
 const byString = (a, b) => a.localeCompare(b);
 const makeId = () =>
@@ -43,7 +41,7 @@ function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    console.error("Failed to save state", e);
+    console.error("Save error", e);
   }
 }
 
@@ -55,27 +53,33 @@ function loadState() {
     state = {
       ...state,
       ...parsed,
-      categoriesDefault: [...DEFAULT_CATEGORIES], // don't allow changing defaults
+      categoriesDefault: [...DEFAULT_CATEGORIES],
       categoriesCustom: parsed.categoriesCustom || []
     };
   } catch (e) {
-    console.error("Failed to load state", e);
+    console.error("Load error", e);
   }
 }
 
-// Combined categories
 function getAllCategories() {
   const set = new Set([...state.categoriesDefault, ...state.categoriesCustom]);
   return Array.from(set).sort(byString);
 }
 
-// ---------- DOM REFS ----------
-let navButtons;
-let tabs;
-let fabBtn;
+// DOM refs
+let navButtons, tabs, fabBtn;
+let recipesContainer,
+  categoriesContainer,
+  plannerMealsContainer,
+  plannerCustomContainer,
+  otherItemsContainer,
+  storesContainer,
+  groceryListContainer;
+let collapseAllBtn, copyListBtn;
 
-// Recipe modal
+// Modals & fields
 let recipeModal,
+  recipeModalTitle,
   recipeNameInput,
   recipeCategoryInput,
   ingredientList,
@@ -83,41 +87,28 @@ let recipeModal,
   saveRecipeBtn,
   closeRecipeModalBtn;
 
-// Other item modal
 let otherItemModal,
   otherItemNameInput,
   otherItemStoreInput,
   saveOtherItemBtn,
   closeOtherItemModalBtn;
 
-// Store modal
-let storeModal, storeNameInput, saveStoreBtn, closeStoreModalBtn;
+let storeModal,
+  storeNameInput,
+  saveStoreBtn,
+  closeStoreModalBtn;
 
-// Planner custom item modal
 let plannerCustomModal,
   plannerCustomNameInput,
   plannerCustomStoreSelect,
   savePlannerCustomBtn,
   closePlannerCustomModalBtn;
 
-// Containers
-let recipesContainer,
-  plannerMealsContainer,
-  plannerCustomContainer,
-  otherItemsContainer,
-  storesContainer,
-  groceryListContainer;
-
-// Buttons
-let collapseAllBtn, copyListBtn;
-
-// Keep track of which tab is active
 let currentTabId = "recipesTab";
-
-// Recipe being edited (null=new)
 let editingMealId = null;
 
 // ---------- INIT ----------
+
 document.addEventListener("DOMContentLoaded", () => {
   loadState();
 
@@ -133,6 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fabBtn = document.getElementById("fabBtn");
 
   recipesContainer = document.getElementById("recipesContainer");
+  categoriesContainer = document.getElementById("categoriesContainer");
   plannerMealsContainer = document.getElementById("plannerMealsContainer");
   plannerCustomContainer = document.getElementById("plannerCustomContainer");
   otherItemsContainer = document.getElementById("otherItemsContainer");
@@ -142,8 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
   collapseAllBtn = document.getElementById("collapseAllBtn");
   copyListBtn = document.getElementById("copyListBtn");
 
-  // Recipe modal elements
   recipeModal = document.getElementById("recipeModal");
+  recipeModalTitle = document.getElementById("recipeModalTitle");
   recipeNameInput = document.getElementById("recipeNameInput");
   recipeCategoryInput = document.getElementById("recipeCategoryInput");
   ingredientList = document.getElementById("ingredientList");
@@ -151,20 +143,17 @@ document.addEventListener("DOMContentLoaded", () => {
   saveRecipeBtn = document.getElementById("saveRecipeBtn");
   closeRecipeModalBtn = document.getElementById("closeRecipeModal");
 
-  // Other item modal
   otherItemModal = document.getElementById("otherItemModal");
   otherItemNameInput = document.getElementById("otherItemNameInput");
   otherItemStoreInput = document.getElementById("otherItemStoreInput");
   saveOtherItemBtn = document.getElementById("saveOtherItemBtn");
   closeOtherItemModalBtn = document.getElementById("closeOtherItemModal");
 
-  // Store modal
   storeModal = document.getElementById("storeModal");
   storeNameInput = document.getElementById("storeNameInput");
   saveStoreBtn = document.getElementById("saveStoreBtn");
   closeStoreModalBtn = document.getElementById("closeStoreModal");
 
-  // Planner custom item modal
   plannerCustomModal = document.getElementById("plannerCustomModal");
   plannerCustomNameInput = document.getElementById("plannerCustomName");
   plannerCustomStoreSelect = document.getElementById("plannerCustomStore");
@@ -173,7 +162,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "closePlannerCustomModal"
   );
 
-  // Wire nav buttons
   navButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const tabId = btn.dataset.tab;
@@ -181,37 +169,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // FAB behavior
   fabBtn.addEventListener("click", handleFabClick);
 
-  // Collapse all in planner (hide ingredient blocks, keep selections)
-  if (collapseAllBtn) {
-    collapseAllBtn.addEventListener("click", () => {
-      const blocks = plannerMealsContainer.querySelectorAll(
-        ".planner-ingredients"
+  collapseAllBtn.addEventListener("click", () => {
+    // just hide ingredient blocks, keep selections
+    const blocks = plannerMealsContainer.querySelectorAll(".planner-ingredients");
+    blocks.forEach((b) => (b.style.display = "none"));
+  });
+
+  copyListBtn.addEventListener("click", () => {
+    const text = buildGroceryText();
+    if (!text.trim()) {
+      alert("Your grocery list is empty.");
+      return;
+    }
+    navigator.clipboard
+      .writeText(text)
+      .then(() => alert("Grocery list copied. Paste into Notes."))
+      .catch(() =>
+        alert("Copy failed. You can still select and copy manually.")
       );
-      blocks.forEach((b) => (b.style.display = "none"));
-    });
-  }
+  });
 
-  // Copy grocery list
-  if (copyListBtn) {
-    copyListBtn.addEventListener("click", () => {
-      const text = buildGroceryText();
-      if (!text.trim()) {
-        alert("Your grocery list is empty.");
-        return;
-      }
-      navigator.clipboard
-        .writeText(text)
-        .then(() => alert("Grocery list copied. Paste into Notes on your phone."))
-        .catch(() =>
-          alert("Copy failed. You can still select and copy manually.")
-        );
-    });
-  }
-
-  // Recipe modal events
   addIngredientBtn.addEventListener("click", () =>
     addIngredientRowToModal()
   );
@@ -220,28 +199,26 @@ document.addEventListener("DOMContentLoaded", () => {
     hideModal(recipeModal)
   );
 
-  // Other item modal events
   saveOtherItemBtn.addEventListener("click", saveOtherItemFromModal);
   closeOtherItemModalBtn.addEventListener("click", () =>
     hideModal(otherItemModal)
   );
 
-  // Store modal events
   saveStoreBtn.addEventListener("click", saveStoreFromModal);
   closeStoreModalBtn.addEventListener("click", () =>
     hideModal(storeModal)
   );
 
-  // Planner custom item modal events
   savePlannerCustomBtn.addEventListener("click", savePlannerCustomFromModal);
   closePlannerCustomModalBtn.addEventListener("click", () =>
     hideModal(plannerCustomModal)
   );
 
-  // Initial render
   syncCategoryDropdown();
   syncStoreSelects();
+
   renderRecipes();
+  renderCategories();
   renderPlanner();
   renderOtherItems();
   renderStores();
@@ -249,21 +226,19 @@ document.addEventListener("DOMContentLoaded", () => {
   updateFabVisibility();
 });
 
-// ---------- NAV / TABS ----------
+// ---------- Tabs & FAB ----------
+
 function switchTab(tabId) {
   currentTabId = tabId;
 
   Object.entries(tabs).forEach(([id, el]) => {
     el.classList.toggle("active", id === tabId);
   });
-
   navButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
 
-  if (tabId === "groceryTab") {
-    renderGroceryList();
-  } else if (tabId === "plannerTab") {
+  if (tabId === "plannerTab") {
     renderPlanner();
   } else if (tabId === "otherTab") {
     renderOtherItems();
@@ -271,23 +246,24 @@ function switchTab(tabId) {
     renderStores();
   } else if (tabId === "recipesTab") {
     renderRecipes();
+    renderCategories();
+  } else if (tabId === "groceryTab") {
+    renderGroceryList();
   }
 
   updateFabVisibility();
 }
 
 function updateFabVisibility() {
-  if (!fabBtn) return;
-  // Only show FAB for tabs where "add" makes sense
   if (
     currentTabId === "recipesTab" ||
     currentTabId === "plannerTab" ||
     currentTabId === "otherTab" ||
     currentTabId === "storesTab"
   ) {
-    fabBtn.classList.remove("hidden");
+    fabBtn.style.display = "flex";
   } else {
-    fabBtn.classList.add("hidden");
+    fabBtn.style.display = "none";
   }
 }
 
@@ -303,7 +279,8 @@ function handleFabClick() {
   }
 }
 
-// ---------- MODAL HELPERS ----------
+// ---------- Modal helpers ----------
+
 function showModal(el) {
   el.classList.remove("hidden");
 }
@@ -312,22 +289,17 @@ function hideModal(el) {
   el.classList.add("hidden");
 }
 
-// ---------- CATEGORY MANAGEMENT ----------
+// ---------- Categories ----------
+
 function syncCategoryDropdown() {
-  // Rebuild the category select in recipe modal
-  if (!recipeCategoryInput) return;
-
-  const categories = getAllCategories();
+  const cats = getAllCategories();
   recipeCategoryInput.innerHTML = "";
-
-  categories.forEach((cat) => {
+  cats.forEach((cat) => {
     const opt = document.createElement("option");
     opt.value = cat;
     opt.textContent = cat;
     recipeCategoryInput.appendChild(opt);
   });
-
-  // "Add new category…" option
   const optNew = document.createElement("option");
   optNew.value = "__new__";
   optNew.textContent = "➕ Add new category…";
@@ -347,6 +319,7 @@ function syncCategoryDropdown() {
         }
         syncCategoryDropdown();
         recipeCategoryInput.value = trimmed;
+        renderCategories();
       } else {
         syncCategoryDropdown();
       }
@@ -354,28 +327,67 @@ function syncCategoryDropdown() {
   };
 }
 
-// ---------- STORE MANAGEMENT ----------
-function syncStoreSelects() {
-  const storeSelects = [
-    otherItemStoreInput,
-    plannerCustomStoreSelect
-    // ingredient rows are built dynamically, we handle there
-  ];
+function renderCategories() {
+  categoriesContainer.innerHTML = "";
+  const all = getAllCategories();
+  all.forEach((cat) => {
+    const pill = document.createElement("div");
+    pill.className = "category-pill";
 
-  storeSelects.forEach((sel) => {
+    const span = document.createElement("span");
+    span.textContent = cat;
+    pill.appendChild(span);
+
+    if (state.categoriesCustom.includes(cat)) {
+      const btn = document.createElement("button");
+      btn.textContent = "✕";
+      btn.title = "Delete custom category";
+      btn.addEventListener("click", () => {
+        if (
+          !confirm(
+            `Delete custom category "${cat}"? Meals will show as Uncategorized.`
+          )
+        )
+          return;
+        state.categoriesCustom = state.categoriesCustom.filter(
+          (c) => c !== cat
+        );
+        state.meals.forEach((m) => {
+          if (m.category === cat) m.category = "";
+        });
+        saveState();
+        syncCategoryDropdown();
+        renderCategories();
+        renderRecipes();
+        renderPlanner();
+      });
+      pill.appendChild(btn);
+    }
+
+    categoriesContainer.appendChild(pill);
+  });
+}
+
+// ---------- Stores ----------
+
+function syncStoreSelects() {
+  const selects = [otherItemStoreInput, plannerCustomStoreSelect];
+  selects.forEach((sel) => {
     if (!sel) return;
     sel.innerHTML = "";
-    state.stores.slice().sort(byString).forEach((store) => {
-      const opt = document.createElement("option");
-      opt.value = store;
-      opt.textContent = store;
-      sel.appendChild(opt);
-    });
+    state.stores
+      .slice()
+      .sort(byString)
+      .forEach((store) => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        sel.appendChild(opt);
+      });
   });
 }
 
 function openStoreModal() {
-  if (!storeModal) return;
   storeNameInput.value = "";
   showModal(storeModal);
 }
@@ -395,65 +407,53 @@ function saveStoreFromModal() {
 }
 
 function renderStores() {
-  if (!storesContainer) return;
   storesContainer.innerHTML = "";
-
-  const storesSorted = state.stores.slice().sort(byString);
-
-  if (!storesSorted.length) {
+  const sorted = state.stores.slice().sort(byString);
+  if (!sorted.length) {
     storesContainer.textContent = "No stores yet.";
     return;
   }
 
-  storesSorted.forEach((store) => {
-    const div = document.createElement("div");
-    div.className = "store-card";
+  sorted.forEach((store) => {
+    const card = document.createElement("div");
+    card.className = "store-card";
 
-    const nameSpan = document.createElement("span");
-    nameSpan.textContent = store;
+    const label = document.createElement("span");
+    label.textContent = store;
 
     const btn = document.createElement("button");
     btn.className = "btn btn-secondary small";
     btn.textContent = "Delete";
     btn.addEventListener("click", () => {
-      attemptDeleteStore(store);
+      const usedInMeals = state.meals.some((m) =>
+        m.ingredients.some((ing) => ing.store === store)
+      );
+      const usedInOthers = state.otherItems.some(
+        (it) => it.store === store
+      );
+
+      if (usedInMeals || usedInOthers) {
+        alert(
+          `Cannot delete "${store}" because it is used in recipes or other items.`
+        );
+        return;
+      }
+      if (!confirm(`Delete store "${store}"?`)) return;
+      state.stores = state.stores.filter((s) => s !== store);
+      saveState();
+      syncStoreSelects();
+      renderStores();
     });
 
-    div.appendChild(nameSpan);
-    div.appendChild(btn);
-
-    storesContainer.appendChild(div);
+    card.appendChild(label);
+    card.appendChild(btn);
+    storesContainer.appendChild(card);
   });
 }
 
-function attemptDeleteStore(storeName) {
-  // Q6: A) prevent deleting if used anywhere
-  const usedInMeals = state.meals.some((meal) =>
-    meal.ingredients.some((ing) => ing.store === storeName)
-  );
-  const usedInOther = state.otherItems.some(
-    (item) => item.store === storeName
-  );
+// ---------- Recipes ----------
 
-  if (usedInMeals || usedInOther) {
-    alert(
-      `Cannot delete store "${storeName}" because it is used in recipes or other items. ` +
-        `Change those first, then try again.`
-    );
-    return;
-  }
-
-  if (!confirm(`Delete store "${storeName}"?`)) return;
-
-  state.stores = state.stores.filter((s) => s !== storeName);
-  saveState();
-  syncStoreSelects();
-  renderStores();
-}
-
-// ---------- RECIPES ----------
 function renderRecipes() {
-  if (!recipesContainer) return;
   recipesContainer.innerHTML = "";
 
   if (!state.meals.length) {
@@ -463,9 +463,8 @@ function renderRecipes() {
     return;
   }
 
-  const sortedMeals = state.meals.slice().sort(byName);
-
-  sortedMeals.forEach((meal) => {
+  const sorted = state.meals.slice().sort(byName);
+  sorted.forEach((meal) => {
     const card = document.createElement("div");
     card.className = "recipe-card";
 
@@ -526,22 +525,21 @@ function deleteMeal(mealId) {
 function openRecipeModal(mealId = null) {
   editingMealId = mealId;
   ingredientList.innerHTML = "";
+  syncCategoryDropdown();
 
   if (mealId) {
+    recipeModalTitle.textContent = "Edit Recipe";
     const meal = state.meals.find((m) => m.id === mealId);
     if (!meal) return;
-    recipeNameInput.value = meal.name || "";
-    syncCategoryDropdown();
-    recipeCategoryInput.value = meal.category || "";
+    recipeNameInput.value = meal.name;
+    recipeCategoryInput.value = meal.category || DEFAULT_CATEGORIES[0];
 
-    meal.ingredients.forEach((ing) => {
-      addIngredientRowToModal(ing);
-    });
+    meal.ingredients.forEach((ing) => addIngredientRowToModal(ing));
   } else {
+    recipeModalTitle.textContent = "Add Recipe";
     recipeNameInput.value = "";
-    syncCategoryDropdown();
     recipeCategoryInput.value = DEFAULT_CATEGORIES[0];
-    addIngredientRowToModal(); // start with one row
+    addIngredientRowToModal();
   }
 
   showModal(recipeModal);
@@ -551,40 +549,97 @@ function addIngredientRowToModal(ing = null) {
   const row = document.createElement("div");
   row.className = "ingredient-edit-row";
 
-  row.innerHTML = `
-    <input type="text" class="ing-name" placeholder="Ingredient name" />
-    <input type="number" class="ing-qty" placeholder="1" min="1" />
-    <input type="text" class="ing-unit" placeholder="CT" />
-    <select class="ing-store"></select>
-    <input type="text" class="ing-group" placeholder="Group (optional)" />
-    <button type="button" class="btn btn-secondary small ing-remove">X</button>
-  `;
+  const main = document.createElement("div");
+  main.className = "ingredient-main-row";
 
-  ingredientList.appendChild(row);
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.placeholder = "Ingredient name";
 
-  // Populate store select
-  const storeSelect = row.querySelector(".ing-store");
-  state.stores.slice().sort(byString).forEach((store) => {
-    const opt = document.createElement("option");
-    opt.value = store;
-    opt.textContent = store;
-    storeSelect.appendChild(opt);
-  });
+  const qtyInput = document.createElement("input");
+  qtyInput.type = "number";
+  qtyInput.min = "1";
+  qtyInput.placeholder = "1";
 
-  if (ing) {
-    row.querySelector(".ing-name").value = ing.name || "";
-    row.querySelector(".ing-qty").value = ing.qty || "";
-    row.querySelector(".ing-unit").value = ing.unit || "";
-    storeSelect.value = ing.store || state.stores[0] || "";
-    row.querySelector(".ing-group").value = ing.group || "";
-  } else {
-    row.querySelector(".ing-qty").value = "1";
-    row.querySelector(".ing-unit").value = "CT";
-  }
+  const unitInput = document.createElement("input");
+  unitInput.type = "text";
+  unitInput.placeholder = "CT";
 
-  row.querySelector(".ing-remove").addEventListener("click", () => {
+  const storeSelect = document.createElement("select");
+
+  state.stores
+    .slice()
+    .sort(byString)
+    .forEach((store) => {
+      const opt = document.createElement("option");
+      opt.value = store;
+      opt.textContent = store;
+      storeSelect.appendChild(opt);
+    });
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "ing-remove-btn";
+  removeBtn.textContent = "✕";
+  removeBtn.addEventListener("click", () => {
     row.remove();
   });
+
+  main.appendChild(nameInput);
+  main.appendChild(qtyInput);
+  main.appendChild(unitInput);
+  main.appendChild(storeSelect);
+  main.appendChild(removeBtn);
+
+  const groupRow = document.createElement("div");
+  groupRow.className = "ingredient-group-row";
+
+  const groupInput = document.createElement("input");
+  groupInput.type = "text";
+  groupInput.placeholder = "Substitute group (optional)";
+  groupInput.className = "ingredient-group-input";
+
+  const defaultBtn = document.createElement("button");
+  defaultBtn.type = "button";
+  defaultBtn.className = "ingredient-default-toggle";
+  defaultBtn.textContent = "☆ Make Default";
+  defaultBtn.dataset.isDefault = "false";
+
+  defaultBtn.addEventListener("click", () => {
+    const isDef = defaultBtn.dataset.isDefault === "true";
+    if (isDef) {
+      defaultBtn.dataset.isDefault = "false";
+      defaultBtn.classList.remove("is-default");
+      defaultBtn.textContent = "☆ Make Default";
+    } else {
+      defaultBtn.dataset.isDefault = "true";
+      defaultBtn.classList.add("is-default");
+      defaultBtn.textContent = "⭐ Default";
+    }
+  });
+
+  groupRow.appendChild(groupInput);
+  groupRow.appendChild(defaultBtn);
+
+  row.appendChild(main);
+  row.appendChild(groupRow);
+  ingredientList.appendChild(row);
+
+  if (ing) {
+    nameInput.value = ing.name || "";
+    qtyInput.value = ing.qty || "";
+    unitInput.value = ing.unit || "";
+    storeSelect.value = ing.store || state.stores[0] || "";
+    groupInput.value = ing.group || "";
+    if (ing.isDefault) {
+      defaultBtn.dataset.isDefault = "true";
+      defaultBtn.classList.add("is-default");
+      defaultBtn.textContent = "⭐ Default";
+    }
+  } else {
+    qtyInput.value = "1";
+    unitInput.value = "CT";
+  }
 }
 
 function saveRecipeFromModal() {
@@ -595,46 +650,62 @@ function saveRecipeFromModal() {
     return;
   }
 
-  if (category && category !== "__new__") {
-    // auto-add custom if needed
-    if (
-      !state.categoriesDefault.includes(category) &&
-      !state.categoriesCustom.includes(category)
-    ) {
-      state.categoriesCustom.push(category);
-    }
+  if (
+    category &&
+    category !== "__new__" &&
+    !state.categoriesDefault.includes(category) &&
+    !state.categoriesCustom.includes(category)
+  ) {
+    state.categoriesCustom.push(category);
   }
 
-  // Gather ingredients
   const rows = ingredientList.querySelectorAll(".ingredient-edit-row");
   const ingredients = [];
 
   rows.forEach((row) => {
-    const n = row.querySelector(".ing-name").value.trim();
-    if (!n) return;
-    const qtyVal = row.querySelector(".ing-qty").value.trim();
-    const unitVal = row.querySelector(".ing-unit").value.trim();
-    const storeVal = row.querySelector(".ing-store").value;
-    const groupVal = row.querySelector(".ing-group").value.trim();
+    const nameInput = row.querySelector(".ingredient-main-row input[type=text]");
+    const [qtyInput, unitInput, storeSelect] =
+      row.querySelectorAll(".ingredient-main-row input, .ingredient-main-row select");
 
-    const qty = qtyVal ? Number(qtyVal) : 1;
-    const unit = unitVal || "CT";
+    const groupInput = row.querySelector(".ingredient-group-input");
+    const defaultBtn = row.querySelector(".ingredient-default-toggle");
+
+    const ingName = nameInput.value.trim();
+    if (!ingName) return;
+
+    const qtyVal = qtyInput.value.trim();
+    const unitVal = unitInput.value.trim();
+    const storeVal = storeSelect.value;
+    const groupVal = groupInput.value.trim();
+    const isDefault = defaultBtn.dataset.isDefault === "true";
+
+    let qty = parseFloat(qtyVal);
+    if (isNaN(qty) || qty <= 0) qty = 1;
 
     ingredients.push({
       id: makeId(),
-      name: n,
-      qty: isNaN(qty) || qty <= 0 ? 1 : qty,
-      unit,
+      name: ingName,
+      qty,
+      unit: unitVal || "CT",
       store: storeVal || "",
-      group: groupVal
+      group: groupVal,
+      isDefault
     });
   });
 
-  if (!ingredients.length) {
-    if (!confirm("No ingredients added. Save recipe anyway?")) {
-      return;
+  // normalize defaults: one per group
+  const groups = {};
+  ingredients.forEach((ing) => {
+    const key = ing.group || "__solo__" + ing.id;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(ing);
+  });
+  Object.values(groups).forEach((ings) => {
+    const defIndex = ings.findIndex((i) => i.isDefault);
+    if (defIndex > -1) {
+      ings.forEach((i, idx) => (i.isDefault = idx === defIndex));
     }
-  }
+  });
 
   if (editingMealId) {
     const meal = state.meals.find((m) => m.id === editingMealId);
@@ -654,12 +725,13 @@ function saveRecipeFromModal() {
   saveState();
   hideModal(recipeModal);
   renderRecipes();
+  renderCategories();
   renderPlanner();
 }
 
-// ---------- OTHER ITEMS ----------
+// ---------- Other Items ----------
+
 function openOtherItemModal() {
-  if (!otherItemModal) return;
   otherItemNameInput.value = "";
   syncStoreSelects();
   showModal(otherItemModal);
@@ -669,10 +741,9 @@ function saveOtherItemFromModal() {
   const name = otherItemNameInput.value.trim();
   const store = otherItemStoreInput.value || "";
   if (!name) {
-    alert("Please enter an item name.");
+    alert("Enter item name.");
     return;
   }
-
   const id = makeId();
   state.otherItems.push({ id, name, store });
   saveState();
@@ -682,16 +753,12 @@ function saveOtherItemFromModal() {
 }
 
 function renderOtherItems() {
-  if (!otherItemsContainer) return;
   otherItemsContainer.innerHTML = "";
-
   if (!state.otherItems.length) {
-    otherItemsContainer.textContent = "No other items yet.";
+    otherItemsContainer.textContent = "No other items added yet.";
     return;
   }
-
   const sorted = state.otherItems.slice().sort(byName);
-
   sorted.forEach((item) => {
     const card = document.createElement("div");
     card.className = "other-item-card";
@@ -716,14 +783,13 @@ function renderOtherItems() {
 
     card.appendChild(label);
     card.appendChild(btn);
-
     otherItemsContainer.appendChild(card);
   });
 }
 
-// ---------- PLANNER CUSTOM ITEMS ----------
+// ---------- Planner Custom Items From FAB ----------
+
 function openPlannerCustomModal() {
-  if (!plannerCustomModal) return;
   plannerCustomNameInput.value = "";
   syncStoreSelects();
   showModal(plannerCustomModal);
@@ -733,30 +799,28 @@ function savePlannerCustomFromModal() {
   const name = plannerCustomNameInput.value.trim();
   const store = plannerCustomStoreSelect.value || "";
   if (!name) {
-    alert("Please enter an item name.");
+    alert("Enter item name.");
     return;
   }
-
   const id = makeId();
   state.otherItems.push({ id, name, store });
-
-  // Q5: B -> also appear in planner & selected
+  // also mark selected in planner
   state.planner.selectedOtherItemIds.push(id);
-
   saveState();
   hideModal(plannerCustomModal);
   renderOtherItems();
   renderPlannerCustomItems();
 }
 
-// ---------- PLANNER ----------
+// ---------- Planner ----------
+
 function renderPlanner() {
-  if (!plannerMealsContainer) return;
   plannerMealsContainer.innerHTML = "";
 
   if (!state.meals.length) {
     plannerMealsContainer.textContent =
       "Add recipes first in the Recipes tab.";
+    plannerCustomContainer.textContent = "";
     return;
   }
 
@@ -776,7 +840,7 @@ function renderPlanner() {
     .sort(byString)
     .forEach((cat) => {
       const meals = mealsByCat[cat];
-      if (!meals || !meals.length) return;
+      if (!meals.length) return;
 
       const header = document.createElement("div");
       header.className = "category-header";
@@ -800,6 +864,7 @@ function renderPlanner() {
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.checked = state.planner.selectedMealIds.includes(meal.id);
+
           cb.addEventListener("change", () =>
             handlePlannerMealToggle(meal.id, cb.checked)
           );
@@ -825,7 +890,6 @@ function renderPlanner() {
         });
     });
 
-  // render planner custom area
   renderPlannerCustomItems();
 }
 
@@ -841,18 +905,11 @@ function handlePlannerMealToggle(mealId, checked) {
       renderPlannerMealIngredients(meal, ingBlock);
     }
   } else {
-    // Remove from selected
     state.planner.selectedMealIds = state.planner.selectedMealIds.filter(
       (id) => id !== mealId
     );
-    // Q4: A => erase comments & reset included
-    const groupStates = state.planner.mealGroupStates[mealId];
-    if (groupStates) {
-      Object.values(groupStates).forEach((gs) => {
-        gs.comment = "";
-        gs.included = true;
-      });
-    }
+    // erase comments & reset included for this meal
+    delete state.planner.mealGroupStates[mealId];
     saveState();
     const ingBlock = document.getElementById(`planner-ings-${mealId}`);
     if (ingBlock) ingBlock.innerHTML = "";
@@ -867,7 +924,6 @@ function renderPlannerMealIngredients(meal, container) {
   }
   const mealStates = state.planner.mealGroupStates[meal.id];
 
-  // group ingredients: group name or solo per ingredient
   const groups = {};
   meal.ingredients.forEach((ing) => {
     const key = ing.group ? "grp:" + ing.group : "solo:" + ing.id;
@@ -876,22 +932,21 @@ function renderPlannerMealIngredients(meal, container) {
   });
 
   Object.entries(groups).forEach(([groupKey, ingArray]) => {
-    const first = ingArray[0];
-
     if (!mealStates[groupKey]) {
+      // pick default-ing or first
+      let def = ingArray.find((i) => i.isDefault) || ingArray[0];
       mealStates[groupKey] = {
-        selectedIngredientId: first.id,
+        selectedIngredientId: def.id,
         included: true,
         comment: ""
       };
     }
 
-    const stateForGroup = mealStates[groupKey];
-
+    const gs = mealStates[groupKey];
     let selectedIng =
-      ingArray.find((i) => i.id === stateForGroup.selectedIngredientId) ||
-      first;
-    stateForGroup.selectedIngredientId = selectedIng.id;
+      ingArray.find((i) => i.id === gs.selectedIngredientId) ||
+      ingArray[0];
+    gs.selectedIngredientId = selectedIng.id;
 
     const row = document.createElement("div");
     row.className = "planner-ingredient-row";
@@ -901,9 +956,9 @@ function renderPlannerMealIngredients(meal, container) {
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
-    cb.checked = stateForGroup.included;
+    cb.checked = gs.included;
     cb.addEventListener("change", () => {
-      stateForGroup.included = cb.checked;
+      gs.included = cb.checked;
       saveState();
     });
 
@@ -914,46 +969,40 @@ function renderPlannerMealIngredients(meal, container) {
     if (typeof selectedIng.qty === "number" && selectedIng.qty > 1) {
       qtyText = ` (${selectedIng.qty} ${selectedIng.unit || "CT"})`;
     }
-
     const storeText = selectedIng.store ? ` — ${selectedIng.store}` : "";
-
     label.textContent = `${selectedIng.name}${qtyText}${storeText}`;
 
     top.appendChild(cb);
     top.appendChild(label);
 
-    // If there are substitutes, show a dropdown
     if (ingArray.length > 1) {
       const sel = document.createElement("select");
       ingArray.forEach((ing) => {
         const opt = document.createElement("option");
         opt.value = ing.id;
-        let qText = "";
+        let q = "";
         if (typeof ing.qty === "number" && ing.qty > 1) {
-          qText = ` (${ing.qty} ${ing.unit || "CT"})`;
+          q = ` (${ing.qty} ${ing.unit || "CT"})`;
         }
-        opt.textContent = `${ing.name}${qText}`;
-        if (ing.id === stateForGroup.selectedIngredientId) {
-          opt.selected = true;
-        }
+        opt.textContent = `${ing.name}${q}`;
+        if (ing.id === gs.selectedIngredientId) opt.selected = true;
         sel.appendChild(opt);
       });
       sel.addEventListener("change", () => {
-        stateForGroup.selectedIngredientId = sel.value;
+        gs.selectedIngredientId = sel.value;
         saveState();
-        // re-render this group's label
         renderPlanner();
       });
       top.appendChild(sel);
     }
 
     const commentInput = document.createElement("input");
-    commentInput.className = "planner-comment";
     commentInput.type = "text";
+    commentInput.className = "planner-comment";
     commentInput.placeholder = "Note (optional)";
-    commentInput.value = stateForGroup.comment || "";
+    commentInput.value = gs.comment || "";
     commentInput.addEventListener("input", () => {
-      stateForGroup.comment = commentInput.value.trim();
+      gs.comment = commentInput.value.trim();
       saveState();
     });
 
@@ -966,16 +1015,14 @@ function renderPlannerMealIngredients(meal, container) {
 }
 
 function renderPlannerCustomItems() {
-  if (!plannerCustomContainer) return;
   plannerCustomContainer.innerHTML = "";
-
   if (!state.otherItems.length) {
-    plannerCustomContainer.textContent = "No extra items yet.";
+    plannerCustomContainer.textContent =
+      "No extra items yet. Use + in Planner or Other tab.";
     return;
   }
 
   const sorted = state.otherItems.slice().sort(byName);
-
   sorted.forEach((item) => {
     const row = document.createElement("div");
     row.className = "planner-ingredient-row";
@@ -1012,20 +1059,21 @@ function renderPlannerCustomItems() {
   });
 }
 
-// ---------- GROCERY LIST ----------
+// ---------- Grocery List ----------
+
 function buildGroceryListStructure() {
   const byStore = {};
-
-  function ensureStoreBucket(store) {
+  const ensureBucket = (store) => {
     const key = store || "Unassigned";
     if (!byStore[key]) byStore[key] = [];
     return byStore[key];
-  }
+  };
 
-  // Meals
+  // from meals
   state.planner.selectedMealIds.forEach((mealId) => {
     const meal = state.meals.find((m) => m.id === mealId);
     if (!meal) return;
+
     const mealStates = state.planner.mealGroupStates[mealId] || {};
 
     const groups = {};
@@ -1038,16 +1086,16 @@ function buildGroceryListStructure() {
     Object.entries(groups).forEach(([groupKey, ingArray]) => {
       const gs = mealStates[groupKey];
       if (!gs || !gs.included) return;
-
       let selectedIng =
         ingArray.find((i) => i.id === gs.selectedIngredientId) ||
+        ingArray.find((i) => i.isDefault) ||
         ingArray[0];
-      const bucket = ensureStoreBucket(selectedIng.store);
 
-      const qty =
-        typeof selectedIng.qty === "number" && selectedIng.qty > 1
-          ? `${selectedIng.qty} ${selectedIng.unit || "CT"}`
-          : "";
+      const bucket = ensureBucket(selectedIng.store);
+      let qty = "";
+      if (typeof selectedIng.qty === "number" && selectedIng.qty > 1) {
+        qty = `${selectedIng.qty} ${selectedIng.unit || "CT"}`;
+      }
       const comment = gs.comment || "";
 
       bucket.push({
@@ -1058,11 +1106,11 @@ function buildGroceryListStructure() {
     });
   });
 
-  // Other items
+  // from other items
   state.planner.selectedOtherItemIds.forEach((id) => {
     const item = state.otherItems.find((o) => o.id === id);
     if (!item) return;
-    const bucket = ensureStoreBucket(item.store);
+    const bucket = ensureBucket(item.store);
     bucket.push({
       name: item.name,
       qty: "",
@@ -1074,27 +1122,26 @@ function buildGroceryListStructure() {
 }
 
 function renderGroceryList() {
-  if (!groceryListContainer) return;
   groceryListContainer.innerHTML = "";
-
   const byStore = buildGroceryListStructure();
-  const storeNames = Object.keys(byStore);
-  if (!storeNames.length) {
+  const keys = Object.keys(byStore);
+  if (!keys.length) {
     groceryListContainer.textContent =
-      "No grocery items yet. Use the Planner to select meals.";
+      "No grocery items yet. Use Planner to select meals and items.";
     return;
   }
 
-  // Prefer state.stores order, then unassigned
   const orderedStores = [...state.stores];
   if (byStore["Unassigned"]) orderedStores.push("Unassigned");
 
   orderedStores.forEach((store) => {
-    if (!byStore[store] || !byStore[store].length) return;
+    const items = byStore[store];
+    if (!items || !items.length) return;
 
     const header = document.createElement("div");
     header.className = "grocery-store-header";
-    header.textContent = store === "Unassigned" ? "Other / Any Store" : store;
+    header.textContent =
+      store === "Unassigned" ? "Other / Any Store" : store;
 
     const line = document.createElement("div");
     line.className = "grocery-divider";
@@ -1102,20 +1149,15 @@ function renderGroceryList() {
     groceryListContainer.appendChild(header);
     groceryListContainer.appendChild(line);
 
-    byStore[store].forEach((item) => {
+    items.forEach((item) => {
       const row = document.createElement("div");
       row.className = "grocery-item";
 
-      let lineText = `• ${item.name}`;
-      if (item.qty) {
-        // only show if >1
-        lineText += ` (${item.qty})`;
-      }
-      if (item.comment) {
-        lineText += ` (${item.comment})`;
-      }
+      let text = `• ${item.name}`;
+      if (item.qty) text += ` (${item.qty})`;
+      if (item.comment) text += ` (${item.comment})`;
 
-      row.textContent = lineText;
+      row.textContent = text;
       groceryListContainer.appendChild(row);
     });
   });
@@ -1123,27 +1165,25 @@ function renderGroceryList() {
 
 function buildGroceryText() {
   const byStore = buildGroceryListStructure();
-  const storeNames = Object.keys(byStore);
-  if (!storeNames.length) return "";
+  const keys = Object.keys(byStore);
+  if (!keys.length) return "";
 
-  const result = [];
-
+  const lines = [];
   const orderedStores = [...state.stores];
   if (byStore["Unassigned"]) orderedStores.push("Unassigned");
 
   orderedStores.forEach((store) => {
-    if (!byStore[store] || !byStore[store].length) return;
-    result.push(
-      store === "Unassigned" ? "Other / Any Store" : store
-    );
-    byStore[store].forEach((item) => {
-      let lineText = `• ${item.name}`;
-      if (item.qty) lineText += ` (${item.qty})`;
-      if (item.comment) lineText += ` (${item.comment})`;
-      result.push(lineText);
+    const items = byStore[store];
+    if (!items || !items.length) return;
+    lines.push(store === "Unassigned" ? "Other / Any Store" : store);
+    items.forEach((item) => {
+      let text = `• ${item.name}`;
+      if (item.qty) text += ` (${item.qty})`;
+      if (item.comment) text += ` (${item.comment})`;
+      lines.push(text);
     });
-    result.push(""); // blank line between stores
+    lines.push("");
   });
 
-  return result.join("\n").trim();
+  return lines.join("\n").trim();
 }
