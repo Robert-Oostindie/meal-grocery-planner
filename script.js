@@ -127,7 +127,6 @@ function renderRecipeCategoryDropdown() {
 // ----------------------
 // INGREDIENT EDITOR
 // ----------------------
-let ingredientRows = [];
 
 function renderIngredientsEditor() {
     const container = document.getElementById("recipeIngredientsContainer");
