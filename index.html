@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Meal & Grocery Planner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- NOTE: uses style.css (singular) -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -33,6 +34,19 @@
             <input id="meal-name" type="text" placeholder="e.g. Chicken Burrito Bowl" />
           </div>
           <div class="mt-4">
+            <label for="meal-category">Category (optional)</label>
+            <input
+              id="meal-category"
+              list="meal-category-suggestions"
+              type="text"
+              placeholder="e.g. Low Prep, Crock Pot"
+            />
+            <datalist id="meal-category-suggestions"></datalist>
+            <div class="inline-note">
+              Examples: Low Prep, Medium Prep, High Prep / Longer Cook Times, Grilling, Breakfast, Crock Pot, Sides, Appetizers, Baby Meals.
+            </div>
+          </div>
+          <div class="mt-4">
             <label for="meal-notes">Notes (optional)</label>
             <textarea id="meal-notes" placeholder="e.g. Kids love this • Use on Tuesdays"></textarea>
           </div>
@@ -42,7 +56,7 @@
             </button>
           </div>
           <div class="inline-note">
-            Tip: After adding a meal, open it below to attach ingredients, stores, and substitutes.
+            After adding a meal, open it below to attach ingredients, stores, and substitutes.
           </div>
         </div>
 
@@ -70,7 +84,7 @@
             <div>
               <div class="card-title">Weekly Plan</div>
               <div class="card-subtitle">
-                Select meals for this week. You’ll pick substitutes before generating the list.
+                Meals grouped by category. Customize ingredients and notes per week.
               </div>
             </div>
             <span class="badge"><span>🗓️</span> Week</span>
@@ -85,7 +99,7 @@
             <div>
               <div class="card-title">Generate Grocery List</div>
               <div class="card-subtitle">
-                Uses selected meals, extras, and pantry. You’ll choose options for each substitute group.
+                Uses selected meals, extras, pantry, and your per-item comments.
               </div>
             </div>
           </div>
@@ -97,6 +111,7 @@
           </button>
           <p class="inline-note">
             Your list will be grouped by store under the <strong>Groceries</strong> tab.
+            You’ll choose substitute options first.
           </p>
         </div>
       </section>
@@ -247,10 +262,13 @@
             <button class="btn btn-ghost btn-sm" id="clear-checks-btn">
               <span>☑️ Clear Checks</span>
             </button>
+            <button class="btn btn-outline btn-sm" id="copy-list-btn">
+              <span>📋 Copy List</span>
+            </button>
           </div>
           <div class="inline-note">
             If you change your weekly meals, extras, or pantry, tap
-            <strong>Refresh from Plan</strong>.
+            <strong>Refresh from Plan</strong>. Use <strong>Copy List</strong> to paste into Notes on your iPhone.
           </div>
           <hr class="divider" />
           <div id="grocery-groups"></div>
