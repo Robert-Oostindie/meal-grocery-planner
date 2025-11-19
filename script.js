@@ -29,7 +29,7 @@ let state = {
 
 // DOM refs
 let tabSections = {};
-let mealNameInput, mealCategoryInput, mealCategoryDatalist, mealNotesInput, addMealBtn, mealListEl, mealCountBadge, mealsEmptyState;
+let mealNameInput, mealCategorySelect, mealNotesInput, addMealBtn, mealListEl, mealCountBadge, mealsEmptyState;
 let plannerMealsEl, plannerEmptyEl, generateListBtn;
 let pantrySearchInput, pantryListEl, pantryEmptyEl;
 let storeNameInput, addStoreBtn, storeListEl, exportBtn, resetBtn, exportStatusEl;
@@ -50,6 +50,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
+    // Merge with defaults so new fields exist
     state = Object.assign(state, parsed);
   } catch (e) {
     console.error("Failed to load state", e);
@@ -120,18 +121,21 @@ function switchTab(tabName) {
 // ---------- MEALS ----------
 function addMeal() {
   const name = mealNameInput.value.trim();
-  const category = mealCategoryInput.value.trim();
+  let category = mealCategorySelect.value;
   const notes = mealNotesInput.value.trim();
+
   if (!name) {
     alert("Please enter a meal name.");
     mealNameInput.focus();
     return;
   }
 
-  if (category) {
-    if (!state.mealCategories.includes(category)) {
-      state.mealCategories.push(category);
-    }
+  if (category === "__new__") {
+    category = "";
+  }
+
+  if (category && !DEFAULT_CATEGORIES.includes(category) && !state.mealCategories.includes(category)) {
+    state.mealCategories.push(category);
   }
 
   const newMeal = {
@@ -142,14 +146,16 @@ function addMeal() {
     ingredients: [] // {id, name, qty, unit, store, subGroup, isDefault}
   };
   state.meals.push(newMeal);
+
   mealNameInput.value = "";
-  mealCategoryInput.value = "";
   mealNotesInput.value = "";
+  mealCategorySelect.value = "";
+
   saveState();
   renderMeals();
   renderPlanner();
   renderPantry();
-  renderMealCategorySuggestions();
+  renderMealCategoryOptions();
 }
 
 function editMeal(mealId) {
@@ -163,14 +169,14 @@ function editMeal(mealId) {
   meal.category = (newCategory || "").trim();
   meal.notes = (newNotes || "").trim();
 
-  if (meal.category && !state.mealCategories.includes(meal.category)) {
+  if (meal.category && !DEFAULT_CATEGORIES.includes(meal.category) && !state.mealCategories.includes(meal.category)) {
     state.mealCategories.push(meal.category);
   }
 
   saveState();
   renderMeals();
   renderPlanner();
-  renderMealCategorySuggestions();
+  renderMealCategoryOptions();
 }
 
 function deleteMeal(mealId) {
@@ -205,17 +211,31 @@ function deleteIngredient(mealId, ingId) {
   regenerateGroceryFromPlan(false);
 }
 
-function renderMealCategorySuggestions() {
+// Build options for category dropdown
+function renderMealCategoryOptions() {
   const set = new Set([...DEFAULT_CATEGORIES, ...(state.mealCategories || [])]);
-  mealCategoryDatalist.innerHTML = "";
-  Array.from(set)
+  const sorted = Array.from(set)
     .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b))
-    .forEach((cat) => {
-      const opt = document.createElement("option");
-      opt.value = cat;
-      mealCategoryDatalist.appendChild(opt);
-    });
+    .sort((a, b) => a.localeCompare(b));
+
+  mealCategorySelect.innerHTML = "";
+
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "No category";
+  mealCategorySelect.appendChild(emptyOpt);
+
+  sorted.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    mealCategorySelect.appendChild(opt);
+  });
+
+  const newOpt = document.createElement("option");
+  newOpt.value = "__new__";
+  newOpt.textContent = "Add new category…";
+  mealCategorySelect.appendChild(newOpt);
 }
 
 function renderMeals() {
@@ -305,14 +325,14 @@ function renderMeals() {
       const meta = document.createElement("div");
       meta.className = "ingredient-meta";
       const parts = [];
-      if (ing.qty) parts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
+
+      const qtyStr = (ing.qty || "").toString().trim();
+      if (qtyStr && qtyStr !== "1") {
+        parts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
+      }
       if (ing.store) parts.push("🛒 " + ing.store);
       if (ing.subGroup) {
-        parts.push(
-          "Group: " +
-            ing.subGroup +
-            (ing.isDefault ? " (default)" : "")
-        );
+        parts.push("Group: " + ing.subGroup + (ing.isDefault ? " (default)" : ""));
       }
       meta.textContent = parts.join(" • ") || "No quantity / store set";
       main.appendChild(meta);
@@ -412,7 +432,7 @@ function openIngredientModal(mealId, ingId = null) {
     const ing = meal.ingredients.find((i) => i.id === ingId);
     if (!ing) return;
     ingredientNameInput.value = ing.name || "";
-    ingredientQtyInput.value = ing.qty || "";
+    ingredientQtyInput.value = ing.qty || "1";
     ingredientUnitInput.value = ing.unit || "CT";
     populateStoreSelect(ingredientStoreSelect, ing.store || "");
     ingredientGroupInput.value = ing.subGroup || "";
@@ -420,7 +440,7 @@ function openIngredientModal(mealId, ingId = null) {
   } else {
     ingredientModalTitle.textContent = "Add Ingredient";
     ingredientNameInput.value = "";
-    ingredientQtyInput.value = "";
+    ingredientQtyInput.value = "1";   // default count
     ingredientUnitInput.value = "CT";
     populateStoreSelect(ingredientStoreSelect, "");
     ingredientGroupInput.value = "";
@@ -449,7 +469,7 @@ function saveIngredientFromModal() {
   }
 
   const name = ingredientNameInput.value.trim();
-  const qty = ingredientQtyInput.value.trim();
+  const qty = ingredientQtyInput.value.trim() || "1"; // default 1
   let unit = ingredientUnitInput.value.trim();
   const store = ingredientStoreSelect.value.trim();
   const subGroup = ingredientGroupInput.value.trim();
@@ -527,21 +547,10 @@ function renderPlanner() {
     categoriesInUse.add(getMealCategoryName(m));
   });
 
-  const orderedCategories = [];
-
-  DEFAULT_CATEGORIES.forEach((cat) => {
-    if (categoriesInUse.has(cat)) orderedCategories.push(cat);
-  });
-
-  const others = Array.from(categoriesInUse).filter(
-    (c) => !DEFAULT_CATEGORIES.includes(c) && c !== "Uncategorized"
+  // lock by alphabetical order
+  const orderedCategories = Array.from(categoriesInUse).sort((a, b) =>
+    a.localeCompare(b)
   );
-  others.sort((a, b) => a.localeCompare(b));
-  orderedCategories.push(...others);
-
-  if (categoriesInUse.has("Uncategorized")) {
-    orderedCategories.push("Uncategorized");
-  }
 
   orderedCategories.forEach((catName) => {
     const catBlock = document.createElement("div");
@@ -594,7 +603,7 @@ function renderPlanner() {
         const toggle = document.createElement("button");
         toggle.type = "button";
         toggle.className = "planner-meal-toggle";
-        toggle.textContent = "Details ▾";
+        toggle.textContent = "Hide details ▴"; // auto-expanded
 
         mainLine.appendChild(checkbox);
         mainLine.appendChild(info);
@@ -603,16 +612,13 @@ function renderPlanner() {
         row.appendChild(mainLine);
 
         const details = document.createElement("div");
-        details.className = "planner-meal-details hidden";
+        details.className = "planner-meal-details"; // NOT hidden by default (auto expanded)
 
         const overridesForMeal = state.plannerOverrides[meal.id] || {};
 
         meal.ingredients.forEach((ing) => {
           const ingRow = document.createElement("div");
           ingRow.className = "planner-ingredient-row";
-
-          const topLine = document.createElement("div");
-          topLine.className = "planner-ingredient-topline";
 
           const ingCheckbox = document.createElement("input");
           ingCheckbox.type = "checkbox";
@@ -631,33 +637,31 @@ function renderPlanner() {
             saveState();
           });
 
-          const label = document.createElement("div");
-          label.className = "grocery-item-main";
-          const n = document.createElement("div");
-          n.className = "grocery-item-name";
-          n.textContent = ing.name || "(no name)";
+          const labelWrap = document.createElement("div");
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "planner-ingredient-name";
+          nameSpan.textContent = ing.name || "(no name)";
 
-          const meta = document.createElement("div");
-          meta.className = "grocery-item-meta";
-          const parts = [];
-          if (ing.qty) parts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
-          if (ing.store) parts.push(ing.store);
-          if (ing.subGroup) parts.push("Group: " + ing.subGroup);
-          meta.textContent = parts.join(" • ") || "No quantity set";
+          const metaSpan = document.createElement("span");
+          metaSpan.className = "planner-ingredient-meta";
 
-          label.appendChild(n);
-          label.appendChild(meta);
+          const metaParts = [];
+          const qtyStr = (ing.qty || "").toString().trim();
+          if (qtyStr && qtyStr !== "1") {
+            metaParts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
+          }
+          if (ing.store) metaParts.push(ing.store);
+          if (ing.subGroup) metaParts.push("Group: " + ing.subGroup);
 
-          topLine.appendChild(ingCheckbox);
-          topLine.appendChild(label);
+          metaSpan.textContent = metaParts.length ? " – " + metaParts.join(" • ") : "";
 
-          ingRow.appendChild(topLine);
+          labelWrap.appendChild(nameSpan);
+          labelWrap.appendChild(metaSpan);
 
-          const commentRow = document.createElement("div");
-          commentRow.className = "planner-ingredient-comment";
           const commentInput = document.createElement("input");
           commentInput.type = "text";
-          commentInput.placeholder = "Comment for this week (optional)";
+          commentInput.className = "planner-ingredient-comment-input";
+          commentInput.placeholder = "Comment (optional)";
           commentInput.value = override?.comment || "";
           commentInput.addEventListener("change", () => {
             if (!state.plannerOverrides[meal.id]) {
@@ -669,16 +673,18 @@ function renderPlanner() {
             state.plannerOverrides[meal.id][ing.id].comment = commentInput.value.trim();
             saveState();
           });
-          commentRow.appendChild(commentInput);
-          ingRow.appendChild(commentRow);
+
+          ingRow.appendChild(ingCheckbox);
+          ingRow.appendChild(labelWrap);
+          ingRow.appendChild(commentInput);
 
           details.appendChild(ingRow);
         });
 
         toggle.addEventListener("click", () => {
           const isHidden = details.classList.contains("hidden");
-          details.classList.toggle("hidden", !isHidden);
-          toggle.textContent = isHidden ? "Details ▴" : "Details ▾";
+          details.classList.toggle("hidden", isHidden); // reverse
+          toggle.textContent = isHidden ? "Hide details ▴" : "Show details ▾";
         });
 
         row.appendChild(details);
@@ -772,7 +778,10 @@ function openSubsModal() {
         const meta = document.createElement("span");
         meta.className = "muted";
         const metaParts = [];
-        if (ing.qty) metaParts.push(ing.qty + (ing.unit ? " " + ing.unit : ""));
+        const qtyStr = (ing.qty || "").toString().trim();
+        if (qtyStr && qtyStr !== "1") {
+          metaParts.push(qtyStr + (ing.unit ? " " + ing.unit : ""));
+        }
         if (ing.store) metaParts.push(ing.store);
         meta.textContent = metaParts.length ? "• " + metaParts.join(" • ") : "";
 
@@ -1108,7 +1117,7 @@ function addExtra() {
   const ex = {
     id: makeId("extra"),
     name,
-    qty,
+    qty: qty || "1", // default to 1 if blank
     unit,
     store,
     include: true
@@ -1148,7 +1157,7 @@ function editExtra(extraId) {
   const newQty = prompt("Quantity (optional):", ex.qty || "") ?? ex.qty;
   const newUnit = prompt("Unit:", ex.unit || "CT") ?? ex.unit;
   ex.name = newName.trim() || ex.name;
-  ex.qty = (newQty || "").trim();
+  ex.qty = (newQty || "").trim() || "1";
   ex.unit = (newUnit || "CT").trim();
   saveState();
   renderExtras();
@@ -1184,7 +1193,10 @@ function renderExtras() {
     const meta = document.createElement("div");
     meta.className = "grocery-item-meta";
     const parts = [];
-    if (ex.qty) parts.push(ex.qty + (ex.unit ? " " + ex.unit : ""));
+    const qtyStr = (ex.qty || "").toString().trim();
+    if (qtyStr && qtyStr !== "1") {
+      parts.push(qtyStr + (ex.unit ? " " + ex.unit : ""));
+    }
     if (ex.store) parts.push(ex.store);
     meta.textContent = parts.join(" • ") || "No quantity set";
     main.appendChild(name);
@@ -1231,6 +1243,8 @@ function renderGroceryList() {
     groups[store].push({ key, ...item });
   });
 
+  // We keep store ordering as defined in state.stores (NOT alphabetical),
+  // with any unknown stores at the end.
   const sortedStores = Object.keys(groups).sort((a, b) => {
     const ia = state.stores.indexOf(a);
     const ib = state.stores.indexOf(b);
@@ -1289,7 +1303,6 @@ function renderGroceryList() {
       meta.className = "grocery-item-meta";
       const parts = [];
 
-      // Quantity formatting: show count only if > 1, keep unit
       let qtyDisplay = "";
       if (typeof item.qty === "number" && !isNaN(item.qty)) {
         if (item.qty !== 1) {
@@ -1301,8 +1314,8 @@ function renderGroceryList() {
         }
       }
 
-      if (item.unit) {
-        const label = (qtyDisplay ? qtyDisplay + " " : "") + item.unit;
+      if (qtyDisplay) {
+        const label = qtyDisplay + (item.unit ? " " + item.unit : "");
         parts.push(label);
       }
 
@@ -1354,13 +1367,13 @@ function buildPlainTextGroceryList() {
       let qtyText = "";
       if (typeof item.qty === "number" && !isNaN(item.qty)) {
         if (item.qty !== 1) {
-          qtyText = ` - ${item.qty} ${item.unit || ""}`.trim();
+          qtyText = ` (${item.qty} ${item.unit || ""})`.trim();
         }
       } else if (typeof item.qty === "string" && item.qty.trim() !== "" && item.qty.trim() !== "1") {
-        qtyText = ` - ${item.qty.trim()} ${item.unit || ""}`.trim();
+        qtyText = ` (${item.qty.trim()} ${item.unit || ""})`.trim();
       }
 
-      const line = `- ${item.name}${comments}${qtyText}`;
+      const line = `• ${item.name}${comments}${qtyText}`;
       lines.push(line);
     });
     lines.push(""); // blank line between stores
@@ -1388,14 +1401,30 @@ function init() {
 
   // meals
   mealNameInput = document.getElementById("meal-name");
-  mealCategoryInput = document.getElementById("meal-category");
-  mealCategoryDatalist = document.getElementById("meal-category-suggestions");
+  mealCategorySelect = document.getElementById("meal-category");
   mealNotesInput = document.getElementById("meal-notes");
   addMealBtn = document.getElementById("add-meal-btn");
   mealListEl = document.getElementById("meal-list");
   mealCountBadge = document.getElementById("meal-count-badge");
   mealsEmptyState = document.getElementById("meals-empty-state");
   addMealBtn.addEventListener("click", addMeal);
+
+  mealCategorySelect.addEventListener("change", () => {
+    if (mealCategorySelect.value === "__new__") {
+      const newCat = prompt("New category name:");
+      if (newCat && newCat.trim()) {
+        const trimmed = newCat.trim();
+        if (!state.mealCategories.includes(trimmed) && !DEFAULT_CATEGORIES.includes(trimmed)) {
+          state.mealCategories.push(trimmed);
+          saveState();
+        }
+        renderMealCategoryOptions();
+        mealCategorySelect.value = trimmed;
+      } else {
+        mealCategorySelect.value = "";
+      }
+    }
+  });
 
   // planner
   plannerMealsEl = document.getElementById("planner-meals");
@@ -1552,7 +1581,7 @@ function init() {
   // make sure dropdowns are populated before first render
   populateStoreSelect(ingredientStoreSelect, "");
   populateStoreSelect(extraStoreSelect, "");
-  renderMealCategorySuggestions();
+  renderMealCategoryOptions();
 
   renderMeals();
   renderPlanner();
@@ -1563,4 +1592,3 @@ function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
-
