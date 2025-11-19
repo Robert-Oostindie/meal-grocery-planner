@@ -276,6 +276,17 @@ textarea:focus {
   font-weight: 600;
 }
 
+.meal-category-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  background: #ecfeff;
+  color: #0f766e;
+  margin-top: 2px;
+}
+
 .meal-notes {
   font-size: 11px;
   color: var(--text-muted);
@@ -500,6 +511,7 @@ textarea:focus {
   margin-top: 10px;
 }
 
+/* Substitute selection blocks */
 .subs-meal-block {
   margin-bottom: 10px;
   border-radius: 12px;
@@ -528,6 +540,97 @@ textarea:focus {
   margin: 2px 0;
 }
 
+/* Planner: categories + meal detail overrides */
+.planner-category-block {
+  margin-bottom: 10px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  padding: 6px 8px;
+  background: #f9fafb;
+}
+
+.planner-category-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.planner-meal-row {
+  border-radius: 10px;
+  padding: 6px 6px;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+}
+
+.planner-meal-mainline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planner-meal-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.planner-meal-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.planner-meal-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.planner-meal-toggle {
+  font-size: 11px;
+  color: var(--primary);
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #eff6ff;
+}
+
+.planner-meal-details {
+  margin-top: 4px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 4px;
+}
+
+.planner-ingredient-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.planner-ingredient-topline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.planner-ingredient-comment {
+  font-size: 11px;
+  margin-left: 20px;
+}
+
+.planner-ingredient-comment input {
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 999px;
+}
+
+/* Animations */
 @keyframes slideUp {
   from { transform: translateY(16px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -571,7 +674,9 @@ textarea:focus {
 
   .meal-item,
   .grocery-group,
-  .subs-meal-block {
+  .subs-meal-block,
+  .planner-category-block,
+  .planner-meal-row {
     background: #020617;
   }
 
