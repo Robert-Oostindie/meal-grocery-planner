@@ -1,374 +1,234 @@
-/* ===== Global ===== */
+/* ------------------------------
+   GLOBAL LAYOUT
+------------------------------ */
+
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #fafafa;
-  color: #222;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                 Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #f7f7f9;
+    color: #222;
 }
 
+.app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* ------------------------------
+   TOP NAV TABS
+------------------------------ */
+
+.top-tabs {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 1px solid #ddd;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.top-tabs button {
+    flex: 1;
+    padding: 1rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.top-tabs button.active {
+    border-bottom: 3px solid dodgerblue;
+    color: dodgerblue;
+    font-weight: 600;
+}
+
+/* ------------------------------
+   HEADINGS
+------------------------------ */
+
 h1 {
-  margin: 16px;
-  font-size: 24px;
-  font-weight: 600;
+    font-size: 1.75rem;
+    margin: 1.2rem 0 0.5rem;
 }
 
 h2 {
-  margin: 16px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
+    font-size: 1.3rem;
+    margin: 1.5rem 0 0.5rem;
 }
 
-h3 {
-  margin-top: 12px;
-  margin-bottom: 8px;
-  font-size: 16px;
-  font-weight: 600;
+.section-note {
+    color: #555;
+    margin-bottom: 1rem;
 }
 
-.hidden {
-  display: none !important;
+/* ------------------------------
+   CARDS (Meals, Ingredients, Stores)
+------------------------------ */
+
+.card {
+    background: white;
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-/* ===== Top Nav ===== */
-.top-nav {
-  display: flex;
-  justify-content: space-around;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
-  position: sticky;
-  top: 0;
-  z-index: 99;
-}
+/* ------------------------------
+   RECIPE LIST
+------------------------------ */
 
-.nav-btn {
-  flex: 1;
-  padding: 12px 0;
-  border: none;
-  background: none;
-  font-size: 15px;
-  color: #666;
-}
-
-.nav-btn.active {
-  color: #007aff;
-  border-bottom: 3px solid #007aff;
-}
-
-/* ===== Tabs ===== */
-.tab-section {
-  display: none;
-  padding-bottom: 80px;
-}
-
-.tab-section.active {
-  display: block;
-}
-
-/* ===== Buttons ===== */
-.btn {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.btn.small {
-  font-size: 12px;
-  padding: 4px 10px;
-}
-
-.btn-primary {
-  background: #007aff;
-  color: #fff;
-}
-
-.btn-secondary {
-  background: #e5e5e5;
-  color: #333;
-}
-
-/* ===== FAB ===== */
-.fab {
-  position: fixed;
-  bottom: 22px;
-  right: 22px;
-  width: 58px;
-  height: 58px;
-  background: #007aff;
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  font-size: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-  z-index: 50;
-}
-
-/* ===== Cards ===== */
-.recipe-card,
-.store-card,
-.other-item-card {
-  background: #fff;
-  padding: 14px;
-  border-radius: 10px;
-  margin: 12px 16px;
-  border: 1px solid #ddd;
+.recipe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .recipe-title {
-  font-size: 18px;
-  font-weight: 600;
+    font-size: 1.3rem;
+    font-weight: 600;
 }
 
-.recipe-category,
 .recipe-meta {
-  font-size: 13px;
-  color: #777;
-  margin-top: 4px;
+    color: #777;
+    margin-bottom: .3rem;
 }
 
-.recipe-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
+/* ------------------------------
+   BUTTONS
+------------------------------ */
+
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    background: #e7e7e7;
+    font-size: 0.9rem;
+    cursor: pointer;
 }
 
-/* ===== Categories in Recipes Tab ===== */
-#categoriesContainer {
-  margin: 8px 16px 16px;
+button.primary {
+    background: dodgerblue;
+    color: white;
 }
 
-.category-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  margin: 4px;
-  background: #eef2ff;
-  border-radius: 999px;
-  font-size: 13px;
+button.danger {
+    background: #d9534f;
+    color: white;
 }
 
-.category-pill button {
-  border: none;
-  background: transparent;
-  color: #777;
-  font-size: 12px;
-  cursor: pointer;
+/* ------------------------------
+   FORMS
+------------------------------ */
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.6rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: .6rem;
 }
 
-/* ===== Category headers in Planner/Grocery ===== */
-.category-header {
-  margin: 20px 16px 4px;
-  font-size: 17px;
-  font-weight: 600;
+textarea {
+    height: 90px;
+    resize: vertical;
 }
 
-.category-line,
-.grocery-divider {
-  height: 1px;
-  background: #ccc;
-  margin: 4px 16px 10px;
+/* Spacing between ingredient rows */
+.ingredient-row {
+    padding: .7rem 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0.6rem;
 }
 
-/* ===== Planner ===== */
-#plannerMealsContainer,
-#plannerCustomContainer {
-  margin: 16px;
+/* ------------------------------
+   DEFAULT SUBSTITUTE TOGGLE
+------------------------------ */
+
+.default-toggle {
+    display: inline-block;
+    padding: 0.35rem 0.7rem;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid dodgerblue;
+    color: dodgerblue;
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
 }
 
-.planner-meal {
-  background: white;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  border: 1px solid #ddd;
+.default-toggle.active {
+    background: dodgerblue;
+    color: white;
 }
 
-.planner-meal-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+/* ------------------------------
+   GROCERY LIST
+------------------------------ */
 
-.planner-meal-name {
-  font-size: 16px;
-  font-weight: 500;
-  flex: 1;
-}
-
-.planner-ingredients {
-  margin-top: 10px;
-  padding-left: 4px;
-}
-
-.planner-ingredient-row {
-  display: flex;
-  flex-direction: column;
-  padding: 6px 0 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.planner-ingredient-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.planner-ingredient-label {
-  font-size: 14px;
-  flex: 1;
-}
-
-.planner-comment {
-  margin-top: 4px;
-  padding: 6px;
-  font-size: 13px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  width: 100%;
-}
-
-/* Planner custom items rows reuse same row style */
-.planner-ingredient-row .planner-ingredient-label {
-  font-weight: 400;
-}
-
-/* ===== Other Items ===== */
-#otherItemsContainer {
-  margin: 16px;
-}
-
-.other-item-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ===== Stores ===== */
-#storesContainer {
-  margin: 16px;
-}
-
-.store-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ===== Grocery List ===== */
-#groceryListContainer {
-  margin: 16px;
-}
-
-.grocery-store-header {
-  font-size: 18px;
-  font-weight: 600;
-  margin-top: 24px;
+.grocery-store-card {
+    background: white;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
 }
 
 .grocery-item {
-  font-size: 16px;
-  margin: 6px 0;
-  line-height: 1.4;
+    display: flex;
+    align-items: center;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-/* ===== Inputs ===== */
-input, select, textarea {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  box-sizing: border-box;
+.grocery-item:last-child {
+    border-bottom: none;
 }
 
-/* ===== Modals ===== */
-.modal-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 200;
+.grocery-item label {
+    margin-left: 0.6rem;
+    font-size: 0.95rem;
 }
 
-.modal {
-  background: white;
-  width: 90%;
-  max-width: 480px;
-  padding: 16px;
-  border-radius: 12px;
+/* ------------------------------
+   FLOATING ACTION BUTTON
+------------------------------ */
+
+.fab {
+    position: fixed;
+    right: 1.6rem;
+    bottom: 1.6rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: dodgerblue;
+    color: white;
+    font-size: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 100;
 }
 
-.modal-actions {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
+/* ------------------------------
+   MOBILE IMPROVEMENTS
+------------------------------ */
 
-/* ===== Ingredient Editor in Recipe Modal ===== */
+@media (max-width: 600px) {
+    .app-container {
+        padding: 0.7rem;
+    }
 
-.ingredient-edit-row {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
+    h1 {
+        font-size: 1.45rem;
+    }
 
-.ingredient-main-row {
-  display: grid;
-  grid-template-columns: 2.2fr 0.9fr 0.9fr 1.2fr auto;
-  gap: 6px;
-  align-items: center;
-}
-
-.ingredient-main-row input,
-.ingredient-main-row select {
-  font-size: 13px;
-  padding: 6px;
-}
-
-.ing-remove-btn {
-  border: none;
-  background: transparent;
-  color: #999;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-/* Group + default row */
-.ingredient-group-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.ingredient-group-input {
-  flex: 1;
-  font-size: 13px;
-  padding: 6px;
-}
-
-.ingredient-default-toggle {
-  border: 1px solid #007aff;
-  background: #fff;
-  color: #007aff;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.ingredient-default-toggle.is-default {
-  background: #007aff;
-  color: #fff;
+    .recipe-title {
+        font-size: 1.15rem;
+    }
 }
