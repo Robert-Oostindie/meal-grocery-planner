@@ -307,9 +307,10 @@ function addIngredientRow() {
     // Sync what the user already typed BEFORE adding a new row
     syncIngredientsFromDOM();
 
-    const defaultStore = state.stores.length ? state.stores[0] : "";
+    const defaultStore = state.stores[0] || "";
+
     ingredientRows.push({
-        id: ingredientRows[i] ? ingredientRows[i].id : crypto.randomUUID(),
+        id: crypto.randomUUID(),   // <-- Correct fixed ID assignment
         name: "",
         qty: 1,
         unit: "CT",
@@ -320,6 +321,7 @@ function addIngredientRow() {
 
     renderIngredientsEditor();
 }
+
 
 
 function removeIngredientRow(idx) {
@@ -369,8 +371,6 @@ function syncIngredientsFromDOM() {
             group: rowEl.querySelector(".ingGroup").value.trim(),
             isDefault: rowEl.querySelector(".default-toggle").classList.contains("active")
         };
-    });
-}
 
     });
 }
