@@ -100,3 +100,177 @@ h1 {
         padding: 0.8rem 0.4rem;
     }
 }
+/* ================================
+   MODAL SYSTEM (Phase 2)
+================================= */
+
+.hidden {
+    display: none !important;
+}
+
+/* Modal container */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+/* Backdrop */
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
+}
+
+/* Modal content */
+.modal-content {
+    position: relative;
+    pointer-events: auto;
+    width: 92%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 1.2rem 1.4rem 1.6rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    transform: translateZ(0); /* iOS scroll fix */
+}
+
+/* Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+/* Step indicators */
+.modal-steps {
+    display: flex;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
+.step-dot {
+    width: 10px;
+    height: 10px;
+    background: #d1d5db;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.step-dot.active {
+    background: #2563eb;
+}
+
+/* Step animation */
+.modal-step {
+    animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Ingredient rows */
+#ingredientsContainer {
+    margin-bottom: 0.8rem;
+}
+
+.ingredient-row {
+    background: #f8f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.ingredient-row input,
+.ingredient-row select {
+    width: 100%;
+    margin-bottom: 0.45rem;
+}
+
+.default-toggle {
+    background: #e5e7eb;
+    border-radius: 6px;
+    padding: 0.35rem 0.55rem;
+    display: inline-block;
+    font-size: 0.85rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.default-toggle.active {
+    background: gold;
+}
+
+/* Review section */
+.review-block {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    padding: 0.85rem;
+    margin-bottom: 0.9rem;
+    border-radius: 10px;
+}
+
+.review-block ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+}
+
+/* Modal buttons */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+
+.modal-actions button {
+    padding: 0.55rem 0.95rem;
+    border: none;
+    border-radius: 8px;
+    background: #e5e7eb;
+    cursor: pointer;
+}
+
+.modal-actions .primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Add Recipe button on Recipes tab */
+.add-recipe-btn {
+    display: inline-block;
+    margin-bottom: 1rem;
+    background: #2563eb;
+    color: white;
+    padding: 0.65rem 1rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
+
