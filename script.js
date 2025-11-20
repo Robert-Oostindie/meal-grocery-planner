@@ -25,6 +25,60 @@ let state = {
 let ingredientRows = [];
 let editingMealId = null;
 let currentStep = 1;
+// ==============================
+// SUBSTITUTE GROUP SUGGESTIONS
+// ==============================
+function getExistingGroups() {
+    const groups = new Set();
+    ingredientRows.forEach(r => {
+        if (r.group && r.group.trim() !== "") {
+            groups.add(r.group.trim());
+        }
+    });
+    return Array.from(groups);
+}
+
+function showGroupSuggestions(inputEl, index) {
+    // remove old menu if any
+    const oldMenu = document.querySelector(".group-suggest-menu");
+    if (oldMenu) oldMenu.remove();
+
+    const groups = getExistingGroups().filter(g =>
+        g.toLowerCase().includes(inputEl.value.toLowerCase())
+    );
+
+    if (groups.length === 0) return;
+
+    const menu = document.createElement("div");
+    menu.className = "group-suggest-menu";
+
+    groups.forEach(g => {
+        const item = document.createElement("div");
+        item.className = "group-suggest-item";
+        item.textContent = g;
+        item.onclick = () => {
+            inputEl.value = g;
+            ingredientRows[index].group = g;
+            menu.remove();
+        };
+        menu.appendChild(item);
+    });
+
+    // position right under the input
+    const rect = inputEl.getBoundingClientRect();
+    menu.style.position = "absolute";
+    menu.style.left = rect.left + "px";
+    menu.style.top = rect.bottom + window.scrollY + "px";
+    menu.style.width = rect.width + "px";
+    menu.style.zIndex = 9999;
+
+    document.body.appendChild(menu);
+}
+
+document.addEventListener("click", () => {
+    const menu = document.querySelector(".group-suggest-menu");
+    if (menu) menu.remove();
+});
 
 loadState();
 function loadState() {
@@ -291,7 +345,13 @@ function renderIngredientsEditor() {
             </div>
 
             <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
-                <input class="ingGroup" style="flex:1;" placeholder="Substitute group (optional)" value="${row.group || ""}">
+                <input class="ingGroup" 
+                   style="flex:1;" 
+                   value="${row.group}" 
+                   placeholder="Substitute group"
+                   oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
+                   onfocus="showGroupSuggestions(this, ${index})">
+
                 <div class="default-toggle ${row.isDefault ? "active" : ""}" onclick="toggleDefault(${index})">
                     ${row.isDefault ? "⭐ Default" : "☆ Make Default"}
                 </div>
