@@ -22,12 +22,20 @@
     <div class="app-container">
 
         <!-- RECIPES TAB -->
-        <div id="recipesTab" class="tab-page active">
-            <h1>Recipes</h1>
-            <p class="section-note">
-                This is your recipes area. In the next phase, we’ll add full recipe + ingredient editing here.
-            </p>
-        </div>
+<div id="recipesTab" class="tab-page active">
+    <h1>Recipes</h1>
+
+    <div class="section-note">
+        Add or edit meals. Ingredients & substitutes added in next steps.
+    </div>
+
+    <button class="primary add-recipe-btn" onclick="openRecipeModalNew()">
+        + Add Recipe
+    </button>
+
+    <div id="recipesList"></div>
+</div>
+
 
         <!-- PLANNER TAB -->
         <div id="plannerTab" class="tab-page">
