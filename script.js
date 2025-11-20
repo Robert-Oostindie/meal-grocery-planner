@@ -410,14 +410,7 @@ function toggleDefault(idx) {
     renderIngredientsEditor();
 }
 
-    // clear defaults for this group
-    ingredientRows.forEach(r => {
-        if (r.group === group) r.isDefault = false;
-    });
 
-    ingredientRows[idx].isDefault = true;
-    renderIngredientsEditor();
-}
 
 // read latest values from DOM into ingredientRows before review/save
 function syncIngredientsFromDOM() {
