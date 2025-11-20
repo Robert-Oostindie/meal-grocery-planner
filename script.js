@@ -304,10 +304,12 @@ function renderIngredientsEditor() {
 }
 
 function addIngredientRow() {
-    // default to first store if available
+    // Sync what the user already typed BEFORE adding a new row
+    syncIngredientsFromDOM();
+
     const defaultStore = state.stores.length ? state.stores[0] : "";
     ingredientRows.push({
-        id: crypto.randomUUID(),
+        id: ingredientRows[i] ? ingredientRows[i].id : crypto.randomUUID(),
         name: "",
         qty: 1,
         unit: "CT",
@@ -315,8 +317,10 @@ function addIngredientRow() {
         group: "",
         isDefault: false
     });
+
     renderIngredientsEditor();
 }
+
 
 function removeIngredientRow(idx) {
     ingredientRows.splice(idx, 1);
@@ -354,9 +358,10 @@ function syncIngredientsFromDOM() {
     if (!container) return;
 
     const rows = container.querySelectorAll(".ingredient-row");
-    ingredientRows = Array.from(rows).map(rowEl => {
+
+    ingredientRows = Array.from(rows).map((rowEl, i) => {
         return {
-            id: crypto.randomUUID(),
+            id: ingredientRows[i] ? ingredientRows[i].id : crypto.randomUUID(),
             name: rowEl.querySelector(".ingName").value.trim(),
             qty: Number(rowEl.querySelector(".ingQty").value) || 1,
             unit: (rowEl.querySelector(".ingUnit").value || "CT").trim(),
@@ -364,6 +369,9 @@ function syncIngredientsFromDOM() {
             group: rowEl.querySelector(".ingGroup").value.trim(),
             isDefault: rowEl.querySelector(".default-toggle").classList.contains("active")
         };
+    });
+}
+
     });
 }
 
