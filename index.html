@@ -81,5 +81,73 @@
 
     <!-- SCRIPT (versioned + deferred to avoid cache issues) -->
     <script src="script.js?v=phase1" defer></script>
+    <!-- RECIPE MODAL -->
+<div id="recipeModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeRecipeModal()"></div>
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <h2 id="recipeModalTitle">Add Recipe</h2>
+            <button class="modal-close" onclick="closeRecipeModal()">×</button>
+        </div>
+
+        <div class="modal-steps">
+            <span id="stepDot1" class="step-dot active"></span>
+            <span id="stepDot2" class="step-dot"></span>
+            <span id="stepDot3" class="step-dot"></span>
+        </div>
+
+        <!-- STEP 1 — BASIC INFO -->
+        <div id="modalStep1" class="modal-step">
+            <label>Meal Name:</label>
+            <input id="modalRecipeName" type="text" placeholder="Ex: Chicken Alfredo">
+
+            <label>Category:</label>
+            <select id="modalRecipeCategory"></select>
+
+            <div class="modal-actions">
+                <button onclick="closeRecipeModal()">Cancel</button>
+                <button class="primary" onclick="goToStep(2)">Next →</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 — INGREDIENTS -->
+        <div id="modalStep2" class="modal-step hidden">
+            <h3>Ingredients</h3>
+            <p class="small-note">Add all ingredients with store + unit + substitutes.</p>
+
+            <div id="ingredientsContainer"></div>
+
+            <button class="primary" onclick="addIngredientRow()">+ Add Ingredient</button>
+
+            <div class="modal-actions">
+                <button onclick="goToStep(1)">← Back</button>
+                <button class="primary" onclick="goToStep(3)">Next →</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 — REVIEW -->
+        <div id="modalStep3" class="modal-step hidden">
+            <h3>Review Recipe</h3>
+
+            <div class="review-block">
+                <strong>Name:</strong> <span id="reviewName"></span><br>
+                <strong>Category:</strong> <span id="reviewCategory"></span>
+            </div>
+
+            <div class="review-block">
+                <strong>Ingredients:</strong>
+                <ul id="reviewIngredients"></ul>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="goToStep(2)">← Back</button>
+                <button class="primary" onclick="saveRecipe()">Save Recipe</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 </body>
 </html>
