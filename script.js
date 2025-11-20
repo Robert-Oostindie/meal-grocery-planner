@@ -390,7 +390,7 @@ function removeIngredientRow(idx) {
 }
 
 function toggleDefault(idx) {
-    // sync EVERYTHING before applying changes (fixes name reset issue)
+    // Sync everything first to avoid wiping names
     syncIngredientsFromDOM();
 
     const group = ingredientRows[idx].group;
@@ -399,22 +399,16 @@ function toggleDefault(idx) {
         return;
     }
 
-    // clear defaults for this group
+    // Clear defaults for this group
     ingredientRows.forEach(r => {
         if (r.group === group) r.isDefault = false;
     });
 
+    // Set new default
     ingredientRows[idx].isDefault = true;
 
     renderIngredientsEditor();
 }
-
-
-    const group = ingredientRows[idx].group;
-    if (!group) {
-        alert("Set a substitute group name first.");
-        return;
-    }
 
     // clear defaults for this group
     ingredientRows.forEach(r => {
