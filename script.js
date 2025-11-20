@@ -423,17 +423,17 @@ function syncIngredientsFromDOM() {
 
     ingredientRows = Array.from(rows).map((rowEl, i) => {
         return {
-            id: ingredientRows[i] ? ingredientRows[i].id : crypto.randomUUID(),
+            id: ingredientRows[i] && ingredientRows[i].id ? ingredientRows[i].id : crypto.randomUUID(),
             name: rowEl.querySelector(".ingName").value.trim(),
             qty: Number(rowEl.querySelector(".ingQty").value) || 1,
             unit: (rowEl.querySelector(".ingUnit").value || "CT").trim(),
             store: rowEl.querySelector(".ingStore").value,
             group: rowEl.querySelector(".ingGroup").value.trim(),
             isDefault: rowEl.querySelector(".default-toggle").classList.contains("active")
-        };
-
+        }
     });
 }
+
 
 // ==============================
 // REVIEW (STEP 3)
