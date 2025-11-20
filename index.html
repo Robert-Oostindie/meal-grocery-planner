@@ -8,150 +8,70 @@
 </head>
 <body>
 
-    <!-- TOP NAV -->
+    <!-- TOP NAV TABS -->
     <div class="top-tabs">
         <button class="tab-btn active" data-tab="recipesTab">Recipes</button>
         <button class="tab-btn" data-tab="plannerTab">Planner</button>
-        <button class="tab-btn" data-tab="otherTab">Other</button>
-        <button class="tab-btn" data-tab="storesTab">Stores</button>
         <button class="tab-btn" data-tab="groceryTab">Grocery List</button>
+        <button class="tab-btn" data-tab="categoriesTab">Categories</button>
+        <button class="tab-btn" data-tab="storesTab">Stores</button>
+        <button class="tab-btn" data-tab="otherTab">Other</button>
     </div>
 
+    <!-- MAIN APP CONTAINER -->
     <div class="app-container">
 
         <!-- RECIPES TAB -->
         <div id="recipesTab" class="tab-page active">
-
             <h1>Recipes</h1>
-
-            <!-- Button row -->
-            <div style="margin: 0.5rem 0 1rem;">
-                <button class="primary" onclick="openRecipeModalNew()">+ Add Recipe</button>
-            </div>
-
-            <!-- Existing recipes -->
-            <div id="recipesContainer"></div>
-
+            <p class="section-note">
+                This is your recipes area. In the next phase, we’ll add full recipe + ingredient editing here.
+            </p>
         </div>
 
         <!-- PLANNER TAB -->
         <div id="plannerTab" class="tab-page">
-            <h1>Meal Planner</h1>
-            <div id="plannerMeals"></div>
-
-            <h2>Add Custom Item</h2>
-            <div class="card">
-                <input id="customPlannerItem" type="text" placeholder="Ex: Paper towels">
-                <button class="primary" onclick="addCustomPlannerItem()">Add</button>
-            </div>
-
-            <button onclick="collapseAllPlanner()">Collapse All</button>
-        </div>
-
-        <!-- OTHER TAB -->
-        <div id="otherTab" class="tab-page">
-            <h1>Meal Categories</h1>
-            <div id="categoryList"></div>
-
-            <h2>Add Category</h2>
-            <div class="card">
-                <input id="newCategory" placeholder="Ex: Snacks">
-                <button class="primary" onclick="addCategory()">Add</button>
-            </div>
-        </div>
-
-        <!-- STORES TAB -->
-        <div id="storesTab" class="tab-page">
-            <h1>Stores</h1>
-            <div id="storeList"></div>
-
-            <h2>Add Store</h2>
-            <div class="card">
-                <input id="newStore" placeholder="Ex: Aldi">
-                <button class="primary" onclick="addStore()">Add</button>
-            </div>
+            <h1>Planner</h1>
+            <p class="section-note">
+                This will become your weekly meal planner.
+            </p>
         </div>
 
         <!-- GROCERY TAB -->
         <div id="groceryTab" class="tab-page">
             <h1>Grocery List</h1>
-            <div id="groceryContainer"></div>
+            <p class="section-note">
+                This will show grocery items grouped by store based on your planner.
+            </p>
+        </div>
+
+        <!-- CATEGORIES TAB -->
+        <div id="categoriesTab" class="tab-page">
+            <h1>Categories</h1>
+            <p class="section-note">
+                Here you’ll manage meal categories like Low Prep, Crock Pot, etc.
+            </p>
+        </div>
+
+        <!-- STORES TAB -->
+        <div id="storesTab" class="tab-page">
+            <h1>Stores</h1>
+            <p class="section-note">
+                This will let you manage stores like Aldi, Walmart, Festival Foods, Woodmans.
+            </p>
+        </div>
+
+        <!-- OTHER TAB -->
+        <div id="otherTab" class="tab-page">
+            <h1>Other</h1>
+            <p class="section-note">
+                Extra settings or later features will live here.
+            </p>
         </div>
 
     </div>
 
-    <!-- FLOATING BUTTON (still works – on Recipes opens modal) -->
-    <div class="fab" onclick="fabAction()">+</div>
-
-    <!-- RECIPE MODAL (3-step wizard) -->
-    <div id="recipeModal" class="modal hidden">
-        <div class="modal-backdrop" onclick="closeRecipeModal()"></div>
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h2 id="recipeModalTitle">Add Recipe</h2>
-                <button class="modal-close" onclick="closeRecipeModal()">×</button>
-            </div>
-
-            <div class="modal-steps">
-                <span id="stepDot1" class="step-dot active"></span>
-                <span id="stepDot2" class="step-dot"></span>
-                <span id="stepDot3" class="step-dot"></span>
-            </div>
-
-            <!-- STEP 1: Basic info -->
-            <div id="modalStep1" class="modal-step">
-                <label>Meal Name:</label>
-                <input id="modalRecipeName" type="text" placeholder="Ex: Chicken Burrito Bowl">
-
-                <label>Category:</label>
-                <select id="modalRecipeCategory"></select>
-
-                <div class="modal-actions">
-                    <button onclick="closeRecipeModal()">Cancel</button>
-                    <button class="primary" onclick="goToStep(2)">Next →</button>
-                </div>
-            </div>
-
-            <!-- STEP 2: Ingredients -->
-            <div id="modalStep2" class="modal-step hidden">
-                <h3>Ingredients</h3>
-                <p style="margin-top:0; color:#666; font-size:0.9rem;">
-                    Add all ingredients for this meal. Quantity defaults to 1 and unit to CT.
-                </p>
-
-                <div id="recipeIngredientsContainer"></div>
-
-                <button class="primary" style="margin-top:0.5rem;" onclick="addIngredientRow()">+ Add Ingredient</button>
-
-                <div class="modal-actions">
-                    <button onclick="goToStep(1)">← Back</button>
-                    <button class="primary" onclick="goToStep(3)">Next →</button>
-                </div>
-            </div>
-
-            <!-- STEP 3: Review & save -->
-            <div id="modalStep3" class="modal-step hidden">
-                <h3>Review</h3>
-                <div class="review-block">
-                    <strong>Meal:</strong> <span id="reviewMealName"></span><br/>
-                    <strong>Category:</strong> <span id="reviewMealCategory"></span>
-                </div>
-
-                <div class="review-block">
-                    <strong>Ingredients:</strong>
-                    <ul id="reviewIngredientsList"></ul>
-                </div>
-
-                <div class="modal-actions">
-                    <button onclick="goToStep(2)">← Back</button>
-                    <button class="primary" onclick="saveRecipeFromModal()">Save Recipe</button>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <script src="script.js?v=6" defer></script>
+    <!-- SCRIPT (versioned + deferred to avoid cache issues) -->
+    <script src="script.js?v=phase1" defer></script>
 </body>
 </html>
