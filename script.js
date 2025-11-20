@@ -390,14 +390,25 @@ function removeIngredientRow(idx) {
 }
 
 function toggleDefault(idx) {
-    // sync latest group names from DOM, then enforce one default per group
-    const container = document.getElementById("ingredientsContainer");
-    const rows = container.querySelectorAll(".ingredient-row");
-    rows.forEach((rowEl, i) => {
-        const groupInput = rowEl.querySelector(".ingGroup");
-        if (!ingredientRows[i]) return;
-        ingredientRows[i].group = groupInput.value.trim();
+    // sync EVERYTHING before applying changes (fixes name reset issue)
+    syncIngredientsFromDOM();
+
+    const group = ingredientRows[idx].group;
+    if (!group) {
+        alert("Set a substitute group name first.");
+        return;
+    }
+
+    // clear defaults for this group
+    ingredientRows.forEach(r => {
+        if (r.group === group) r.isDefault = false;
     });
+
+    ingredientRows[idx].isDefault = true;
+
+    renderIngredientsEditor();
+}
+
 
     const group = ingredientRows[idx].group;
     if (!group) {
