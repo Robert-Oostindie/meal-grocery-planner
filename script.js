@@ -393,27 +393,6 @@ function removeIngredientRow(idx) {
     renderIngredientsEditor();
 }
 
-<input type="checkbox" ${isSelected ? "checked" : ""} onclick="function function togglePlannerMeal(mealId) {Meal(mealId) {Meal('${meal.id}')">(idx) {
-    // Sync everything first to avoid wiping names
-    syncIngredientsFromDOM();
-
-    const group = ingredientRows[idx].group;
-    if (!group) {
-        alert("Set a substitute group name first.");
-        return;
-    }
-
-    // Clear defaults for this group
-    ingredientRows.forEach(r => {
-        if (r.group === group) r.isDefault = false;
-    });
-
-    // Set new default
-    ingredientRows[idx].isDefault = true;
-
-    renderIngredientsEditor();
-}
-
 
 
 // read latest values from DOM into ingredientRows before review/save
@@ -487,7 +466,7 @@ function renderPlanner() {
                 const mainRow = document.createElement("label");
                 mainRow.className = "planner-meal-row";
                 mainRow.innerHTML = `
-                    <input type="checkbox" ${isSelected ? "checked" : ""} onclick="togglePlannerMeal(mealId) {Meal(mealId) {Meal('${meal.id}')">
+                    <input type="checkbox" ${isSelected ? "checked" : ""} onclick="togglePlannerMeal('${meal.id}')">
                     <span>${meal.name}</span>
                 `;
                 mealRow.appendChild(mainRow);
