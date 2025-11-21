@@ -512,7 +512,17 @@ function toggleCategory(cat) {
     renderPlanner();
 }
 
-function togglePlannerMeal(mealId) {Meal(mealId) {
+function togglePlannerMeal(mealId) {
+    const idx = state.plannerMeals.indexOf(mealId);
+    if (idx === -1) {
+        state.plannerMeals.push(mealId);
+    } else {
+        state.plannerMeals.splice(idx, 1);
+    }
+    saveState();
+    renderPlanner();
+}
+
     const idx = state.plannerMeals.indexOf(mealId);
     if (idx === -1) {
         state.plannerMeals.push(mealId);
