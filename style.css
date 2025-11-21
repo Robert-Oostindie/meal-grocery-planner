@@ -319,12 +319,6 @@ h1 {
     margin-top: 1.5rem;
 }
 
-.planner-extra-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
 .planner-extra-item {
     display: flex;
     justify-content: space-between;
@@ -347,20 +341,14 @@ h1 {
 .grocery-item {
     margin: 2px 0;
 }
-.planner-extra-row {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-}
+
 /* Make the Other Items store dropdown visible */
 #plannerExtraStore {
     width: 150px;      /* or 160px if you want larger */
     padding: 4px;
 }
 /* Allow dropdown to display outside the flex row */
-.planner-extra-row {
-    overflow: visible !important;
-}
+
 /* Prevent clipping of dropdown in the extras section */
 .planner-extras {
     overflow: visible !important;
@@ -375,9 +363,7 @@ h1 {
    =========================================================== */
 
 /* FIX: Let dropdowns escape the flex parent */
-.planner-extra-row {
-    position: relative;
-}
+
 
 #plannerExtraStore {
     position: absolute;
@@ -386,5 +372,43 @@ h1 {
     width: 150px;
     z-index: 9999;
     background: white;
+}
+/* Container for Other Items row */
+.planner-extra-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    /* critical fixes */
+    flex-wrap: nowrap;
+    overflow: visible !important;
+}
+
+/* Make inputs behave nicely in flex */
+#plannerExtraInput {
+    flex: 1;       /* stretch */
+    min-width: 120px;
+}
+
+#plannerExtraQty {
+    width: 70px;
+    min-width: 60px;
+}
+
+#plannerExtraStore {
+    width: 150px;
+    min-width: 120px;   /* important */
+    padding: 4px;
+    overflow: visible;
+    position: relative;
+    z-index: 20;        /* ensures dropdown appears above row */
+}
+
+/* Ensure dropdown never gets clipped by parent container */
+.planner-extras {
+    overflow: visible !important;
+    position: relative;
+    z-index: 10;
 }
 
