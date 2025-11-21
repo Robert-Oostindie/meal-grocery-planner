@@ -47,13 +47,25 @@
     <div id="plannerContainer"></div>
 
     <div class="planner-extras">
-        <h3>Other Items</h3>
-        <div class="planner-extra-row">
-            <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
-            <button class="primary" onclick="addPlannerExtra()">Add</button>
-        </div>
-        <div id="plannerExtrasList"></div>
+    <h3>Other Items</h3>
+
+    <div class="planner-extra-row">
+
+        <!-- Item name -->
+        <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
+
+        <!-- Qty (NEW) -->
+        <input id="plannerExtraQty" type="number" value="1" min="1" style="width:70px;">
+
+        <!-- Store dropdown (NEW – script will populate) -->
+        <select id="plannerExtraStore"></select>
+
+        <button class="primary" onclick="addPlannerExtra()">Add</button>
     </div>
+
+    <div id="plannerExtrasList"></div>
+</div>
+
 
     <button class="primary build-grocery-btn" onclick="buildGroceryList()">
         Build Grocery List
@@ -190,6 +202,17 @@
     </div>
 
     <!-- LOAD SCRIPT LAST -->
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const sel = document.getElementById("plannerExtraStore");
+    if (sel && window.state?.stores) {
+        sel.innerHTML = state.stores
+            .map(s => `<option>${s}</option>`)
+            .join("");
+    }
+});
+</script>
+
     <script src="script.js?v=phase2" defer></script>
 
 </body>
