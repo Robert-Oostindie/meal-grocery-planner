@@ -357,4 +357,17 @@ h1 {
     width: 150px;      /* or 160px if you want larger */
     padding: 4px;
 }
+/* Allow dropdown to display outside the flex row */
+.planner-extra-row {
+    overflow: visible !important;
+}
+/* Prevent clipping of dropdown in the extras section */
+.planner-extras {
+    overflow: visible !important;
+}
+/* Ensure the select can appear above surrounding elements */
+#plannerExtraStore:focus {
+    position: relative;
+    z-index: 1000;
+}
 
