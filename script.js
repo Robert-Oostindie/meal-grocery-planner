@@ -18,7 +18,7 @@ let state = {
     ],
     stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
     plannerMeals: [],       // array of meal IDs that are checked in Planner
-    plannerExtras: [],      // array of free-text "other items"
+    plannerExtras: [],   // each item: { id, name, qty, unit, store }
     collapsedCategories: [], // which category accordions are collapsed
     plannerIngredientChecks: {}   // { mealId: { ingredientId: true/false } }
 };
