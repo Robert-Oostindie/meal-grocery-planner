@@ -523,15 +523,7 @@ function togglePlannerMeal(mealId) {
     renderPlanner();
 }
 
-    const idx = state.plannerMeals.indexOf(mealId);
-    if (idx === -1) {
-        state.plannerMeals.push(mealId);
-    } else {
-        state.plannerMeals.splice(idx, 1);
-    }
-    saveState();
-    renderPlanner();
-}
+    
 function renderPlannerExtras() {
     const list = document.getElementById("plannerExtrasList");
     if (!list) return;
