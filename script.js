@@ -32,13 +32,26 @@ let currentStep = 1;
 // ==============================
 function getExistingGroups() {
     const groups = new Set();
+
+    // include groups already typed in this modal
     ingredientRows.forEach(r => {
         if (r.group && r.group.trim() !== "") {
             groups.add(r.group.trim());
         }
     });
+
+    // also include groups from all saved meals
+    state.meals.forEach(meal => {
+        (meal.ingredients || []).forEach(ing => {
+            if (ing.group && ing.group.trim() !== "") {
+                groups.add(ing.group.trim());
+            }
+        });
+    });
+
     return Array.from(groups);
 }
+
 
 function showGroupSuggestions(inputEl, index) {
     // remove old menu if any
@@ -390,6 +403,28 @@ function addIngredientRow() {
 
 function removeIngredientRow(idx) {
     ingredientRows.splice(idx, 1);
+    renderIngredientsEditor();
+}
+function toggleDefault(idx) {
+    // Sync first so nothing gets erased
+    syncIngredientsFromDOM();
+
+    const group = ingredientRows[idx].group.trim();
+
+    if (!group) {
+        alert("Set a substitute group name first.");
+        return;
+    }
+
+    // Clear defaults for this group
+    ingredientRows.forEach(r => {
+        if (r.group === group) r.isDefault = false;
+    });
+
+    // Set this one as default
+    ingredientRows[idx].isDefault = true;
+
+    // Re-render UI
     renderIngredientsEditor();
 }
 
