@@ -608,25 +608,39 @@ function renderPlannerExtras() {
         const row = document.createElement("div");
         row.className = "planner-extra-item";
         row.innerHTML = `
-            <span>${item}</span>
+            <span>${item.name} (${item.qty}) — <em>${item.store}</em></span>
             <button class="danger" onclick="removePlannerExtra(${idx})">Remove</button>
         `;
         list.appendChild(row);
     });
 }
 
+
 function addPlannerExtra() {
-    const input = document.getElementById("plannerExtraInput");
-    if (!input) return;
+    const nameEl = document.getElementById("plannerExtraInput");
+    const qtyEl = document.getElementById("plannerExtraQty");
+    const storeEl = document.getElementById("plannerExtraStore");
 
-    const text = input.value.trim();
-    if (!text) return;
+    const name = nameEl.value.trim();
+    if (!name) return;
 
-    state.plannerExtras.push(text);
-    input.value = "";
+    const qty = Number(qtyEl.value) || 1;
+    const store = storeEl.value || "";
+
+    // Save as full object
+    state.plannerExtras.push({
+        name,
+        qty,
+        store
+    });
+
     saveState();
-    renderPlannerExtras();
+    renderPlannerExtras(); // ONLY update the list; do NOT rerender the whole planner
+
+    nameEl.value = "";
+    qtyEl.value = 1;
 }
+
 
 function removePlannerExtra(index) {
     state.plannerExtras.splice(index, 1);
@@ -681,8 +695,12 @@ function renderGroceryList() {
 
     });
 
-    // Add planner extras under "Other"
-    state.plannerExtras.forEach(item => addItem("Other", item));
+   // Add planner extras with full text
+state.plannerExtras.forEach(item => {
+    const qtyPart = item.qty > 1 ? ` (${item.qty})` : "";
+    addItem(item.store, `${item.name}${qtyPart}`);
+});
+
 
     // Render grouped by store
     Object.keys(itemsByStore).sort().forEach(store => {
