@@ -38,20 +38,38 @@
         </div>
 
         <!-- PLANNER TAB -->
-        <div id="plannerTab" class="tab-page">
-            <h1>Planner</h1>
-            <p class="section-note">
-                This will become your weekly meal planner.
-            </p>
+       <div id="plannerTab" class="tab-page">
+    <h1>Planner</h1>
+    <p class="section-note">
+        Select meals for this trip, then build your grocery list.
+    </p>
+
+    <div id="plannerContainer"></div>
+
+    <div class="planner-extras">
+        <h3>Other Items</h3>
+        <div class="planner-extra-row">
+            <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
+            <button class="primary" onclick="addPlannerExtra()">Add</button>
         </div>
+        <div id="plannerExtrasList"></div>
+    </div>
+
+    <button class="primary build-grocery-btn" onclick="buildGroceryList()">
+        Build Grocery List
+    </button>
+</div>
+
 
         <!-- GROCERY TAB -->
-        <div id="groceryTab" class="tab-page">
+       <div id="groceryTab" class="tab-page">
             <h1>Grocery List</h1>
             <p class="section-note">
-                This will show grocery items grouped by store based on your planner.
+                Based on your selected meals and other items.
             </p>
+            <div id="groceryContainer"></div>
         </div>
+
 
         <!-- CATEGORIES TAB -->
         <div id="categoriesTab" class="tab-page">
