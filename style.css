@@ -352,4 +352,9 @@ h1 {
     gap: 0.6rem;
     align-items: center;
 }
+/* Make the Other Items store dropdown visible */
+#plannerExtraStore {
+    width: 150px;      /* or 160px if you want larger */
+    padding: 4px;
+}
 
