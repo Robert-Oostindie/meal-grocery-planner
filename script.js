@@ -19,7 +19,8 @@ let state = {
     stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
     plannerMeals: [],       // array of meal IDs that are checked in Planner
     plannerExtras: [],      // array of free-text "other items"
-    collapsedCategories: [] // which category accordions are collapsed
+    collapsedCategories: [], // which category accordions are collapsed
+    plannerIngredientChecks: {}   // { mealId: { ingredientId: true/false } }
 };
 
 
@@ -512,15 +513,38 @@ function renderPlanner() {
                     ingDiv.className = "planner-ingredients";
 
                     (meal.ingredients || []).forEach(ing => {
-                        // Respect substitute groups: only include default in a group
-                        if (ing.group && !ing.isDefault) return;
+                // respect default in substitute groups
+                if (ing.group && !ing.isDefault) return;
 
-                        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
-                        const line = document.createElement("div");
-                        line.className = "planner-ingredient";
-                        line.innerHTML = `• ${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span>`;
-                        ingDiv.appendChild(line);
-                    });
+                const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+
+                // initialize storage object if needed
+                if (!state.plannerIngredientChecks[meal.id]) {
+                    state.plannerIngredientChecks[meal.id] = {};
+                }
+
+                // default state for checked/unchecked = true
+                if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+                    state.plannerIngredientChecks[meal.id][ing.id] = true;
+                }
+
+                const checked = state.plannerIngredientChecks[meal.id][ing.id];
+
+                const line = document.createElement("label");
+                line.className = "planner-ingredient-check";
+                line.innerHTML = `
+                    <input 
+                        type="checkbox"
+                        ${checked ? "checked" : ""}
+                        onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
+                    >
+                    ${ing.name}${qtyPart}
+                    <span class="muted">– ${ing.store}</span>
+                `;
+
+                ingDiv.appendChild(line);
+            });
+
 
                     mealRow.appendChild(ingDiv);
                 }
@@ -557,7 +581,17 @@ function togglePlannerMeal(mealId) {
     saveState();
     renderPlanner();
 }
+function togglePlannerIngredient(mealId, ingId) {
+    if (!state.plannerIngredientChecks[mealId]) {
+        state.plannerIngredientChecks[mealId] = {};
+    }
 
+    const prev = state.plannerIngredientChecks[mealId][ingId];
+    state.plannerIngredientChecks[mealId][ingId] = !prev;
+
+    saveState();
+    renderPlanner();
+}
     
 function renderPlannerExtras() {
     const list = document.getElementById("plannerExtrasList");
@@ -635,12 +669,16 @@ function renderGroceryList() {
     // Pull from selected meals
     selectedMeals.forEach(meal => {
         (meal.ingredients || []).forEach(ing => {
-            // Again: respect substitute groups (only default)
             if (ing.group && !ing.isDefault) return;
+
+            // ingredient selection respected
+            const checked = state.plannerIngredientChecks[meal.id]?.[ing.id];
+            if (!checked) return;
 
             const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
             addItem(ing.store, `${ing.name}${qtyPart}`);
         });
+
     });
 
     // Add planner extras under "Other"
