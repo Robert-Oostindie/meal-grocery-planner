@@ -393,4 +393,17 @@ h1 {
     position: relative;
     z-index: 9999;
 }
+/* FIX: Let dropdowns escape the flex parent */
+.planner-extra-row {
+    position: relative;
+}
+
+#plannerExtraStore {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 150px;
+    z-index: 9999;
+    background: white;
+}
 
