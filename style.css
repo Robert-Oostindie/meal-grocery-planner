@@ -370,4 +370,27 @@ h1 {
     position: relative;
     z-index: 1000;
 }
+/* ===========================================================
+   FIX: Make the Other Items store dropdown fully visible
+   =========================================================== */
+
+#plannerExtraStore {
+    width: 150px;
+    padding: 4px;
+    position: relative;
+    z-index: 50;
+}
+
+.planner-extra-row {
+    overflow: visible !important;
+}
+
+.planner-extras {
+    overflow: visible !important;
+}
+
+#plannerExtraStore:focus {
+    position: relative;
+    z-index: 9999;
+}
 
