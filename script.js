@@ -97,6 +97,10 @@ document.addEventListener("click", () => {
 });
 
 loadState();
+document.addEventListener("DOMContentLoaded", () => {
+    renderApp();
+});
+
 function loadState() {
     try {
         const raw = localStorage.getItem(LS_KEY);
@@ -139,8 +143,7 @@ function switchTab(tabId) {
     });
 }
 
-// initial render
-renderApp();
+
 function renderApp() {
     renderRecipes();
     renderPlanner();
