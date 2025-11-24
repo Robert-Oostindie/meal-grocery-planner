@@ -530,7 +530,10 @@ function openSubstituteModal(mealId, groupName) {
 
     options.forEach(ing => {
         const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
-        const isDefaultLabel = ing.isDefault ? " ⭐ default" : "";
+        // Only show default if THIS recipe marked it default
+        const recipeDefault = options.find(o => o.isDefault)?.id;
+        const isDefaultLabel = ing.id === recipeDefault ? " ⭐ default" : "";
+
 
         const row = document.createElement("label");
         row.style.display = "block";
