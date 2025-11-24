@@ -619,6 +619,15 @@ function togglePlannerIngredient(mealId, ingId) {
 }
     
 function renderPlannerExtras() {
+
+    // 🔥 Always repopulate store dropdown
+    const sel = document.getElementById("plannerExtraStore");
+    if (sel && state.stores.length) {
+        sel.innerHTML = state.stores
+            .map(store => `<option>${store}</option>`)
+            .join("");
+    }
+
     const list = document.getElementById("plannerExtrasList");
     if (!list) return;
 
