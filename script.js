@@ -32,6 +32,8 @@ let editingMealId = null;
 let currentStep = 1;
 let subModalMealId = null;
 let subModalGroupName = null;
+let subModalIngredientIndex = null;
+
 // ==============================
 // SUBSTITUTE GROUP SUGGESTIONS
 // ==============================
