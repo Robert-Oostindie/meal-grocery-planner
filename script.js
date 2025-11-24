@@ -21,7 +21,8 @@ let state = {
     plannerExtras: [],   // each item: { id, name, qty, unit, store }
     collapsedCategories: [], // which category accordions are collapsed
    plannerIngredientChecks: {},
-   plannerIngredientComments: {}
+   plannerIngredientComments: {},
+   plannerSubstituteSelections: {}  // { [mealId]: { [groupName]: ingredientId } } 
 };
 
 
@@ -29,6 +30,8 @@ let state = {
 let ingredientRows = [];
 let editingMealId = null;
 let currentStep = 1;
+let subModalMealId = null;
+let subModalGroupName = null;
 // ==============================
 // SUBSTITUTE GROUP SUGGESTIONS
 // ==============================
@@ -454,6 +457,120 @@ function syncIngredientsFromDOM() {
         }
     });
 }
+// Return the list of "active" ingredients for a meal:
+//  - all non-grouped ingredients
+//  - exactly 1 ingredient per substitute group, default or user-selected
+function getActiveIngredientsForMeal(meal) {
+    const ingredients = meal.ingredients || [];
+    const groupsMap = {};
+    const ungrouped = [];
+
+    ingredients.forEach(ing => {
+        if (ing.group) {
+            if (!groupsMap[ing.group]) groupsMap[ing.group] = [];
+            groupsMap[ing.group].push(ing);
+        } else {
+            ungrouped.push(ing);
+        }
+    });
+
+    const result = [...ungrouped];
+
+    const selectionsForMeal = state.plannerSubstituteSelections[meal.id] || {};
+
+    Object.keys(groupsMap).forEach(groupName => {
+        const groupIngs = groupsMap[groupName];
+
+        // default = ingredient marked isDefault, otherwise first one
+        const defaultIng =
+            groupIngs.find(i => i.isDefault) || groupIngs[0];
+
+        const selectedId = selectionsForMeal[groupName] || defaultIng.id;
+        const activeIng =
+            groupIngs.find(i => i.id === selectedId) || defaultIng;
+
+        result.push(activeIng);
+    });
+
+    return result;
+}
+function openSubstituteModal(mealId, groupName) {
+    subModalMealId = mealId;
+    subModalGroupName = groupName;
+
+    const meal = state.meals.find(m => m.id === mealId);
+    if (!meal) return;
+
+    const options = (meal.ingredients || []).filter(
+        ing => ing.group === groupName
+    );
+
+    if (!options.length) return;
+
+    const selectionsForMeal = state.plannerSubstituteSelections[mealId] || {};
+    const selectedId = selectionsForMeal[groupName] ||
+        (options.find(o => o.isDefault)?.id || options[0].id);
+
+    const body = document.getElementById("subModalBody");
+    if (!body) return;
+
+    body.innerHTML = "";
+
+    options.forEach(ing => {
+        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+        const isDefaultLabel = ing.isDefault ? " ⭐ default" : "";
+
+        const row = document.createElement("label");
+        row.style.display = "block";
+        row.style.marginBottom = "0.4rem";
+        row.innerHTML = `
+            <input 
+                type="radio" 
+                name="subChoice" 
+                value="${ing.id}" 
+                ${ing.id === selectedId ? "checked" : ""}
+            >
+            ${ing.name}${qtyPart}${isDefaultLabel}
+        `;
+        body.appendChild(row);
+    });
+
+    const modal = document.getElementById("subModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeSubstituteModal() {
+    const modal = document.getElementById("subModal");
+    if (modal) modal.classList.add("hidden");
+    subModalMealId = null;
+    subModalGroupName = null;
+}
+
+function applySubstituteChoice() {
+    if (!subModalMealId || !subModalGroupName) {
+        closeSubstituteModal();
+        return;
+    }
+
+    const selected = document.querySelector(
+        'input[name="subChoice"]:checked'
+    );
+    if (!selected) {
+        closeSubstituteModal();
+        return;
+    }
+
+    const ingId = selected.value;
+
+    if (!state.plannerSubstituteSelections[subModalMealId]) {
+        state.plannerSubstituteSelections[subModalMealId] = {};
+    }
+    state.plannerSubstituteSelections[subModalMealId][subModalGroupName] = ingId;
+
+    saveState();
+    closeSubstituteModal();
+    renderPlanner(); // refresh planner view with the new choice
+}
 // ==============================
 // PLANNER TAB
 // ==============================
@@ -516,51 +633,62 @@ function renderPlanner() {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
 
-                    (meal.ingredients || []).forEach(ing => {
-                // respect default in substitute groups
-                if (ing.group && !ing.isDefault) return;
+                   const activeIngredients = getActiveIngredientsForMeal(meal);
 
-                const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+                activeIngredients.forEach(ing => {
+                    const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
 
-                // initialize storage object if needed
-                if (!state.plannerIngredientChecks[meal.id]) {
-                    state.plannerIngredientChecks[meal.id] = {};
-                }
-
-                // default state for checked/unchecked = true
-                if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+                    // init checks store
+                    if (!state.plannerIngredientChecks[meal.id]) {
+                        state.plannerIngredientChecks[meal.id] = {};
+                    }
+                    if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
                     state.plannerIngredientChecks[meal.id][ing.id] = true;
-                }
+                    }
 
-                const checked = state.plannerIngredientChecks[meal.id][ing.id];
+                    const checked = state.plannerIngredientChecks[meal.id][ing.id];
+                    const existingComment =
+                        state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
-                const existingComment =
-                    state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
+                    const line = document.createElement("div");
+                    line.className = "planner-ingredient-check";
 
-                const line = document.createElement("div");
-                line.className = "planner-ingredient-check";
+                    // base content
+                    let inner = `
+                        <input 
+                            type="checkbox"
+                            ${checked ? "checked" : ""}
+                            onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
+                        >
+                        <span>${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span></span>
 
-                line.innerHTML = `
-                    <input 
-                        type="checkbox"
-                        ${checked ? "checked" : ""}
-                        onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
-                    >
-                    <span>${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span></span>
+                        <input 
+                            type="text"
+                            class="ing-comment"
+                            placeholder="Comment"
+                            value="${existingComment}"
+                            oninput="updateIngredientComment('${meal.id}', '${ing.id}', this.value)"
+                            style="margin-left:8px; flex:1;"
+                        >
+                    `;
 
-                    <input 
-                        type="text"
-                        class="ing-comment"
-                        placeholder="Comment"
-                        value="${existingComment}"
-                        oninput="updateIngredientComment('${meal.id}', '${ing.id}', this.value)"
-                        style="margin-left:8px; flex:1;"
-                    >
-                `;
+                    // if this ingredient belongs to a substitute group, add Swap button
+                    if (ing.group) {
+                        inner += `
+                            <button 
+                                class="primary" 
+                                style="margin-left:8px; white-space:nowrap;"
+                                onclick="openSubstituteModal('${meal.id}', '${ing.group}')"
+                            >
+                                Swap
+                            </button>
+                        `;
+                    }
 
+                    line.innerHTML = inner;
+                    ingDiv.appendChild(line);
+                });
 
-                ingDiv.appendChild(line);
-            });
 
 
                     mealRow.appendChild(ingDiv);
