@@ -714,8 +714,15 @@ function renderGroceryList() {
             const checked = state.plannerIngredientChecks[meal.id]?.[ing.id];
             if (!checked) return;
 
+           const comment =
+                state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
+
             const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
-            addItem(ing.store, `${ing.name}${qtyPart}`);
+
+            const commentPart = comment ? ` (${comment})` : "";
+
+            addItem(ing.store, `${ing.name}${qtyPart}${commentPart}`);
+ 
         });
 
     });
