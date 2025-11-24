@@ -375,7 +375,9 @@ function renderIngredientsEditor() {
                    value="${row.group}" 
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
-                   onfocus="showGroupSuggestions(this, ${index})">
+                   onfocus="showGroupSuggestions(this, ${index})"
+                   onblur="handleGroupFinished(${index}, this.value)">
+
 
                 <div class="default-toggle ${row.isDefault ? "active" : ""}" onclick="toggleDefault(${index})">
                     ${row.isDefault ? "⭐ Default" : "☆ Make Default"}
@@ -571,6 +573,61 @@ function openSubstituteModal(mealId, groupName) {
     const modal = document.getElementById("subModal");
     if (modal) modal.classList.remove("hidden");
 }
+// When user finishes typing a group name in recipe editor
+function handleGroupFinished(index, groupName) {
+    groupName = groupName.trim();
+    if (!groupName) return;
+
+    // Build list of ALL ingredients across ALL meals that belong to this group
+    const matches = [];
+    state.meals.forEach(m => {
+        (m.ingredients || []).forEach(ing => {
+            if (ing.group === groupName) {
+                matches.push(ing);
+            }
+        });
+    });
+
+    // If only 1 match → nothing to reuse
+    if (matches.length <= 1) return;
+
+    // Load modal body
+    const body = document.getElementById("subModalBody");
+    if (!body) return;
+    body.innerHTML = "";
+
+    // Show all existing global ingredients
+    matches.forEach(ing => {
+        const qty = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+        const row = document.createElement("label");
+        row.style.display = "block";
+        row.style.margin = "0.35rem 0";
+        row.innerHTML = `
+            <input type="radio" name="reuseChoice" value="${ing.id}">
+            ${ing.name}${qty}
+        `;
+        body.appendChild(row);
+    });
+
+    // Add "new ingredient" option
+    const addNew = document.createElement("label");
+    addNew.style.display = "block";
+    addNew.style.margin = "0.7rem 0 0.3rem";
+    addNew.innerHTML = `
+        <input type="radio" name="reuseChoice" value="__new__">
+        Add a brand-new ingredient
+    `;
+    body.appendChild(addNew);
+
+    // Store which ingredient row is being edited
+    subModalMealId = "__recipe_edit__";
+    subModalGroupName = groupName;
+    subModalIngredientIndex = index;
+
+    // Open modal
+    document.getElementById("subModal").classList.remove("hidden");
+}
+
 function getGlobalGroupIngredients(groupName) {
     const results = [];
     state.meals.forEach(m => {
@@ -591,10 +648,32 @@ function closeSubstituteModal() {
 }
 
 function applySubstituteChoice() {
-    if (!subModalMealId || !subModalGroupName) {
+    // SPECIAL CASE: choosing a substitute inside the RECIPE EDITOR
+if (subModalMealId === "__recipe_edit__") {
+    const selected = document.querySelector('input[name="reuseChoice"]:checked');
+    if (!selected) {
         closeSubstituteModal();
         return;
     }
+
+    const choice = selected.value;
+
+    if (choice !== "__new__") {
+        const ing = findIngredientById(choice);
+        if (ing) {
+            // Copy values into the current ingredient row
+            ingredientRows[subModalIngredientIndex].name = ing.name;
+            ingredientRows[subModalIngredientIndex].qty = ing.qty;
+            ingredientRows[subModalIngredientIndex].unit = ing.unit;
+            ingredientRows[subModalIngredientIndex].store = ing.store;
+        }
+    }
+
+    renderIngredientsEditor();
+    closeSubstituteModal();
+    return;
+}
+
 
     const selected = document.querySelector('input[name="subChoice"]:checked');
     if (!selected) {
@@ -613,6 +692,14 @@ function applySubstituteChoice() {
     saveState();
     closeSubstituteModal();
     renderPlanner();
+}
+function findIngredientById(id) {
+    for (const meal of state.meals) {
+        for (const ing of (meal.ingredients || [])) {
+            if (ing.id === id) return ing;
+        }
+    }
+    return null;
 }
 
 // ==============================
