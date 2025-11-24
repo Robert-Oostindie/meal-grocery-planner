@@ -361,7 +361,7 @@ h1 {
     align-items: center;
     margin-bottom: 0.5rem;
 
-    /* critical fixes */
+    flex-wrap: nowrap;     /* ← REQUIRED */
     overflow: visible !important;
 }
 
