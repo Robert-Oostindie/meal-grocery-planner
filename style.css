@@ -376,14 +376,10 @@ h1 {
     width: 70px;
     min-width: 60px;
 }
-
 #plannerExtraStore {
     width: 150px;
-    min-width: 120px;   /* important */
+    min-width: 120px;
     padding: 4px;
-    overflow: visible;
-    position: relative;
-    z-index: 20;        /* ensures dropdown appears above row */
 }
 
 /* Ensure dropdown never gets clipped by parent container */
