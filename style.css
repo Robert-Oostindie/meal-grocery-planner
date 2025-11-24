@@ -388,4 +388,9 @@ h1 {
     gap: 0.4rem;
     margin: 4px 0;
 }
+#plannerExtraStore {
+    width: 150px;
+    min-width: 120px;
+    padding: 4px;
+}
 
