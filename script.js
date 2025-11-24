@@ -465,6 +465,7 @@ function getActiveIngredientsForMeal(meal) {
     const groupsMap = {};
     const ungrouped = [];
 
+    // first, split grouped vs ungrouped
     ingredients.forEach(ing => {
         if (ing.group) {
             if (!groupsMap[ing.group]) groupsMap[ing.group] = [];
@@ -474,18 +475,21 @@ function getActiveIngredientsForMeal(meal) {
         }
     });
 
+    // start results with ungrouped items
     const result = [...ungrouped];
 
+    // check if user has made substitution selections for this meal
     const selectionsForMeal = state.plannerSubstituteSelections[meal.id] || {};
 
+    // for each group pick the selected one if present, otherwise the default, otherwise the first
     Object.keys(groupsMap).forEach(groupName => {
         const groupIngs = groupsMap[groupName];
 
-        // default = ingredient marked isDefault, otherwise first one
         const defaultIng =
             groupIngs.find(i => i.isDefault) || groupIngs[0];
 
         const selectedId = selectionsForMeal[groupName] || defaultIng.id;
+
         const activeIng =
             groupIngs.find(i => i.id === selectedId) || defaultIng;
 
@@ -552,9 +556,7 @@ function applySubstituteChoice() {
         return;
     }
 
-    const selected = document.querySelector(
-        'input[name="subChoice"]:checked'
-    );
+    const selected = document.querySelector('input[name="subChoice"]:checked');
     if (!selected) {
         closeSubstituteModal();
         return;
@@ -562,6 +564,7 @@ function applySubstituteChoice() {
 
     const ingId = selected.value;
 
+    // save override
     if (!state.plannerSubstituteSelections[subModalMealId]) {
         state.plannerSubstituteSelections[subModalMealId] = {};
     }
@@ -569,8 +572,9 @@ function applySubstituteChoice() {
 
     saveState();
     closeSubstituteModal();
-    renderPlanner(); // refresh planner view with the new choice
+    renderPlanner();
 }
+
 // ==============================
 // PLANNER TAB
 // ==============================
