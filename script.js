@@ -505,24 +505,40 @@ function openSubstituteModal(mealId, groupName) {
     const meal = state.meals.find(m => m.id === mealId);
     if (!meal) return;
 
-    // Collect every ingredient in every meal that belongs to this group
+    // ---------------------------------------------
+    // STEP 1 — Collect ALL ingredients in ALL meals
+    // ---------------------------------------------
     const options = [];
-
     state.meals.forEach(m => {
         (m.ingredients || []).forEach(ing => {
             if (ing.group === groupName) {
-                options.push(ing);
+                options.push({ ...ing, _mealId: m.id });
             }
         });
     });
 
-
     if (!options.length) return;
 
-    const selectionsForMeal = state.plannerSubstituteSelections[mealId] || {};
-    const selectedId = selectionsForMeal[groupName] ||
-        (options.find(o => o.isDefault)?.id || options[0].id);
+    // --------------------------------------------------------
+    // STEP 2 — Determine THIS meal's default for this group
+    // --------------------------------------------------------
+    const mealDefaults = (meal.ingredients || []).filter(
+        ing => ing.group === groupName && ing.isDefault
+    );
 
+    // --------------------------------------------------------
+    // STEP 3 — Determine which ingredient should be selected
+    // --------------------------------------------------------
+    const selectionsForMeal = state.plannerSubstituteSelections[mealId] || {};
+
+    const selectedId =
+        selectionsForMeal[groupName] ||       // user override
+        (mealDefaults[0]?.id ||               // recipe-specific default
+         options[0].id);                      // fallback: first global option
+
+    // --------------------------------------------------------
+    // STEP 4 — Render the modal UI
+    // --------------------------------------------------------
     const body = document.getElementById("subModalBody");
     if (!body) return;
 
@@ -530,10 +546,12 @@ function openSubstituteModal(mealId, groupName) {
 
     options.forEach(ing => {
         const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
-        // Only show default if THIS recipe marked it default
-        const recipeDefault = options.find(o => o.isDefault)?.id;
-        const isDefaultLabel = ing.id === recipeDefault ? " ⭐ default" : "";
 
+        // Only show "default" if it is the default for THIS recipe
+        const isDefaultLabel =
+            (mealDefaults.length && mealDefaults[0].id === ing.id)
+                ? " ⭐ default"
+                : "";
 
         const row = document.createElement("label");
         row.style.display = "block";
