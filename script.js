@@ -20,8 +20,8 @@ let state = {
     plannerMeals: [],       // array of meal IDs that are checked in Planner
     plannerExtras: [],   // each item: { id, name, qty, unit, store }
     collapsedCategories: [], // which category accordions are collapsed
-    plannerIngredientChecks: {},   // { mealId: { ingredientId: true/false } }
-    plannerIngredientComments: { mealId: { ingId: "text" } }
+   plannerIngredientChecks: {},
+   plannerIngredientComments: {}
 };
 
 
