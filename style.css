@@ -362,7 +362,6 @@ h1 {
     margin-bottom: 0.5rem;
 
     /* critical fixes */
-    flex-wrap: nowrap;
     overflow: visible !important;
 }
 
@@ -375,11 +374,6 @@ h1 {
 #plannerExtraQty {
     width: 70px;
     min-width: 60px;
-}
-#plannerExtraStore {
-    width: 150px;
-    min-width: 120px;
-    padding: 4px;
 }
 
 /* Ensure dropdown never gets clipped by parent container */
