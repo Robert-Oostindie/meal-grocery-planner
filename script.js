@@ -505,9 +505,17 @@ function openSubstituteModal(mealId, groupName) {
     const meal = state.meals.find(m => m.id === mealId);
     if (!meal) return;
 
-    const options = (meal.ingredients || []).filter(
-        ing => ing.group === groupName
-    );
+    // Collect every ingredient in every meal that belongs to this group
+    const options = [];
+
+    state.meals.forEach(m => {
+        (m.ingredients || []).forEach(ing => {
+            if (ing.group === groupName) {
+                options.push(ing);
+            }
+        });
+    });
+
 
     if (!options.length) return;
 
