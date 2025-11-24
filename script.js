@@ -842,27 +842,25 @@ function renderGroceryList() {
         itemsByStore[key].push(text);
     }
 
-    // Pull from selected meals
-    selectedMeals.forEach(meal => {
-        (meal.ingredients || []).forEach(ing => {
-            if (ing.group && !ing.isDefault) return;
+   // Pull from selected meals
+selectedMeals.forEach(meal => {
+    const activeIngredients = getActiveIngredientsForMeal(meal);
 
-            // ingredient selection respected
-            const checked = state.plannerIngredientChecks[meal.id]?.[ing.id];
-            if (!checked) return;
+    activeIngredients.forEach(ing => {
+        // ingredient selection respected
+        const checked = state.plannerIngredientChecks[meal.id]?.[ing.id];
+        if (!checked) return;
 
-           const comment =
-                state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
+        const comment =
+            state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
 
-            const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+        const commentPart = comment ? ` (${comment})` : "";
 
-            const commentPart = comment ? ` (${comment})` : "";
-
-            addItem(ing.store, `${ing.name}${qtyPart}${commentPart}`);
- 
-        });
-
+        addItem(ing.store, `${ing.name}${qtyPart}${commentPart}`);
     });
+});
+
 
    // Add planner extras with full text
 state.plannerExtras.forEach(item => {
