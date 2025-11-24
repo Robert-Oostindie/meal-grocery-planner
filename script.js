@@ -20,7 +20,8 @@ let state = {
     plannerMeals: [],       // array of meal IDs that are checked in Planner
     plannerExtras: [],   // each item: { id, name, qty, unit, store }
     collapsedCategories: [], // which category accordions are collapsed
-    plannerIngredientChecks: {}   // { mealId: { ingredientId: true/false } }
+    plannerIngredientChecks: {},   // { mealId: { ingredientId: true/false } }
+    plannerIngredientComments: { mealId: { ingId: "text" } }
 };
 
 
@@ -533,17 +534,30 @@ function renderPlanner() {
 
                 const checked = state.plannerIngredientChecks[meal.id][ing.id];
 
-                const line = document.createElement("label");
+                const existingComment =
+                    state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
+
+                const line = document.createElement("div");
                 line.className = "planner-ingredient-check";
+
                 line.innerHTML = `
                     <input 
                         type="checkbox"
                         ${checked ? "checked" : ""}
                         onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
                     >
-                    ${ing.name}${qtyPart}
-                    <span class="muted">– ${ing.store}</span>
+                    <span>${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span></span>
+
+                    <input 
+                        type="text"
+                        class="ing-comment"
+                        placeholder="Comment"
+                        value="${existingComment}"
+                        oninput="updateIngredientComment('${meal.id}', '${ing.id}', this.value)"
+                        style="margin-left:8px; flex:1;"
+                    >
                 `;
+
 
                 ingDiv.appendChild(line);
             });
@@ -573,6 +587,14 @@ function toggleCategory(cat) {
     saveState();
     renderPlanner();
 }
+function updateIngredientComment(mealId, ingId, text) {
+    if (!state.plannerIngredientComments[mealId]) {
+        state.plannerIngredientComments[mealId] = {};
+    }
+    state.plannerIngredientComments[mealId][ingId] = text;
+    saveState();
+}
+
 
 function togglePlannerMeal(mealId) {
     const idx = state.plannerMeals.indexOf(mealId);
