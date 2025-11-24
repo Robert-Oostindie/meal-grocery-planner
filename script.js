@@ -503,15 +503,22 @@ function getActiveIngredientsForMeal(meal) {
     return result;
 }
 function openSubstituteModal(mealId, groupName) {
+
+    // 🔥 SAFETY CHECK:
+    // If the recipe editor is using the modal, do NOT open the planner modal.
+    // handleGroupFinished() uses "__recipe_edit__" as the indicator.
+    if (mealId === "__recipe_edit__") return;
+
+    // Store modal context
     subModalMealId = mealId;
     subModalGroupName = groupName;
 
     const meal = state.meals.find(m => m.id === mealId);
     if (!meal) return;
 
-    // ---------------------------------------------
-    // STEP 1 — Collect ALL ingredients in ALL meals
-    // ---------------------------------------------
+    // ---------------------------------------------------------
+    // 1. Collect ALL ingredients across all meals for this group
+    // ---------------------------------------------------------
     const options = [];
     state.meals.forEach(m => {
         (m.ingredients || []).forEach(ing => {
@@ -521,28 +528,31 @@ function openSubstituteModal(mealId, groupName) {
         });
     });
 
-    if (!options.length) return;
+    if (!options.length) return; // should never happen
 
-    // --------------------------------------------------------
-    // STEP 2 — Determine THIS meal's default for this group
-    // --------------------------------------------------------
-    const mealDefaults = (meal.ingredients || []).filter(
+    // ---------------------------------------------------------
+    // 2. Determine THIS recipe's default ingredient for this group
+    // ---------------------------------------------------------
+    const recipeDefaults = (meal.ingredients || []).filter(
         ing => ing.group === groupName && ing.isDefault
     );
 
-    // --------------------------------------------------------
-    // STEP 3 — Determine which ingredient should be selected
-    // --------------------------------------------------------
+    const recipeDefaultId =
+        recipeDefaults.length ? recipeDefaults[0].id : null;
+
+    // ---------------------------------------------------------
+    // 3. Determine CURRENT selected ingredient (user override)
+    // ---------------------------------------------------------
     const selectionsForMeal = state.plannerSubstituteSelections[mealId] || {};
 
     const selectedId =
-        selectionsForMeal[groupName] ||       // user override
-        (mealDefaults[0]?.id ||               // recipe-specific default
-         options[0].id);                      // fallback: first global option
+        selectionsForMeal[groupName] ||      // user selection
+        recipeDefaultId ||                   // recipe default
+        options[0].id;                       // fallback
 
-    // --------------------------------------------------------
-    // STEP 4 — Render the modal UI
-    // --------------------------------------------------------
+    // ---------------------------------------------------------
+    // 4. Render the modal UI
+    // ---------------------------------------------------------
     const body = document.getElementById("subModalBody");
     if (!body) return;
 
@@ -551,9 +561,9 @@ function openSubstituteModal(mealId, groupName) {
     options.forEach(ing => {
         const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
 
-        // Only show "default" if it is the default for THIS recipe
+        // Only show "default" label if default for THIS recipe
         const isDefaultLabel =
-            (mealDefaults.length && mealDefaults[0].id === ing.id)
+            recipeDefaultId && ing.id === recipeDefaultId
                 ? " ⭐ default"
                 : "";
 
@@ -564,7 +574,7 @@ function openSubstituteModal(mealId, groupName) {
             <input 
                 type="radio" 
                 name="subChoice" 
-                value="${ing.id}" 
+                value="${ing.id}"
                 ${ing.id === selectedId ? "checked" : ""}
             >
             ${ing.name}${qtyPart}${isDefaultLabel}
@@ -572,9 +582,11 @@ function openSubstituteModal(mealId, groupName) {
         body.appendChild(row);
     });
 
+    // Open modal
     const modal = document.getElementById("subModal");
     if (modal) modal.classList.remove("hidden");
 }
+
 // When user finishes typing a group name in recipe editor
 function handleGroupFinished(index, groupName) {
     groupName = groupName.trim();
@@ -645,38 +657,53 @@ function getGlobalGroupIngredients(groupName) {
 function closeSubstituteModal() {
     const modal = document.getElementById("subModal");
     if (modal) modal.classList.add("hidden");
+
+    // 🔥 Reset ALL modal context values
     subModalMealId = null;
     subModalGroupName = null;
+    subModalIngredientIndex = null;
+
+    // Also clear modal body so old options never appear again
+    const body = document.getElementById("subModalBody");
+    if (body) body.innerHTML = "";
 }
 
+
 function applySubstituteChoice() {
-    // SPECIAL CASE: choosing a substitute inside the RECIPE EDITOR
-if (subModalMealId === "__recipe_edit__") {
-    const selected = document.querySelector('input[name="reuseChoice"]:checked');
-    if (!selected) {
+    // ----------------------------------------------------
+    // MODE 1: Choosing an ingredient inside the RECIPE EDITOR
+    // ----------------------------------------------------
+    if (subModalMealId === "__recipe_edit__") {
+        const selected = document.querySelector('input[name="reuseChoice"]:checked');
+        if (!selected) {
+            closeSubstituteModal();
+            return;
+        }
+
+        const choice = selected.value;
+
+        // If reusing an existing ingredient from another meal
+        if (choice !== "__new__") {
+            const ing = findIngredientById(choice);
+            if (ing) {
+                ingredientRows[subModalIngredientIndex].name = ing.name;
+                ingredientRows[subModalIngredientIndex].qty = ing.qty;
+                ingredientRows[subModalIngredientIndex].unit = ing.unit;
+                ingredientRows[subModalIngredientIndex].store = ing.store;
+
+                // ⚠️ Importantly DO NOT copy over defaults or IDs
+                // The ingredient still belongs to THIS recipe as a new instance
+            }
+        }
+
+        renderIngredientsEditor();
         closeSubstituteModal();
         return;
     }
 
-    const choice = selected.value;
-
-    if (choice !== "__new__") {
-        const ing = findIngredientById(choice);
-        if (ing) {
-            // Copy values into the current ingredient row
-            ingredientRows[subModalIngredientIndex].name = ing.name;
-            ingredientRows[subModalIngredientIndex].qty = ing.qty;
-            ingredientRows[subModalIngredientIndex].unit = ing.unit;
-            ingredientRows[subModalIngredientIndex].store = ing.store;
-        }
-    }
-
-    renderIngredientsEditor();
-    closeSubstituteModal();
-    return;
-}
-
-
+    // ----------------------------------------------------
+    // MODE 2: Selecting a substitute for the Planner
+    // ----------------------------------------------------
     const selected = document.querySelector('input[name="subChoice"]:checked');
     if (!selected) {
         closeSubstituteModal();
@@ -685,16 +712,19 @@ if (subModalMealId === "__recipe_edit__") {
 
     const ingId = selected.value;
 
-    // save override
+    // Ensure dictionary entry exists
     if (!state.plannerSubstituteSelections[subModalMealId]) {
         state.plannerSubstituteSelections[subModalMealId] = {};
     }
+
+    // Save selection
     state.plannerSubstituteSelections[subModalMealId][subModalGroupName] = ingId;
 
     saveState();
     closeSubstituteModal();
     renderPlanner();
 }
+
 function findIngredientById(id) {
     for (const meal of state.meals) {
         for (const ing of (meal.ingredients || [])) {
