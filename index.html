@@ -201,18 +201,6 @@
         </div>
     </div>
 
-    <!-- LOAD SCRIPT LAST -->
-    <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const sel = document.getElementById("plannerExtraStore");
-    if (sel && window.state?.stores) {
-        sel.innerHTML = state.stores
-            .map(s => `<option>${s}</option>`)
-            .join("");
-    }
-});
-</script>
-
     <script src="script.js?v=phase2" defer></script>
 
 </body>
