@@ -571,6 +571,17 @@ function openSubstituteModal(mealId, groupName) {
     const modal = document.getElementById("subModal");
     if (modal) modal.classList.remove("hidden");
 }
+function getGlobalGroupIngredients(groupName) {
+    const results = [];
+    state.meals.forEach(m => {
+        (m.ingredients || []).forEach(ing => {
+            if (ing.group === groupName) {
+                results.push({ ...ing, _mealId: m.id });
+            }
+        });
+    });
+    return results;
+}
 
 function closeSubstituteModal() {
     const modal = document.getElementById("subModal");
