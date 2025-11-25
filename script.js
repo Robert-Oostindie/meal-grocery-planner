@@ -439,13 +439,20 @@ function renderIngredientsEditor() {
                    onfocus="showGroupSuggestions(this, ${index})"
                   onblur="setTimeout(() => {
                     const menu = document.querySelector('.group-suggest-menu');
-                    // Only close if pointer is NOT inside the menu
-                    if (!menu || !menu.matches(':hover')) {
-                        handleGroupFinished(${index}, this.value);
-                        if (menu) menu.remove();
-                    }
-                }, 150)"
+                    const clickedItem = window.__clickedGroupItem;
 
+                    if (clickedItem) {
+                        // A dropdown option was tapped → accept it
+                        ingredientRows[${index}].group = clickedItem;
+                        this.value = clickedItem;
+                    } else {
+                        // No dropdown option tapped → treat as finishing typing
+                        handleGroupFinished(${index}, this.value);
+                    }
+
+                    delete window.__clickedGroupItem;
+                    if (menu) menu.remove();
+                }, 120)"
                     >
 
 
