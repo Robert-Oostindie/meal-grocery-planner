@@ -149,13 +149,13 @@ document.addEventListener("mousedown", (e) => {
     const menu = document.querySelector(".group-suggest-menu");
     if (!menu) return;
 
-    // If clicking inside suggestions → do NOT close
-    if (menu.contains(e.target)) return;
+    const clickedInsideMenu = menu.contains(e.target);
+    const clickedInput = e.target.classList.contains("ingGroup");
 
-    // If clicking inside input → do NOT close
-    if (e.target.classList.contains("ingGroup")) return;
+    // If click is on menu or input, do nothing
+    if (clickedInsideMenu || clickedInput) return;
 
-    // Otherwise close
+    // Otherwise: close it
     menu.remove();
 });
 
@@ -437,7 +437,14 @@ function renderIngredientsEditor() {
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
                    onfocus="showGroupSuggestions(this, ${index})"
-                   onblur="setTimeout(() => handleGroupFinished(${index}, this.value), 250)">
+                   onblur="setTimeout(() => {
+                        const menu = document.querySelector('.group-suggest-menu');
+                        // Only close if user did NOT click a menu item
+                        if (!menu || !menu.contains(document.activeElement)) {
+                            handleGroupFinished(${index}, this.value);
+                        }
+                    }, 200)"
+                    >
 
 
 
