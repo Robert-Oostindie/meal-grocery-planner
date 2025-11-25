@@ -129,13 +129,16 @@ function showGroupSuggestions(inputEl, index) {
         menu.appendChild(item);
     });
 
-    // position right under the input
-    const rect = inputEl.getBoundingClientRect();
-    menu.style.position = "absolute";
-    menu.style.left = rect.left + "px";
-    menu.style.top = rect.bottom + window.scrollY + "px";
-    menu.style.width = rect.width + "px";
-    menu.style.zIndex = 9999;
+   // Position inside the modal so the menu stays aligned
+const rect = inputEl.getBoundingClientRect();
+const modalRect = document.getElementById("recipeModal").getBoundingClientRect();
+
+menu.style.position = "absolute";
+menu.style.left = (rect.left - modalRect.left) + "px";
+menu.style.top = (rect.bottom - modalRect.top) + "px";
+menu.style.width = rect.width + "px";
+menu.style.zIndex = 9999;
+
 
     document.getElementById("recipeModal").appendChild(menu);
 
