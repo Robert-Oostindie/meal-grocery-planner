@@ -58,6 +58,46 @@ function getExistingGroups() {
 
     return Array.from(groups);
 }
+function showGroupSuggestions(inputEl, index) {
+    // remove old menu if any
+    const oldMenu = document.querySelector(".group-suggest-menu");
+    if (oldMenu) oldMenu.remove();
+
+    const groups = getExistingGroups().filter(g =>
+        g.toLowerCase().includes(inputEl.value.toLowerCase())
+    );
+
+    if (groups.length === 0) return;
+
+    const menu = document.createElement("div");
+    menu.className = "group-suggest-menu";
+
+    groups.forEach(g => {
+        const item = document.createElement("div");
+        item.className = "group-suggest-item";
+        item.textContent = g;
+        item.onclick = () => {
+            inputEl.value = g;
+            ingredientRows[index].group = g;
+            menu.remove();
+        };
+        menu.appendChild(item);
+    });
+
+    // Correct modal positioning
+    const inputRect = inputEl.getBoundingClientRect();
+    const modalRect = document.getElementById("recipeModal").getBoundingClientRect();
+
+    menu.style.position = "absolute";
+    menu.style.left = (inputRect.left - modalRect.left) + "px";
+    menu.style.top = (inputRect.bottom - modalRect.top) + "px";
+    menu.style.width = inputRect.width + "px";
+    menu.style.zIndex = 9999;
+
+    // Attach inside modal (important!)
+    document.getElementById("recipeModal").appendChild(menu);
+}
+
 function exportAppData() {
     const dataStr = JSON.stringify(state, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
