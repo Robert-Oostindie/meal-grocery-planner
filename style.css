@@ -417,4 +417,22 @@ textarea {
         font-size: 16px !important;
     }
 }
+.group-suggest-menu {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+}
+
+.group-suggest-item {
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+.group-suggest-item:hover {
+    background: #f0f0f0;
+}
 
