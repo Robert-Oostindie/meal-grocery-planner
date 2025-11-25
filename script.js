@@ -437,13 +437,15 @@ function renderIngredientsEditor() {
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
                    onfocus="showGroupSuggestions(this, ${index})"
-                   onblur="setTimeout(() => {
-                        const menu = document.querySelector('.group-suggest-menu');
-                        // Only close if user did NOT click a menu item
-                        if (!menu || !menu.contains(document.activeElement)) {
-                            handleGroupFinished(${index}, this.value);
-                        }
-                    }, 200)"
+                  onblur="setTimeout(() => {
+                    const menu = document.querySelector('.group-suggest-menu');
+                    // Only close if pointer is NOT inside the menu
+                    if (!menu || !menu.matches(':hover')) {
+                        handleGroupFinished(${index}, this.value);
+                        if (menu) menu.remove();
+                    }
+                }, 150)"
+
                     >
 
 
