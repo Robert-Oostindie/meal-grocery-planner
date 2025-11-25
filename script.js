@@ -137,7 +137,8 @@ function showGroupSuggestions(inputEl, index) {
     menu.style.width = rect.width + "px";
     menu.style.zIndex = 9999;
 
-    document.body.appendChild(menu);
+    document.getElementById("recipeModal").appendChild(menu);
+
 }
 
 document.addEventListener("click", () => {
