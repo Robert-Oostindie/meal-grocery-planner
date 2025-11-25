@@ -399,4 +399,22 @@ select,
 textarea {
     font-size: 16px !important;
 }
+/* Ensure modal text and inputs meet iOS minimum */
+.modal-content {
+    font-size: 16px !important;
+}
+.modal-content input,
+.modal-content select,
+.modal-content textarea,
+.modal-content label,
+.modal-content span {
+    font-size: 16px !important;
+}
+@supports (-webkit-touch-callout: none) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
 
