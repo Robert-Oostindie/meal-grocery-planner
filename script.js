@@ -425,7 +425,8 @@ function renderIngredientsEditor() {
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
                    onfocus="showGroupSuggestions(this, ${index})"
-                   onblur="handleGroupFinished(${index}, this.value)">
+                   onblur="setTimeout(() => handleGroupFinished(${index}, this.value), 150)"
+
 
 
                 <div class="default-toggle ${row.isDefault ? "active" : ""}" onclick="toggleDefault(${index})">
