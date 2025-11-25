@@ -184,10 +184,17 @@ menu.style.zIndex = 9999;
 
 }
 
-document.addEventListener("click", () => {
+document.addEventListener("click", (e) => {
     const menu = document.querySelector(".group-suggest-menu");
-    if (menu) menu.remove();
+    if (!menu) return;
+
+    // If the click is INSIDE the menu → do NOT close it
+    if (menu.contains(e.target)) return;
+
+    // Otherwise close it
+    menu.remove();
 });
+
 
 loadState();
 document.addEventListener("DOMContentLoaded", () => {
