@@ -70,21 +70,24 @@
     <button class="primary build-grocery-btn" onclick="buildGroceryList()">
         Build Grocery List
     </button>
-           
-</div>
-<div class="planner-backup-controls" style="margin-top: 1rem; display:flex; gap:0.6rem;">
-    <button onclick="exportAppData()" class="primary">Export Data</button>
+        <div class="planner-backup-controls" style="margin-top: 1.2rem; display:flex; gap:0.6rem;">
 
-    <button onclick="document.getElementById('importFile').click()" class="primary">
+    <button class="primary" onclick="exportAppData()">
+        Export Data
+    </button>
+
+    <button class="primary" onclick="document.getElementById('importFile').click()">
         Import Data
     </button>
 
-    <input id="importFile" 
-           type="file" 
-           accept="application/json" 
-           style="display:none" 
+    <input id="importFile"
+           type="file"
+           accept="application/json"
+           style="display:none"
            onchange="importAppData(event)">
 </div>
+   
+
 
 
         <!-- GROCERY TAB -->
