@@ -70,6 +70,20 @@
     <button class="primary build-grocery-btn" onclick="buildGroceryList()">
         Build Grocery List
     </button>
+           
+</div>
+<div class="planner-backup-controls" style="margin-top: 1rem; display:flex; gap:0.6rem;">
+    <button onclick="exportAppData()" class="primary">Export Data</button>
+
+    <button onclick="document.getElementById('importFile').click()" class="primary">
+        Import Data
+    </button>
+
+    <input id="importFile" 
+           type="file" 
+           accept="application/json" 
+           style="display:none" 
+           onchange="importAppData(event)">
 </div>
 
 
