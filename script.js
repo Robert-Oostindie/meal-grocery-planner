@@ -59,6 +59,35 @@ function getExistingGroups() {
     return Array.from(groups);
 }
 
+function importAppData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+
+            // Minimal validation
+            if (typeof imported !== "object" || !imported.meals) {
+                alert("Invalid backup file.");
+                return;
+            }
+
+            state = { ...state, ...imported };
+            saveState();
+            renderApp();
+
+            alert("Data imported successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("There was an error importing the file.");
+        }
+    };
+
+    reader.readAsText(file);
+}
 
 function showGroupSuggestions(inputEl, index) {
     // remove old menu if any
