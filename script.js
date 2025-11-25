@@ -58,6 +58,20 @@ function getExistingGroups() {
 
     return Array.from(groups);
 }
+function exportAppData() {
+    const dataStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    a.download = `mealplanner_backup_${timestamp}.json`;
+
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 function importAppData(event) {
     const file = event.target.files[0];
