@@ -58,20 +58,7 @@ function getExistingGroups() {
 
     return Array.from(groups);
 }
-    // Correct modal positioning
-    const inputRect = inputEl.getBoundingClientRect();
-    const modalRect = document.getElementById("recipeModal").getBoundingClientRect();
-
-    menu.style.position = "absolute";
-    menu.style.left = (inputRect.left - modalRect.left) + "px";
-    menu.style.top = (inputRect.bottom - modalRect.top) + "px";
-    menu.style.width = inputRect.width + "px";
-    menu.style.zIndex = 9999;
-
-    // Attach inside modal (important!)
-    document.getElementById("recipeModal").appendChild(menu);
-}
-
+    
 function exportAppData() {
     const dataStr = JSON.stringify(state, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
