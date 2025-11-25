@@ -58,32 +58,6 @@ function getExistingGroups() {
 
     return Array.from(groups);
 }
-function showGroupSuggestions(inputEl, index) {
-    // remove old menu if any
-    const oldMenu = document.querySelector(".group-suggest-menu");
-    if (oldMenu) oldMenu.remove();
-
-    const groups = getExistingGroups().filter(g =>
-        g.toLowerCase().includes(inputEl.value.toLowerCase())
-    );
-
-    if (groups.length === 0) return;
-
-    const menu = document.createElement("div");
-    menu.className = "group-suggest-menu";
-
-    groups.forEach(g => {
-        const item = document.createElement("div");
-        item.className = "group-suggest-item";
-        item.textContent = g;
-        item.onclick = () => {
-            inputEl.value = g;
-            ingredientRows[index].group = g;
-            menu.remove();
-        };
-        menu.appendChild(item);
-    });
-
     // Correct modal positioning
     const inputRect = inputEl.getBoundingClientRect();
     const modalRect = document.getElementById("recipeModal").getBoundingClientRect();
