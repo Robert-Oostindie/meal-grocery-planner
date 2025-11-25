@@ -184,16 +184,20 @@ menu.style.zIndex = 9999;
 
 }
 
-document.addEventListener("click", (e) => {
+document.addEventListener("mousedown", (e) => {
     const menu = document.querySelector(".group-suggest-menu");
     if (!menu) return;
 
-    // If the click is INSIDE the menu → do NOT close it
+    // If clicking inside suggestions → do NOT close
     if (menu.contains(e.target)) return;
 
-    // Otherwise close it
+    // If clicking inside input → do NOT close
+    if (e.target.classList.contains("ingGroup")) return;
+
+    // Otherwise close
     menu.remove();
 });
+
 
 
 loadState();
