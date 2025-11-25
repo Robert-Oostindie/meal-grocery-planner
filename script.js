@@ -450,7 +450,7 @@ function renderIngredientsEditor() {
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
                    onfocus="showGroupSuggestions(this, ${index})"
-                   onblur="setTimeout(() => handleGroupFinished(${index}, this.value), 150)"
+                   onblur="setTimeout(() => handleGroupFinished(${index}, this.value), 250)">
 
 
 
