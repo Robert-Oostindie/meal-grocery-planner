@@ -1088,10 +1088,13 @@ function addPlannerExtra() {
 
     // Save as full object
     state.plannerExtras.push({
+        id: makeId(),
         name,
         qty,
+        unit: "CT",
         store
-    });
+      });
+
 
     saveState();
     renderPlannerExtras(); // ONLY update the list; do NOT rerender the whole planner
