@@ -900,67 +900,67 @@ function renderPlanner() {
                 if (isSelected) {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
-const activeIngredients = getActiveIngredientsForMeal(meal);
+                    const activeIngredients = getActiveIngredientsForMeal(meal);
 
-// ⭐ SAFETY: If the meal has zero ingredients, show placeholder and stop.
-if (!activeIngredients || activeIngredients.length === 0) {
-    const placeholder = document.createElement("div");
-    placeholder.className = "planner-ingredient-check";
-    placeholder.innerHTML = `<span class="muted">(No ingredients)</span>`;
-    ingDiv.appendChild(placeholder);
-    mealRow.appendChild(ingDiv);
-    return;
-}
+                    // ⭐ SAFETY: If the meal has zero ingredients, show placeholder and stop.
+                    if (!activeIngredients || activeIngredients.length === 0) {
+                        const placeholder = document.createElement("div");
+                        placeholder.className = "planner-ingredient-check";
+                        placeholder.innerHTML = `<span class="muted">(No ingredients)</span>`;
+                        ingDiv.appendChild(placeholder);
+                        mealRow.appendChild(ingDiv);
+                        return;
+                    }
 
-activeIngredients.forEach(ing => {
-    const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+                    activeIngredients.forEach(ing => {
+                        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
 
-    // ensure check dictionary exists
-    if (!state.plannerIngredientChecks[meal.id]) {
-        state.plannerIngredientChecks[meal.id] = {};
-    }
-    // default unchecked ingredients to checked
-    if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
-        state.plannerIngredientChecks[meal.id][ing.id] = true;
-    }
+                        // ensure check dictionary exists
+                        if (!state.plannerIngredientChecks[meal.id]) {
+                            state.plannerIngredientChecks[meal.id] = {};
+                        }
+                        // default unchecked ingredients to checked
+                        if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+                            state.plannerIngredientChecks[meal.id][ing.id] = true;
+                        }
 
-    const checked = state.plannerIngredientChecks[meal.id][ing.id];
-    const existingComment =
-        state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
+                        const checked = state.plannerIngredientChecks[meal.id][ing.id];
+                        const existingComment =
+                            state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
-    const line = document.createElement("div");
-    line.className = "planner-ingredient-check";
+                        const line = document.createElement("div");
+                        line.className = "planner-ingredient-check";
 
-    let inner = `
-        <input 
-            type="checkbox"
-            ${checked ? "checked" : ""}
-            onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
-        >
-        <span>${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span></span>
+                        let inner = `
+                            <input 
+                                type="checkbox"
+                                ${checked ? "checked" : ""}
+                                onclick="togglePlannerIngredient('${meal.id}', '${ing.id}')"
+                            >
+                            <span>${ing.name}${qtyPart} <span class="muted">– ${ing.store}</span></span>
 
-        <input 
-            type="text"
-            class="ing-comment"
-            placeholder="Comment"
-            value="${existingComment}"
-            oninput="updateIngredientComment('${meal.id}', '${ing.id}', this.value)"
-            style="margin-left:8px; flex:1;"
-        >
-    `;
+                            <input 
+                                type="text"
+                                class="ing-comment"
+                                placeholder="Comment"
+                                value="${existingComment}"
+                                oninput="updateIngredientComment('${meal.id}', '${ing.id}', this.value)"
+                                style="margin-left:8px; flex:1;"
+                            >
+                        `;
 
-    // substitute button
-    if (ing.group) {
-        inner += `
-            <button 
-                class="primary" 
-                style="margin-left:8px; white-space:nowrap;"
-                onclick="openSubstituteModal('${meal.id}', '${ing.group}')"
-            >
-                Swap
-            </button>
-        `;
-    }
+                        // substitute button
+                        if (ing.group) {
+                            inner += `
+                                <button 
+                                    class="primary" 
+                                    style="margin-left:8px; white-space:nowrap;"
+                                    onclick="openSubstituteModal('${meal.id}', '${ing.group}')"
+                                >
+                                    Swap
+                                </button>
+                            `;
+                        }
 
     line.innerHTML = inner;
     ingDiv.appendChild(line);
