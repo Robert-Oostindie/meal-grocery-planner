@@ -32,7 +32,6 @@ function makeId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
         return window.makeId();
     }
-    // Fallback for older browsers
     return (
         "id_" +
         Date.now().toString(36) +
@@ -40,6 +39,7 @@ function makeId() {
         Math.random().toString(16).slice(2)
     );
 }
+
 
 // for the recipe modal
 let ingredientRows = [];
