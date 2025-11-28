@@ -1220,23 +1220,30 @@ function renderGroceryList() {
                 return;
             }
 
-            // Ensure ingredient-check dictionary exists
+            // =====================================================
+            // ⭐ FIXED BLOCK — THIS WAS THE BUG ⭐
+            // =====================================================
+
+            // Ensure dictionary exists
             if (!state.plannerIngredientChecks[meal.id]) {
                 state.plannerIngredientChecks[meal.id] = {};
             }
 
+            // Default undefined → TRUE (was incorrectly treated as false)
             if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
                 state.plannerIngredientChecks[meal.id][ing.id] = true;
                 console.log(`[GL] Defaulting ingredient checked=true → ${ing.name} (id=${ing.id})`);
             }
 
             const checked = state.plannerIngredientChecks[meal.id][ing.id];
-            console.log(`[GL] Ingredient "${ing.name}" (id=${ing.id}) checked=${checked}`);
 
-            if (!checked) {
+            // Skip only if explicitly false, not if undefined
+            if (checked === false) {
                 console.log(`[GL] Skipping UNCHECKED ingredient "${ing.name}"`);
                 return;
             }
+
+            // =====================================================
 
             const comment =
                 state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
@@ -1282,7 +1289,7 @@ function renderGroceryList() {
         itemsByStore[store].forEach(text => {
             const line = document.createElement("div");
             line.className = "grocery-item";
-            line.textContent = text;   // no extra bullet, CSS ::before handles it
+            line.textContent = text;   // CSS ::before adds bullet
             block.appendChild(line);
         });
 
@@ -1291,34 +1298,6 @@ function renderGroceryList() {
 
     console.log("[GL] RENDER COMPLETE. container.innerHTML:", container.innerHTML);
     console.groupEnd();
-}
-
-// ==============================
-// REVIEW (STEP 3)
-// ==============================
-function updateReview() {
-    const name = document.getElementById("modalRecipeName").value.trim();
-    const category = document.getElementById("modalRecipeCategory").value.trim();
-
-    document.getElementById("reviewName").textContent = name || "(no name)";
-    document.getElementById("reviewCategory").textContent = category || "(no category)";
-
-    const list = document.getElementById("reviewIngredients");
-    list.innerHTML = "";
-
-    if (!ingredientRows.length) {
-        const li = document.createElement("li");
-        li.textContent = "No ingredients added.";
-        list.appendChild(li);
-        return;
-    }
-
-    ingredientRows.forEach(row => {
-        const li = document.createElement("li");
-        const qtyPart = row.qty > 1 ? ` (${row.qty} ${row.unit})` : "";
-        li.textContent = `${row.name} – ${row.store}${qtyPart}`;
-        list.appendChild(li);
-    });
 }
 
 // ==============================
