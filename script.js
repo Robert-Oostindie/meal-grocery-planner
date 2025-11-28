@@ -1082,12 +1082,13 @@ function removePlannerExtra(index) {
 // GROCERY LIST TAB
 // ==============================
 function buildGroceryList() {
-    // Just re-render from current planner selections
     saveState();
-    renderGroceryList();
-    // Auto-switch to Grocery tab
-    switchTab("groceryTab");
+    setTimeout(() => {
+        renderGroceryList();
+        switchTab("groceryTab");
+    }, 50);  // tiny delay prevents race condition
 }
+
 
 function renderGroceryList() {
     const container = document.getElementById("groceryContainer");
