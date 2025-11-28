@@ -332,14 +332,37 @@ h1 {
 }
 
 /* Visible grocery store group */
+#groceryContainer {
+    margin-top: 1rem;
+    padding: 1rem;
+}
+
 .grocery-store-card {
-    background: #ffffff;
+    background: white;
     border: 1px solid #d1d5db;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     padding: 1rem;
     border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: block;        /* <- CRITICAL FIX */
+    visibility: visible;   /* <- CRITICAL FIX */
 }
+
+.grocery-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 16px;
+    color: #111827;
+}
+.grocery-item:last-child {
+    border-bottom: none;
+}
+
+.grocery-item::before {
+    content: "• ";
+    color: #2563eb;
+    font-weight: bold;
+}
+
 
 #groceryContainer h3 {
     margin: 0 0 0.5rem 0;
