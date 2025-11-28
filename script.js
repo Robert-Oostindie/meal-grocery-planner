@@ -30,7 +30,7 @@ let state = {
 // ==============================
 function makeId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
-        return window.makeId();
+        return window.crypto.randomUUID();
     }
     return (
         "id_" +
@@ -39,6 +39,7 @@ function makeId() {
         Math.random().toString(16).slice(2)
     );
 }
+
 
 
 // for the recipe modal
