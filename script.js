@@ -1115,21 +1115,25 @@ function renderGroceryList() {
 selectedMeals.forEach(meal => {
     const activeIngredients = getActiveIngredientsForMeal(meal);
 
+    // ⭐ SAFETY: Skip meals with 0 ingredients
+    if (!activeIngredients || activeIngredients.length === 0) {
+        return;
+    }
+
     activeIngredients.forEach(ing => {
-        // ingredient selection respected
-        // Ensure check dictionary exists
+
+        // Ensure ingredient-check dictionary exists
         if (!state.plannerIngredientChecks[meal.id]) {
             state.plannerIngredientChecks[meal.id] = {};
         }
 
-        // Default all NEW ingredients to "checked"
+        // Default newly-seen ingredients to checked
         if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
             state.plannerIngredientChecks[meal.id][ing.id] = true;
         }
 
         const checked = state.plannerIngredientChecks[meal.id][ing.id];
         if (!checked) return;
-
 
         const comment =
             state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
@@ -1140,6 +1144,7 @@ selectedMeals.forEach(meal => {
         addItem(ing.store, `${ing.name}${qtyPart}${commentPart}`);
     });
 });
+
 
 
    // Add planner extras with full text
