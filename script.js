@@ -431,6 +431,8 @@ function renderIngredientsEditor() {
     ingredientRows.forEach((row, index) => {
         const div = document.createElement("div");
         div.className = "ingredient-row";
+        div.dataset.id = row.id;   // <-- ADD THIS LINE
+
 
         const storeOptions = state.stores
             .map(s => `<option ${row.store === s ? "selected" : ""}>${s}</option>`)
@@ -538,18 +540,21 @@ function syncIngredientsFromDOM() {
 
     const rows = container.querySelectorAll(".ingredient-row");
 
-    ingredientRows = Array.from(rows).map((rowEl, i) => {
+    ingredientRows = Array.from(rows).map(rowEl => {
+        const id = rowEl.dataset.id || crypto.randomUUID();
+
         return {
-            id: ingredientRows[i] && ingredientRows[i].id ? ingredientRows[i].id : crypto.randomUUID(),
+            id,
             name: rowEl.querySelector(".ingName").value.trim(),
             qty: Number(rowEl.querySelector(".ingQty").value) || 1,
             unit: (rowEl.querySelector(".ingUnit").value || "CT").trim(),
             store: rowEl.querySelector(".ingStore").value,
             group: rowEl.querySelector(".ingGroup").value.trim(),
             isDefault: rowEl.querySelector(".default-toggle").classList.contains("active")
-        }
+        };
     });
 }
+
 // Return the list of "active" ingredients for a meal:
 //  - all non-grouped ingredients
 //  - exactly 1 ingredient per substitute group, default or user-selected
