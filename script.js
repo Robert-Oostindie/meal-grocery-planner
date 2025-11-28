@@ -250,7 +250,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 function renderApp() {
     renderRecipes();
     renderPlanner();
-    renderGroceryList();
 }
 
 
