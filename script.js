@@ -129,7 +129,7 @@ function showGroupSuggestions(inputEl, index) {
             ingredientRows[index].group = g;
             ingredientRows[index].group = g;
     
-            window.__selectingSuggestion = true;
+            window.__clickedGroupItem = g;
 
             if (menu) menu.remove();
         };
@@ -444,22 +444,20 @@ function renderIngredientsEditor() {
                    placeholder="Substitute group"
                    oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
                    onfocus="showGroupSuggestions(this, ${index})"
-                  onblur="setTimeout(() => {
-                    const menu = document.querySelector('.group-suggest-menu');
-                    const clickedItem = window.__clickedGroupItem;
+                      onblur="setTimeout(() => {
+                        const menu = document.querySelector('.group-suggest-menu');
+                        const picked = window.__clickedGroupItem;
 
-                    if (clickedItem) {
-                        // A dropdown option was tapped → accept it
-                        ingredientRows[${index}].group = clickedItem;
-                        this.value = clickedItem;
-                    } else {
-                        // No dropdown option tapped → treat as finishing typing
-                        handleGroupFinished(${index}, this.value);
-                    }
+                        if (picked) {
+                            ingredientRows[${index}].group = picked;
+                            this.value = picked;
+                        } else {
+                            handleGroupFinished(${index}, this.value);
+                        }
 
-                    delete window.__clickedGroupItem;
-                    if (menu) menu.remove();
-                }, 120)"
+                        delete window.__clickedGroupItem;
+                        if (menu) menu.remove();
+                    }, 120)"
                     >
 
 
