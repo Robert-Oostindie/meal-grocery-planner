@@ -332,37 +332,22 @@ h1 {
 }
 
 /* Visible grocery store group */
+/* =========================
+   GROCERY LIST STYLES
+   ========================= */
+
 #groceryContainer {
     margin-top: 1rem;
     padding: 1rem;
 }
 
 .grocery-store-card {
-    background: white;
+    background: #ffffff;
     border: 1px solid #d1d5db;
     margin-bottom: 1rem;
     padding: 1rem;
     border-radius: 10px;
-    display: block;        /* <- CRITICAL FIX */
-    visibility: visible;   /* <- CRITICAL FIX */
 }
-
-.grocery-item {
-    padding: 6px 0;
-    border-bottom: 1px solid #eee;
-    font-size: 16px;
-    color: #111827;
-}
-.grocery-item:last-child {
-    border-bottom: none;
-}
-
-.grocery-item::before {
-    content: "• ";
-    color: #2563eb;
-    font-weight: bold;
-}
-
 
 #groceryContainer h3 {
     margin: 0 0 0.5rem 0;
@@ -370,28 +355,25 @@ h1 {
     color: #111827;
 }
 
-/* Visible grocery items */
+/* each grocery line */
 .grocery-item {
-    display: block;              /* ← FIXES THE INVISIBILITY */
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     padding: 6px 0;
     border-bottom: 1px solid #eee;
     font-size: 16px;
     color: #111827;
 }
 
-.grocery-item::before {
-    content: "• ";
-    color: #2563eb;
-    font-weight: bold;
-    margin-right: 4px;
-}
-#groceryContainer {
-    margin-top: 1rem;
-}
-
-
 .grocery-item:last-child {
     border-bottom: none;
+}
+
+.grocery-item::before {
+    content: "•";
+    color: #2563eb;
+    font-weight: bold;
 }
 
 
