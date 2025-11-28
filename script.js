@@ -1102,8 +1102,19 @@ selectedMeals.forEach(meal => {
 
     activeIngredients.forEach(ing => {
         // ingredient selection respected
-        const checked = state.plannerIngredientChecks[meal.id]?.[ing.id];
+        // Ensure check dictionary exists
+        if (!state.plannerIngredientChecks[meal.id]) {
+            state.plannerIngredientChecks[meal.id] = {};
+        }
+
+        // Default all NEW ingredients to "checked"
+        if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+            state.plannerIngredientChecks[meal.id][ing.id] = true;
+        }
+
+        const checked = state.plannerIngredientChecks[meal.id][ing.id];
         if (!checked) return;
+
 
         const comment =
             state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
