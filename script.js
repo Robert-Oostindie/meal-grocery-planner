@@ -148,7 +148,7 @@ menu.style.width = rect.width + "px";
 menu.style.zIndex = 9999;
 
 
-    document.getElementById("recipeModal").appendChild(menu);
+    document.querySelector("#recipeModal .modal-content").appendChild(menu);
 
 }
 
