@@ -363,6 +363,9 @@ h1 {
     font-weight: bold;
     margin-right: 4px;
 }
+#'groceryContainer {
+    margin-top: 1rem;
+}
 
 .grocery-item:last-child {
     border-bottom: none;
