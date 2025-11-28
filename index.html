@@ -67,9 +67,16 @@
 </div>
 
 
-   <button onclick="console.log('BTN CLICKED'); buildGroceryList()" class="build-grocery-btn">
+  <button id="testBuildBtn" class="build-grocery-btn">
         Build Grocery List
     </button>
+
+    <script>
+    document.getElementById("testBuildBtn").addEventListener("click", () => {
+        console.log("EVENT LISTENER CLICKED");
+    });
+    </script>
+
 
 
         <div class="planner-backup-controls" style="margin-top: 1.2rem; display:flex; gap:0.6rem;">
