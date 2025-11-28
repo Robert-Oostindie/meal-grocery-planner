@@ -877,7 +877,13 @@ function renderPlanner() {
                 const mainRow = document.createElement("label");
                 mainRow.className = "planner-meal-row";
                 mainRow.innerHTML = `
-                    <input type="checkbox" ${isSelected ? "checked" : ""} onclick="togglePlannerMeal('${meal.id}')">
+                    <input 
+                        type="checkbox" 
+                        ${isSelected ? "checked" : ""} 
+                        onchange="togglePlannerMeal('${meal.id}')" 
+                        onclick="event.stopPropagation();"
+                    >
+
                     <span>${meal.name}</span>
                 `;
                 mealRow.appendChild(mainRow);
