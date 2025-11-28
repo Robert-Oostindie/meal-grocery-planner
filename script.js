@@ -30,7 +30,7 @@ let state = {
 // ==============================
 function makeId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
-        return window.makeId());
+        return window.makeId();
     }
     // Fallback for older browsers
     return (
@@ -505,7 +505,7 @@ function addIngredientRow() {
     const defaultStore = state.stores[0] || "";
 
     ingredientRows.push({
-        id: makeId()),   // <-- Correct fixed ID assignment
+        id: makeId(),   // <-- Correct fixed ID assignment
         name: "",
         qty: 1,
         unit: "CT",
@@ -556,7 +556,7 @@ function syncIngredientsFromDOM() {
     const rows = container.querySelectorAll(".ingredient-row");
 
     ingredientRows = Array.from(rows).map(rowEl => {
-        const id = rowEl.dataset.id || makeId());
+        const id = rowEl.dataset.id || makeId();
 
         return {
             id,
@@ -1262,7 +1262,7 @@ function saveRecipe() {
     }
 
     const mealData = {
-        id: editingMealId || makeId()),
+        id: editingMealId || makeId(),
         name,
         category,
         ingredients: ingredientRows
