@@ -470,4 +470,17 @@ textarea {
 .group-suggest-item:hover {
     background: #f0f0f0;
 }
+/* Fix Grocery List Layout */
+#groceryTab {
+    display: block !important;
+    width: 100% !important;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#groceryContainer {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
 
