@@ -331,16 +331,32 @@ h1 {
     width: 100%;
 }
 
+/* Visible grocery store group */
 .grocery-store-card {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    border-radius: 8px;
-    background: #f9fafb;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
+
+/* Visible grocery items */
 .grocery-item {
-    margin: 2px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 16px;
+    color: #111827; /* ensures text is visible */
 }
+
+.grocery-item:last-child {
+    border-bottom: none;
+}
+
 
 /* Allow dropdown to display outside the flex row */
 
