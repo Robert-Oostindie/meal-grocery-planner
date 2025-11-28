@@ -238,6 +238,13 @@ function switchTab(tabId) {
         btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
 }
+// Enable tab switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const tabId = btn.dataset.tab;
+        switchTab(tabId);
+    });
+});
 
 
 function renderApp() {
