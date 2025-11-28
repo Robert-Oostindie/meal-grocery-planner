@@ -909,8 +909,10 @@ function renderPlanner() {
                         placeholder.innerHTML = `<span class="muted">(No ingredients)</span>`;
                         ingDiv.appendChild(placeholder);
                         mealRow.appendChild(ingDiv);
-                        return;
+                        catWrapper.appendChild(mealRow);
+                        return; // exit THIS meal only, not the whole planner
                     }
+
 
                     activeIngredients.forEach(ing => {
                         const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
