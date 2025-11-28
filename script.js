@@ -900,8 +900,6 @@ function renderPlanner() {
                 if (isSelected) {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
-
-                   const activeIngredients = getActiveIngredientsForMeal(meal);
 const activeIngredients = getActiveIngredientsForMeal(meal);
 
 // ⭐ SAFETY: If the meal has zero ingredients, show placeholder and stop.
