@@ -357,6 +357,12 @@ h1 {
     font-size: 16px;
     color: #111827; /* ensures text is visible */
 }
+.grocery-item::before {
+    content: "• ";
+    color: #2563eb;
+    font-weight: bold;
+    margin-right: 4px;
+}
 
 .grocery-item:last-child {
     border-bottom: none;
