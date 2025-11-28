@@ -138,17 +138,22 @@ function showGroupSuggestions(inputEl, index) {
     });
 
    // Position inside the modal so the menu stays aligned
-const rect = inputEl.getBoundingClientRect();
-const modalRect = document.getElementById("recipeModal").getBoundingClientRect();
+// Position the dropdown precisely under the input, relative to modal-content
+const contentEl = document.querySelector("#recipeModal .modal-content");
 
+const inputRect = inputEl.getBoundingClientRect();
+const contentRect = contentEl.getBoundingClientRect();
+
+// Exact alignment inside modal-content
 menu.style.position = "absolute";
-menu.style.left = (rect.left - modalRect.left) + "px";
-menu.style.top = (rect.bottom - modalRect.top) + "px";
-menu.style.width = rect.width + "px";
+menu.style.left = (inputRect.left - contentRect.left) + "px";
+menu.style.top = (inputRect.bottom - contentRect.top) + "px";
+menu.style.width = inputRect.width + "px";
 menu.style.zIndex = 9999;
 
+// Attach menu inside modal-content, NOT whole modal
+contentEl.appendChild(menu);
 
-    document.querySelector("#recipeModal .modal-content").appendChild(menu);
 
 }
 
