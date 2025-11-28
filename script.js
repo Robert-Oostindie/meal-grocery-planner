@@ -1122,10 +1122,18 @@ function removePlannerExtra(index) {
 // ==============================
 function buildGroceryList() {
     saveState();
-    setTimeout(() => {
-        renderGroceryList();
-        switchTab("groceryTab");
-    }, 50);  // tiny delay prevents race condition
+
+    // 🔥 FORCE grocery tab visible BEFORE rendering the list
+    document.querySelectorAll(".tab-page").forEach(t => t.classList.remove("active"));
+    document.getElementById("groceryTab").classList.add("active");
+
+    // 🔥 Update tab buttons too
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === "groceryTab");
+    });
+
+    // 🔥 Now render the grocery list while the tab is visible
+    renderGroceryList();
 }
 
 
