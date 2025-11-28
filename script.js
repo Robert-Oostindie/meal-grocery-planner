@@ -691,12 +691,17 @@ function handleGroupFinished(index, groupName) {
         });
     });
 
+    // NEW RULE:
+    // If group exists 0 times → do nothing
+    if (matches.length === 0) return;
+
     // Load modal body
     const body = document.getElementById("subModalBody");
     if (!body) return;
+
     body.innerHTML = "";
 
-    // Show all existing global ingredients
+    // Show all existing global ingredients (even if only one)
     matches.forEach(ing => {
         const qty = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
         const row = document.createElement("label");
@@ -709,7 +714,7 @@ function handleGroupFinished(index, groupName) {
         body.appendChild(row);
     });
 
-    // Add "new ingredient" option
+    // Always allow creating a brand-new ingredient
     const addNew = document.createElement("label");
     addNew.style.display = "block";
     addNew.style.margin = "0.7rem 0 0.3rem";
