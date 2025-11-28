@@ -582,12 +582,19 @@ function syncIngredientsFromDOM() {
 //  - all non-grouped ingredients
 //  - exactly 1 ingredient per substitute group, default or user-selected
 function getActiveIngredientsForMeal(meal) {
-    const ingredients = meal.ingredients || [];
+    if (!meal || !Array.isArray(meal.ingredients)) {
+        console.warn("[ING] Meal has no valid ingredients:", meal);
+        return [];
+    }
+
+    const ingredients = meal.ingredients;
     const groupsMap = {};
     const ungrouped = [];
 
-    // first, split grouped vs ungrouped
+    // Separate grouped vs ungrouped
     ingredients.forEach(ing => {
+        if (!ing || !ing.id) return; // ignore corrupt ingredient objects
+
         if (ing.group) {
             if (!groupsMap[ing.group]) groupsMap[ing.group] = [];
             groupsMap[ing.group].push(ing);
@@ -596,29 +603,32 @@ function getActiveIngredientsForMeal(meal) {
         }
     });
 
-    // start results with ungrouped items
     const result = [...ungrouped];
 
-    // check if user has made substitution selections for this meal
-    const selectionsForMeal = state.plannerSubstituteSelections[meal.id] || {};
+    // Load user's selected substitutes
+    const selectionsForMeal =
+        state.plannerSubstituteSelections?.[meal.id] || {};
 
-    // for each group pick the selected one if present, otherwise the default, otherwise the first
+    // Handle groups safely
     Object.keys(groupsMap).forEach(groupName => {
         const groupIngs = groupsMap[groupName];
+        if (!groupIngs.length) return;
 
         const defaultIng =
             groupIngs.find(i => i.isDefault) || groupIngs[0];
 
-        const selectedId = selectionsForMeal[groupName] || defaultIng.id;
+        const selectedId =
+            selectionsForMeal[groupName] || defaultIng.id;
 
         const activeIng =
             groupIngs.find(i => i.id === selectedId) || defaultIng;
 
-        result.push(activeIng);
+        if (activeIng) result.push(activeIng);
     });
 
     return result;
 }
+
 function openSubstituteModal(mealId, groupName) {
 
     // 🔥 SAFETY CHECK:
