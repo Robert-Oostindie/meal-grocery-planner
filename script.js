@@ -1130,173 +1130,110 @@ function removePlannerExtra(index) {
 // ==============================
 // GROCERY LIST TAB
 // ==============================
+// ==============================
+// DEBUG GROCERY LIST (TEMPORARY)
+// ==============================
 function buildGroceryList() {
     saveState();
 
-    // 🔥 FORCE grocery tab visible BEFORE rendering the list
+    // Force tab visible BEFORE rendering
     document.querySelectorAll(".tab-page").forEach(t => t.classList.remove("active"));
     document.getElementById("groceryTab").classList.add("active");
 
-    // 🔥 Update tab buttons too
+    // Activate buttons
     document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.tab === "groceryTab");
     });
 
-    // 🔥 Now render the grocery list while the tab is visible
-    renderGroceryList();
+    console.warn("🔧 DEBUG GROCERY: buildGroceryList() running");
+    renderGroceryList_DEBUG();
 }
 
+function renderGroceryList_DEBUG() {
+    console.group("🔧 DEBUG GROCERY LIST");
 
-function renderGroceryList() {
     const container = document.getElementById("groceryContainer");
+
     if (!container) {
-        console.warn("[GL] #groceryContainer NOT FOUND");
-        return;
-    }
-
-    console.group("renderGroceryList TRACER");
-
-    console.log("[GL] plannerMeals IDs:", JSON.stringify(state.plannerMeals));
-    console.log("[GL] plannerExtras:", JSON.stringify(state.plannerExtras));
-    console.log("[GL] all meals:", state.meals.map(m => ({
-        id: m.id,
-        name: m.name,
-        category: m.category,
-        ingCount: (m.ingredients || []).length
-    })));
-
-    container.innerHTML = "";
-
-    const selectedMeals = state.meals.filter(m => state.plannerMeals.includes(m.id));
-    console.log("[GL] selectedMeals:", selectedMeals.map(m => ({
-        id: m.id,
-        name: m.name,
-        ingCount: (m.ingredients || []).length
-    })));
-
-    if (!selectedMeals.length && !state.plannerExtras.length) {
-        console.log("[GL] EARLY RETURN: no selected meals and no extras");
-        container.innerHTML = `<p class="section-note">Select meals in the Planner and click "Build Grocery List".</p>`;
+        console.error("❌ #groceryContainer not found!");
         console.groupEnd();
         return;
     }
 
+    container.innerHTML = "";
+    container.style.minHeight = "200px"; // ensure it's not collapsing
+    container.style.display = "block";
+
+    // Get selected meals
+    const selectedMeals = state.meals.filter(m => state.plannerMeals.includes(m.id));
+
+    console.log("Selected Meals:", selectedMeals);
+
+    // Get extras
+    const extras = state.plannerExtras || [];
+    console.log("Planner Extras:", extras);
+
+    // If nothing selected
+    if (!selectedMeals.length && !extras.length) {
+        container.innerHTML = `<p class="section-note">No meals or extras selected.</p>`;
+        console.groupEnd();
+        return;
+    }
+
+    // Group items by store
     const itemsByStore = {};
 
-    function addItem(store, text, source) {
+    function add(store, text) {
         const key = store || "Other";
         if (!itemsByStore[key]) itemsByStore[key] = [];
         itemsByStore[key].push(text);
-        console.log(`[GL] addItem → store="${key}", text="${text}", source=${source}`);
+        console.log(`Add → [${key}] ${text}`);
     }
 
-    // -------- FROM SELECTED MEALS --------
+    // Add ingredients from meals (NO CHECKBOXES, NO COMMENTS)
     selectedMeals.forEach(meal => {
-        console.group(`[GL] Meal: ${meal.name} (${meal.id})`);
+        console.group(`Meal: ${meal.name}`);
 
-        let activeIngredientsRaw;
-        let activeIngredients = [];
-
-        try {
-            activeIngredientsRaw = getActiveIngredientsForMeal(meal);
-            console.log("[GL] getActiveIngredientsForMeal raw:", activeIngredientsRaw);
-            activeIngredients = Array.isArray(activeIngredientsRaw) ? activeIngredientsRaw : [];
-        } catch (e) {
-            console.error("[GL] ERROR in getActiveIngredientsForMeal for meal:", meal.id, e);
-            activeIngredients = [];
-        }
-
-        console.log("[GL] activeIngredients (final):", activeIngredients);
-
-        if (!activeIngredients.length) {
-            console.warn("[GL] Meal has NO active ingredients, skipping meal:", meal.name);
+        if (!meal.ingredients || meal.ingredients.length === 0) {
+            console.warn("Meal has no ingredients");
             console.groupEnd();
             return;
         }
 
-        activeIngredients.forEach(ing => {
-            if (!ing) {
-                console.warn("[GL] Skipping falsy ingredient:", ing);
-                return;
-            }
-
-            // =====================================================
-            // ⭐ FIXED BLOCK — THIS WAS THE BUG ⭐
-            // =====================================================
-
-            // Ensure dictionary exists
-            if (!state.plannerIngredientChecks[meal.id]) {
-                state.plannerIngredientChecks[meal.id] = {};
-            }
-
-            // Default undefined → TRUE (was incorrectly treated as false)
-            if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
-                state.plannerIngredientChecks[meal.id][ing.id] = true;
-                console.log(`[GL] Defaulting ingredient checked=true → ${ing.name} (id=${ing.id})`);
-            }
-
-            const checked = state.plannerIngredientChecks[meal.id][ing.id];
-
-            // Skip only if explicitly false, not if undefined
-            if (checked === false) {
-                console.log(`[GL] Skipping UNCHECKED ingredient "${ing.name}"`);
-                return;
-            }
-
-            // =====================================================
-
-            const comment =
-                state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
-
-            const qtyPart =
-                ing.qty && ing.qty > 1 ? ` (${ing.qty} ${ing.unit || ""})` : "";
-
-            const commentPart = comment ? ` (${comment})` : "";
-
-            const lineText = `${ing.name}${qtyPart}${commentPart}`;
-            addItem(ing.store, lineText, `meal:${meal.name}`);
+        meal.ingredients.forEach(ing => {
+            if (!ing || !ing.name) return;
+            const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+            add(ing.store, `${ing.name}${qtyPart}`);
         });
 
         console.groupEnd();
     });
 
-    // -------- FROM EXTRAS --------
-    console.group("[GL] Planner Extras");
-    state.plannerExtras.forEach(item => {
+    // Add planner extras
+    extras.forEach(item => {
         const qtyPart = item.qty > 1 ? ` (${item.qty})` : "";
-        const text = `${item.name}${qtyPart}`;
-        addItem(item.store, text, "extra");
+        add(item.store, `${item.name}${qtyPart}`);
     });
-    console.groupEnd();
 
-    console.log("[GL] FINAL itemsByStore:", JSON.stringify(itemsByStore, null, 2));
+    console.log("FINAL itemsByStore:", itemsByStore);
 
-    const storeKeys = Object.keys(itemsByStore);
-    console.log("[GL] storeKeys:", storeKeys);
-
-    if (!storeKeys.length) {
-        console.warn("[GL] NO storeKeys → nothing to render");
-        container.innerHTML = `<p class="section-note">No grocery items to show. (DEBUG: itemsByStore is empty – see console.)</p>`;
-        console.groupEnd();
-        return;
-    }
-
-    storeKeys.sort().forEach(store => {
-        const block = document.createElement("div");
-        block.className = "grocery-store-card";
-        block.innerHTML = `<h3>${store}</h3>`;
+    // Render result
+    Object.keys(itemsByStore).sort().forEach(store => {
+        const card = document.createElement("div");
+        card.className = "grocery-store-card";
+        card.innerHTML = `<h3>${store}</h3>`;
 
         itemsByStore[store].forEach(text => {
-            const line = document.createElement("div");
-            line.className = "grocery-item";
-            line.textContent = text;   // CSS ::before adds bullet
-            block.appendChild(line);
+            const row = document.createElement("div");
+            row.className = "grocery-item";
+            row.textContent = "• " + text;
+            card.appendChild(row);
         });
 
-        container.appendChild(block);
+        container.appendChild(card);
     });
 
-    console.log("[GL] RENDER COMPLETE. container.innerHTML:", container.innerHTML);
+    console.log("DEBUG RENDER DONE. HTML:", container.innerHTML);
     console.groupEnd();
 }
 
