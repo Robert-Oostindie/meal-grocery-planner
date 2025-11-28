@@ -122,11 +122,18 @@ function showGroupSuggestions(inputEl, index) {
         const item = document.createElement("div");
         item.className = "group-suggest-item";
         item.textContent = g;
-        item.onclick = () => {
+        // pointerdown fires BEFORE blur on mobile + desktop
+        item.onpointerdown = (e) => {
+            e.preventDefault(); // prevents blur from killing the click
             inputEl.value = g;
             ingredientRows[index].group = g;
-            menu.remove();
+            ingredientRows[index].group = g;
+    
+            window.__selectingSuggestion = true;
+
+            if (menu) menu.remove();
         };
+
         menu.appendChild(item);
     });
 
