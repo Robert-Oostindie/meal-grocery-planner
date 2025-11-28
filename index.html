@@ -67,15 +67,14 @@
 </div>
 
 
-  <button id="testBuildBtn" class="build-grocery-btn">
-        Build Grocery List
+ <button class="primary build-grocery-btn" onclick="buildGroceryList()">
+    Build Grocery List
     </button>
 
-    <script>
-    document.getElementById("testBuildBtn").addEventListener("click", () => {
-        console.log("EVENT LISTENER CLICKED");
-    });
-    </script>
+    </div> <!-- FIXED: closes the Planner tab content properly -->
+
+    <div class="planner-backup-controls" style="margin-top: 1.2rem; display:flex; gap:0.6rem;">
+
 
 
 
