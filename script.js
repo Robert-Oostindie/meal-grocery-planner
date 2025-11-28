@@ -923,11 +923,11 @@ function renderPlanner() {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
 
-                    let activeIngredients = [];
+                   let activeIngredients = [];
                     try {
                         activeIngredients = getActiveIngredientsForMeal(meal) || [];
                     } catch (e) {
-                        console.error("Error in getActiveIngredientsForMeal for meal:", meal.id, e);
+                        console.error("Error in getActiveIngredientsForMeal (grocery) for meal:", meal.id, e);
                         activeIngredients = [];
                     }
 
