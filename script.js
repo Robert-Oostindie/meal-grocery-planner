@@ -123,16 +123,19 @@ function showGroupSuggestions(inputEl, index) {
         item.className = "group-suggest-item";
         item.textContent = g;
         // pointerdown fires BEFORE blur on mobile + desktop
-        item.onpointerdown = (e) => {
-            e.preventDefault(); // prevents blur from killing the click
+       item.onpointerdown = (e) => {
+            e.preventDefault();
+            window.__clickedGroupItem = g;
+
             inputEl.value = g;
             ingredientRows[index].group = g;
-            ingredientRows[index].group = g;
-    
-            window.__clickedGroupItem = g;
+
+            // Force popup ALWAYS when picking a suggestion
+            handleGroupFinished(index, g);
 
             if (menu) menu.remove();
         };
+
 
         menu.appendChild(item);
     });
@@ -687,9 +690,6 @@ function handleGroupFinished(index, groupName) {
             }
         });
     });
-
-    // If only 1 match → nothing to reuse
-    if (matches.length <= 1) return;
 
     // Load modal body
     const body = document.getElementById("subModalBody");
