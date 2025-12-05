@@ -85,18 +85,21 @@
 
 
         <!-- CATEGORIES TAB -->
-        <div id="categoriesTab" class="tab-page">
+        <<div id="categoriesTab" class="tab-page">
             <h1>Categories</h1>
-            <p class="section-note">
-                Manage meal categories like Low Prep, Crock Pot, etc.
-            </p>
 
-            <div id="categoryList"></div>
+            <h3>Default Categories</h3>
+            <div id="globalCategoryList"></div>
 
-            <div style="margin-top:1.2rem;">
-                <label>Add Category:</label>
-                <input id="newCategory" type="text" placeholder="Ex: Snacks">
-                <button onclick="addCategory()" class="primary">Add</button>
+            <h3 style="margin-top:1rem;">My Categories</h3>
+            <div id="userCategoryList"></div>
+
+            <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                <input id="newCategoryName" 
+                       type="text" 
+                       placeholder="Add a category..." 
+                       style="flex:1;">
+                <button class="primary" onclick="addUserCategory()">Add</button>
             </div>
         </div>
 
