@@ -879,9 +879,6 @@ function findIngredientById(id) {
 // ==============================
 // PLANNER TAB
 // ==============================
-// ==============================
-// PLANNER TAB
-// ==============================
 function renderPlanner() {
     const container = document.getElementById("plannerContainer");
     if (!container) return;
@@ -914,26 +911,24 @@ function renderPlanner() {
         header.className = "planner-category-header";
         header.onclick = () => toggleCategory(cat);
         header.innerHTML = `
-            <span class="chevron">${isCollapsed ? "▶" : "▼"}</span>
+            <span class="chevron">${isCollapsedCategory ? "▶" : "▼"}</span>
             <span>${cat}</span>
         `;
         catWrapper.appendChild(header);
 
-        // Meals list (only if not collapsed)
-        if (!isCollapsed) {
+        // Meals list (only if category is not collapsed)
+        if (!isCollapsedCategory) {
             byCategory[cat].forEach(meal => {
                 const mealRow = document.createElement("div");
                 mealRow.className = "planner-meal-block";
 
                 const isSelected = state.plannerMeals.includes(meal.id);
 
-                // 🔹 create the main row element
+                // main row container
                 const mainRow = document.createElement("label");
                 mainRow.className = "planner-meal-row";
 
-                // Main row with checkbox + multiplier
                 const multiplier = state.plannerMealMultipliers[meal.id] || 1;
-
                 const isMealCollapsed = state.collapsedMeals[meal.id] === true;
 
                 mainRow.innerHTML = `
@@ -952,7 +947,6 @@ function renderPlanner() {
                         ${isMealCollapsed ? "▶" : "▼"}
                     </span>
 
-
                     <span>${meal.name}</span>
 
                     <select 
@@ -960,34 +954,29 @@ function renderPlanner() {
                         onchange="updateMealMultiplier('${meal.id}', this.value)"
                         style="margin-left:8px; padding:2px 6px;"
                     >
-                        <option value="1" ${multiplier==1?"selected":""}>1×</option>
-                        <option value="2" ${multiplier==2?"selected":""}>2×</option>
-                        <option value="3" ${multiplier==3?"selected":""}>3×</option>
-                        <option value="4" ${multiplier==4?"selected":""}>4×</option>
-                        <option value="5" ${multiplier==5?"selected":""}>5×</option>
+                        <option value="1" ${multiplier==1 ? "selected" : ""}>1×</option>
+                        <option value="2" ${multiplier==2 ? "selected" : ""}>2×</option>
+                        <option value="3" ${multiplier==3 ? "selected" : ""}>3×</option>
+                        <option value="4" ${multiplier==4 ? "selected" : ""}>4×</option>
+                        <option value="5" ${multiplier==5 ? "selected" : ""}>5×</option>
                     </select>
                 `;
 
-
                 mealRow.appendChild(mainRow);
 
-                // If selected, show ingredients (or a placeholder if none)
-                const isMealCollapsed = state.collapsedMeals[meal.id] === true;
-
+                // If selected & not collapsed at meal or category level, show ingredients
                 if (isSelected && !isMealCollapsed && !isCollapsedCategory) {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
 
-
-                   let activeIngredients = [];
+                    let activeIngredients = [];
                     try {
                         activeIngredients = getActiveIngredientsForMeal(meal) || [];
                     } catch (e) {
-                        console.error("Error in getActiveIngredientsForMeal (grocery) for meal:", meal.id, e);
+                        console.error("Error in getActiveIngredientsForMeal (planner) for meal:", meal.id, e);
                         activeIngredients = [];
                     }
 
-                    // ⭐ SAFETY: If the meal has zero ingredients, show placeholder
                     if (!activeIngredients.length) {
                         const placeholder = document.createElement("div");
                         placeholder.className = "planner-ingredient-check";
@@ -998,11 +987,9 @@ function renderPlanner() {
                         activeIngredients.forEach(ing => {
                             const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
 
-                            // ensure check dictionary exists
                             if (!state.plannerIngredientChecks[meal.id]) {
                                 state.plannerIngredientChecks[meal.id] = {};
                             }
-                            // default unchecked ingredients to checked
                             if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
                                 state.plannerIngredientChecks[meal.id][ing.id] = true;
                             }
@@ -1032,7 +1019,6 @@ function renderPlanner() {
                                 >
                             `;
 
-                            // substitute button
                             if (ing.group) {
                                 inner += `
                                     <button 
@@ -1063,6 +1049,7 @@ function renderPlanner() {
     // Render extras under planner
     renderPlannerExtras();
 }
+
 
 function updateMealMultiplier(mealId, value) {
     state.plannerMealMultipliers[mealId] = Number(value);
