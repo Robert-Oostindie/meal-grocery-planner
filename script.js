@@ -902,7 +902,7 @@ function renderPlanner() {
         const catWrapper = document.createElement("div");
         catWrapper.className = "planner-category";
 
-        const isCollapsed = state.collapsedCategories.includes(cat);
+        const isCollapsedCategory = state.collapsedCategories.includes(cat);
 
         // Category header (accordion)
         const header = document.createElement("div");
@@ -966,9 +966,12 @@ function renderPlanner() {
                 mealRow.appendChild(mainRow);
 
                 // If selected, show ingredients (or a placeholder if none)
-                if (isSelected) {
+                const isMealCollapsed = state.collapsedMeals[meal.id] === true;
+
+                if (isSelected && !isMealCollapsed && !isCollapsedCategory) {
                     const ingDiv = document.createElement("div");
                     ingDiv.className = "planner-ingredients";
+
 
                    let activeIngredients = [];
                     try {
@@ -1071,6 +1074,12 @@ function toggleCategory(cat) {
     saveState();
     renderPlanner();
 }
+function toggleMealCollapse(mealId) {
+    state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
+    saveState();
+    renderPlanner();
+}
+
 function updateIngredientComment(mealId, ingId, text) {
     if (!state.plannerIngredientComments[mealId]) {
         state.plannerIngredientComments[mealId] = {};
