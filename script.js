@@ -1038,6 +1038,11 @@ function renderPlanner() {
     renderPlannerExtras();
 }
 
+function updateMealMultiplier(mealId, value) {
+    state.plannerMealMultipliers[mealId] = Number(value);
+    saveState();
+    renderPlanner(); // optional: re-render preview
+}
 
 function toggleCategory(cat) {
     const idx = state.collapsedCategories.indexOf(cat);
@@ -1223,12 +1228,15 @@ function renderGroceryList() {
             const comment =
                 state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
+            const mult = state.plannerMealMultipliers[meal.id] || 1;
+
             addItem(ing.store, {
                 name: ing.name,
-                qty: ing.qty,
+                qty: ing.qty * mult,
                 unit: ing.unit,
                 comment
             });
+
         });
     });
 
