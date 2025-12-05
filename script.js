@@ -1641,7 +1641,7 @@ function saveRecipe() {
     const category = document.getElementById("modalRecipeCategory").value.trim();
 
     const mealData = {
-        id: editingMealId,
+        id: editingMealId || makeId(),
         name,
         category,
         ingredients: ingredientRows
