@@ -16,23 +16,8 @@ const GLOBAL_CATEGORIES = [
     "Sides",
     "Appetizers"
 ];
-const GLOBAL_RECIPES = [
-    {
-        id: "global_tacos",
-        name: "Tacos",
-        category: "Low Prep",
-        ingredients: [
-            { id: makeId(), name: "Tortillas", qty: 1, unit: "CT", store: "Walmart" },
-            { id: makeId(), name: "Ground Beef", qty: 1, unit: "LB", store: "Walmart" }
-        ]
-    },
-    {
-        id: "global_pasta",
-        name: "Pasta with Sauce",
-        category: "Low Prep",
-        ingredients: []
-    }
-];
+const GLOBAL_RECIPES = [];
+
 
 const GLOBAL_STORES = [
     {
