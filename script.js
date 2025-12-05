@@ -95,7 +95,6 @@ function findStoreByName(name) {
 
 
 let state = {
-    meals: [],
     userCategories: [],
 
     // user-defined stores only; globals come from GLOBAL_STORES
@@ -130,7 +129,10 @@ function makeId() {
     );
 }
 function getAllMeals() {
-    return [...GLOBAL_RECIPES, ...(state.userMeals || [])];
+    return [
+        ...GLOBAL_RECIPES,
+        ...(state.userMeals || [])
+    ];
 }
 
 function toggleMealCollapse(mealId) {
@@ -379,7 +381,7 @@ function renderRecipes() {
 
     container.innerHTML = "";
 
-    if (!state.meals.length) {
+    if (!getAllMeals().length) {
         const empty = document.createElement("p");
         empty.className = "section-note";
         empty.textContent = "No recipes yet. Tap + Add Recipe to create one.";
@@ -416,11 +418,20 @@ function renderRecipes() {
 }
 
 function deleteRecipe(id) {
-    if (!confirm("Delete this recipe?")) return;
-    state.meals = state.meals.filter(m => m.id !== id);
+    const isGlobal = GLOBAL_RECIPES.some(m => m.id === id);
+
+    if (isGlobal) {
+        alert("Starter recipes cannot be deleted.");
+        return;
+    }
+
+    state.userMeals = state.userMeals.filter(m => m.id !== id);
+
     saveState();
     renderRecipes();
+    renderPlanner();
 }
+
 
 // ==============================
 // RECIPE MODAL: OPEN / CLOSE
@@ -444,7 +455,7 @@ function openRecipeModalNew() {
 }
 
 function openRecipeModalEdit(mealId) {
-    const meal = state.meals.find(m => m.id === mealId);
+    const meal = getAllMeals().find(m => m.id === mealId);
     if (!meal) return;
 
     editingMealId = mealId;
@@ -762,7 +773,7 @@ function openSubstituteModal(mealId, groupName) {
     subModalMealId = mealId;
     subModalGroupName = groupName;
 
-    const meal = state.meals.find(m => m.id === mealId);
+    const meal = getAllMeals().find(m => m.id === mealId);
     if (!meal) return;
 
     // ---------------------------------------------------------
@@ -977,13 +988,14 @@ function applySubstituteChoice() {
 }
 
 function findIngredientById(id) {
-    for (const meal of state.meals) {
+    for (const meal of getAllMeals()) {
         for (const ing of (meal.ingredients || [])) {
             if (ing.id === id) return ing;
         }
     }
     return null;
 }
+
 
 // ==============================
 // PLANNER TAB
@@ -994,7 +1006,7 @@ function renderPlanner() {
 
     container.innerHTML = "";
 
-    if (!state.meals.length) {
+    if (!getAllMeals().length) {
         container.innerHTML = `<p class="section-note">No meals yet. Add recipes first.</p>`;
         renderPlannerExtras();
         return;
@@ -1357,7 +1369,7 @@ function renderGroceryList() {
 
     container.innerHTML = "";
 
-    const selectedMeals = state.meals.filter(m => state.plannerMeals.includes(m.id));
+    const selectedMeals = getAllMeals().filter(m => state.plannerMeals.includes(m.id));
 
     if (!selectedMeals.length && !state.plannerExtras.length) {
         container.innerHTML = `<p class="section-note">Select meals in the Planner and click "Build Grocery List".</p>`;
@@ -1549,20 +1561,6 @@ function saveRecipe() {
     const name = document.getElementById("modalRecipeName").value.trim();
     const category = document.getElementById("modalRecipeCategory").value.trim();
 
-    if (!name) {
-        alert("Meal name is required.");
-        currentStep = 1;
-        updateStepUI();
-        return;
-    }
-
-    if (!category) {
-        alert("Category is required.");
-        currentStep = 1;
-        updateStepUI();
-        return;
-    }
-
     const mealData = {
         id: editingMealId || makeId(),
         name,
@@ -1570,20 +1568,24 @@ function saveRecipe() {
         ingredients: ingredientRows
     };
 
-    if (editingMealId) {
-        // update existing
-        const idx = state.meals.findIndex(m => m.id === editingMealId);
-        if (idx !== -1) {
-            state.meals[idx] = mealData;
-        } else {
-            state.meals.push(mealData);
-        }
+    const isGlobal = GLOBAL_RECIPES.some(m => m.id === mealData.id);
+
+    if (isGlobal) {
+        alert("Starter recipes cannot be edited.");
+        return;
+    }
+
+    // Update existing user recipe
+    const idx = state.userMeals.findIndex(m => m.id === mealData.id);
+
+    if (idx !== -1) {
+        state.userMeals[idx] = mealData;
     } else {
-        // new recipe
-        state.meals.push(mealData);
+        state.userMeals.push(mealData);
     }
 
     saveState();
     closeRecipeModal();
     renderRecipes();
 }
+
