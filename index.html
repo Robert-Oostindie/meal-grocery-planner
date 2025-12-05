@@ -103,28 +103,22 @@
         <!-- STORES TAB -->
         <div id="storesTab" class="tab-page">
             <h1>Stores</h1>
-            <p class="section-note">
-                Manage stores like Aldi, Walmart, Festival Foods, Woodmans.
-            </p>
 
-            <div id="storeList"></div>
+            <h3>Default Stores (Global)</h3>
+            <div id="globalStoresList"></div>
 
-            <div style="margin-top:1.2rem;">
-                <label>Add Store:</label>
-                <input id="newStore" type="text" placeholder="Ex: Costco">
-                <button onclick="addStore()" class="primary">Add</button>
+            <h3 style="margin-top:1rem;">My Stores</h3>
+            <div id="userStoresList"></div>
+
+            <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                <input id="newStoreName" 
+                       type="text" 
+                       placeholder="Add a store..." 
+                       style="flex:1;">
+                <button class="primary" onclick="addUserStore()">Add</button>
             </div>
         </div>
 
-        <!-- OTHER TAB -->
-        <div id="otherTab" class="tab-page">
-            <h1>Other</h1>
-            <p class="section-note">
-                Extra settings or future features will go here.
-            </p>
-        </div>
-
-    </div>
 
 
 
