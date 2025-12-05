@@ -295,10 +295,8 @@ function switchTab(tabId) {
         btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
 
-    // If we are switching into Grocery List, render it now
-    if (tabId === "groceryTab") {
-        renderGroceryList();
-    }
+    if (tabId === "groceryTab") renderGroceryList();
+    if (tabId === "storesTab") renderStoresTab();   // 👈 NEW
 }
 
 
@@ -1191,6 +1189,49 @@ function renderPlannerExtras() {
         `;
         list.appendChild(row);
     });
+}
+function renderStoresTab() {
+    const globalDiv = document.getElementById("globalStoresList");
+    const userDiv = document.getElementById("userStoresList");
+    
+    // Render global stores
+    globalDiv.innerHTML = GLOBAL_STORES
+        .map(s => `<div class="store-row">${s.name} (default)</div>`)
+        .join("");
+
+    // Render user stores
+    userDiv.innerHTML = (state.userStores || [])
+        .map((s, idx) => `
+            <div class="store-row" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>${s.name}</span>
+                <button class="danger" onclick="removeUserStore(${idx})">Remove</button>
+            </div>
+        `)
+        .join("");
+}
+function addUserStore() {
+    const input = document.getElementById("newStoreName");
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (!state.userStores) state.userStores = [];
+
+    state.userStores.push({
+        id: makeId(),
+        name
+    });
+
+    saveState();
+    input.value = "";
+    renderStoresTab();
+}
+
+function removeUserStore(index) {
+    if (!state.userStores) return;
+
+    state.userStores.splice(index, 1);
+    saveState();
+    renderStoresTab();
 }
 
 
