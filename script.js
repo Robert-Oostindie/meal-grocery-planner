@@ -237,14 +237,13 @@ function switchTab(tabId) {
     tabButtons.forEach(btn => {
         btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
+
+    // If we are switching into Grocery List, render it now
+    if (tabId === "groceryTab") {
+        renderGroceryList();
+    }
 }
-// Enable tab switching
-document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const tabId = btn.dataset.tab;
-        switchTab(tabId);
-    });
-});
+
 
 
 function renderApp() {
