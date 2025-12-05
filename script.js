@@ -19,10 +19,11 @@ let state = {
     stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
     plannerMeals: [],       // array of meal IDs that are checked in Planner
     plannerExtras: [],   // each item: { id, name, qty, unit, store }
+    plannerMealMultipliers: {}, // { [mealId]: number }
     collapsedCategories: [], // which category accordions are collapsed
-   plannerIngredientChecks: {},
-   plannerIngredientComments: {},
-   plannerSubstituteSelections: {}  // { [mealId]: { [groupName]: ingredientId } } 
+    plannerIngredientChecks: {},
+    plannerIngredientComments: {},
+    plannerSubstituteSelections: {}  // { [mealId]: { [groupName]: ingredientId } } 
 };
 
 // ==============================
@@ -921,17 +922,30 @@ function renderPlanner() {
                 const isSelected = state.plannerMeals.includes(meal.id);
 
                 // Main row with checkbox
-                const mainRow = document.createElement("label");
-                mainRow.className = "planner-meal-row";
+                const multiplier = state.plannerMealMultipliers[meal.id] || 1;
+
                 mainRow.innerHTML = `
                     <input 
-                        type="checkbox" 
-                        ${isSelected ? "checked" : ""} 
-                        onchange="togglePlannerMeal('${meal.id}')" 
+                        type="checkbox"
+                        ${isSelected ? "checked" : ""}
+                        onchange="togglePlannerMeal('${meal.id}')"
                         onclick="event.stopPropagation();"
                     >
                     <span>${meal.name}</span>
+    
+                    <select 
+                        class="meal-multiplier"
+                        onchange="updateMealMultiplier('${meal.id}', this.value)"
+                        style="margin-left:8px; padding:2px 6px;"
+                    >
+                        <option value="1" ${multiplier==1?"selected":""}>1×</option>
+                        <option value="2" ${multiplier==2?"selected":""}>2×</option>
+                        <option value="3" ${multiplier==3?"selected":""}>3×</option>
+                        <option value="4" ${multiplier==4?"selected":""}>4×</option>
+                        <option value="5" ${multiplier==5?"selected":""}>5×</option>
+                    </select>
                 `;
+
                 mealRow.appendChild(mainRow);
 
                 // If selected, show ingredients (or a placeholder if none)
