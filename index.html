@@ -37,8 +37,8 @@
             <div id="recipesList"></div>
         </div>
 
-        <!-- PLANNER TAB -->
-       <div id="plannerTab" class="tab-page">
+       <!-- PLANNER TAB -->
+        <div id="plannerTab" class="tab-page">
             <h1>Planner</h1>
             <p class="section-note">
                 Select meals for this trip, then build your grocery list.
@@ -47,56 +47,32 @@
             <div id="plannerContainer"></div>
 
             <div class="planner-extras">
-            <h3>Other Items</h3>
+                <h3>Other Items</h3>
 
-            <div class="planner-extra-row">
+                <div class="planner-extra-row">
+                    <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
+                    <input id="plannerExtraQty" type="number" value="1" min="1" style="width:70px;">
+                    <select id="plannerExtraStore"></select>
+                    <button class="primary" onclick="addPlannerExtra()">Add</button>
+                </div>
 
-                <!-- Item name -->
-                <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
-
-                <!-- Qty (NEW) -->
-                <input id="plannerExtraQty" type="number" value="1" min="1" style="width:70px;">
-    
-                <!-- Store dropdown (NEW – script will populate) -->
-                <select id="plannerExtraStore"></select>
-
-                <button class="primary" onclick="addPlannerExtra()">Add</button>
+                <div id="plannerExtrasList"></div>
             </div>
 
-            <div id="plannerExtrasList"></div>
-        </div>
-
-
-         <button class="primary build-grocery-btn" onclick="buildGroceryList()">
-            Build Grocery List
+            <button class="primary build-grocery-btn" onclick="buildGroceryList()">
+                Build Grocery List
             </button>
-
-            </div> <!-- FIXED: closes the Planner tab content properly -->
-    
-
 
             <div class="planner-backup-controls" style="margin-top: 1.2rem; display:flex; gap:0.6rem;">
-
-            <button class="primary" onclick="exportAppData()">
-                Export Data
-            </button>
-
-            <button class="primary" onclick="document.getElementById('importFile').click()">
-                Import Data
-            </button>
-
-            <input id="importFile"
-                   type="file"
-                   accept="application/json"
-                   style="display:none"
-                   onchange="importAppData(event)">
-        </div>
-        </div> <!-- end plannerContainer wrapper -->
-        </div> <!-- end plannerTab -->
-
-   
-
-
+                <button class="primary" onclick="exportAppData()">Export Data</button>
+                <button class="primary" onclick="document.getElementById('importFile').click()">Import Data</button>
+                <input id="importFile"
+                       type="file"
+                       accept="application/json"
+                       style="display:none"
+                       onchange="importAppData(event)">
+            </div>
+        </div> <!-- END plannerTab -->
 
         <!-- GROCERY TAB -->
        <div id="groceryTab" class="tab-page">
