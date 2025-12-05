@@ -1189,12 +1189,19 @@ function renderGroceryList() {
 
     const itemsByStore = {};
 
-    function addItem(store, text, source) {
+    function addItem(store, ing, source) {
         const key = store || "Other";
+
         if (!itemsByStore[key]) itemsByStore[key] = [];
-        itemsByStore[key].push(text);
-        console.log(`[GL] addItem → store="${key}", text="${text}", source=${source}`);
+
+        itemsByStore[key].push({
+            name: ing.name,
+            qty: ing.qty || 1,
+            unit: ing.unit || "",
+            comment: ing.comment || "",
+        });
     }
+
 
     // -------- FROM SELECTED MEALS --------
     selectedMeals.forEach(meal => {
