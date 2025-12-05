@@ -6,6 +6,35 @@ const LS_KEY = "mealPlanner_rebuild_v1";
 // ==============================
 // GLOBAL STORES (Built-in)
 // ==============================
+const GLOBAL_CATEGORIES = [
+    "Low Prep",
+    "Medium Prep",
+    "High Prep / Longer Cook Times",
+    "Grilling",
+    "Breakfast",
+    "Crock Pot",
+    "Sides",
+    "Appetizers",
+    "Baby Meals"
+];
+const GLOBAL_RECIPES = [
+    {
+        id: "global_tacos",
+        name: "Tacos",
+        category: "Low Prep",
+        ingredients: [
+            { id: makeId(), name: "Tortillas", qty: 1, unit: "CT", store: "Walmart" },
+            { id: makeId(), name: "Ground Beef", qty: 1, unit: "LB", store: "Walmart" }
+        ]
+    },
+    {
+        id: "global_pasta",
+        name: "Pasta with Sauce",
+        category: "Low Prep",
+        ingredients: [...]
+    }
+];
+
 const GLOBAL_STORES = [
     {
         id: "aldi",
@@ -67,17 +96,8 @@ function findStoreByName(name) {
 
 let state = {
     meals: [],
-    categories: [
-        "Low Prep",
-        "Medium Prep",
-        "High Prep / Longer Cook Times",
-        "Grilling",
-        "Breakfast",
-        "Crock Pot",
-        "Sides",
-        "Appetizers",
-        "Baby Meals"
-    ],
+    userCategories: [],
+
     // user-defined stores only; globals come from GLOBAL_STORES
     userStores: [
         { id: makeId(), name: "Festival Foods" },
@@ -90,7 +110,9 @@ let state = {
     plannerIngredientChecks: {},
     plannerIngredientComments: {},
     plannerSubstituteSelections: {},
-    plannerMealMultipliers: {}
+    plannerMealMultipliers: {},
+    userMeals: []
+
 };
 
 // ==============================
@@ -107,11 +129,17 @@ function makeId() {
         Math.random().toString(16).slice(2)
     );
 }
+function getAllMeals() {
+    return [...GLOBAL_RECIPES, ...(state.userMeals || [])];
+}
 
 function toggleMealCollapse(mealId) {
     state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
     saveState();
     renderPlanner();
+}
+function getAllCategories() {
+    return [...GLOBAL_CATEGORIES, ...(state.userCategories || [])];
 }
 
 
@@ -137,7 +165,7 @@ function getExistingGroups() {
     });
 
     // also include groups from all saved meals
-    state.meals.forEach(meal => {
+    getAllMeals().forEach(meal => {
         (meal.ingredients || []).forEach(ing => {
             if (ing.group && ing.group.trim() !== "") {
                 groups.add(ing.group.trim());
@@ -359,7 +387,7 @@ function renderRecipes() {
         return;
     }
 
-    state.meals.forEach(meal => {
+    getAllMeals().forEach(meal => {
         const card = document.createElement("div");
         card.className = "card";
 
@@ -463,7 +491,7 @@ function populateCategoryDropdown(selected) {
     if (!sel) return;
 
     sel.innerHTML = "";
-    state.categories.forEach(cat => {
+    getAllCategories().forEach(cat => {
         const opt = document.createElement("option");
         opt.value = cat;
         opt.textContent = cat;
@@ -741,7 +769,7 @@ function openSubstituteModal(mealId, groupName) {
     // 1. Collect ALL ingredients across all meals for this group
     // ---------------------------------------------------------
     const options = [];
-    state.meals.forEach(m => {
+    getAllMeals().forEach(m => {
         (m.ingredients || []).forEach(ing => {
             if (ing.group === groupName) {
                 options.push({ ...ing, _mealId: m.id });
@@ -815,7 +843,7 @@ function handleGroupFinished(index, groupName) {
 
     // Build list of ALL ingredients across ALL meals that belong to this group
     const matches = [];
-    state.meals.forEach(m => {
+    getAllMeals().forEach(m => {
         (m.ingredients || []).forEach(ing => {
             if (ing.group === groupName) {
                 matches.push(ing);
@@ -867,7 +895,7 @@ function handleGroupFinished(index, groupName) {
 
 function getGlobalGroupIngredients(groupName) {
     const results = [];
-    state.meals.forEach(m => {
+    getAllMeals().forEach(m => {
         (m.ingredients || []).forEach(ing => {
             if (ing.group === groupName) {
                 results.push({ ...ing, _mealId: m.id });
@@ -974,7 +1002,7 @@ function renderPlanner() {
 
     // Group meals by category
     const byCategory = {};
-    state.meals.forEach(meal => {
+    getAllMeals().forEach(meal => {
         const cat = meal.category || "Uncategorized";
         if (!byCategory[cat]) byCategory[cat] = [];
         byCategory[cat].push(meal);
