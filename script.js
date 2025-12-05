@@ -2,6 +2,41 @@
 // STORAGE & APP STATE
 // ==============================
 const LS_KEY = "mealPlanner_rebuild_v1";
+// ==============================
+// GLOBAL STORES (Built-in)
+// ==============================
+const GLOBAL_STORES = [
+    {
+        id: "aldi",
+        name: "Aldi",
+        affiliateUrl: "https://www.aldi.us/?q={ITEM}"
+    },
+    {
+        id: "walmart",
+        name: "Walmart",
+        affiliateUrl: "https://www.walmart.com/search?q={ITEM}"
+    },
+    {
+        id: "amazon",
+        name: "Amazon",
+        affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID"
+    }
+    // add more later as needed
+];
+
+// Return global + user stores together
+function getAllStores() {
+    return [
+        ...GLOBAL_STORES,
+        ...(state.userStores || [])
+    ];
+}
+
+// Find a store by its display name (for affiliate links)
+function findStoreByName(name) {
+    if (!name) return null;
+    return getAllStores().find(s => s.name === name) || null;
+}
 
 let state = {
     meals: [],
@@ -16,15 +51,19 @@ let state = {
         "Appetizers",
         "Baby Meals"
     ],
-    stores: ["Aldi", "Walmart", "Festival Foods", "Woodmans"],
-    plannerMeals: [],       // array of meal IDs that are checked in Planner
-    plannerExtras: [],   // each item: { id, name, qty, unit, store }
-    plannerMealMultipliers: {}, // { [mealId]: number }
-    collapsedCategories: [], // which category accordions are collapsed
-    collapsedMeals: {},   // { [mealId]: true/false }
+    // user-defined stores only; globals come from GLOBAL_STORES
+    userStores: [
+        { id: makeId(), name: "Festival Foods" },
+        { id: makeId(), name: "Woodmans" }
+    ],
+    plannerMeals: [],
+    plannerExtras: [],
+    collapsedCategories: [],
+    collapsedMeals: {},
     plannerIngredientChecks: {},
     plannerIngredientComments: {},
-    plannerSubstituteSelections: {}  // { [mealId]: { [groupName]: ingredientId } } 
+    plannerSubstituteSelections: {},
+    plannerMealMultipliers: {}
 };
 
 // ==============================
@@ -209,11 +248,22 @@ function loadState() {
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
+
         state = { ...state, ...saved };
+
+        // Backwards compatibility: if old "stores" exist and no userStores yet
+        if (!state.userStores && Array.isArray(saved.stores)) {
+            state.userStores = saved.stores.map(name => ({
+                id: makeId(),
+                name
+            }));
+        }
+
     } catch (e) {
         console.warn("Could not load saved state:", e);
     }
 }
+
 
 function saveState() {
     try {
@@ -470,9 +520,13 @@ function renderIngredientsEditor() {
         div.dataset.id = row.id;   // <-- ADD THIS LINE
 
 
-        const storeOptions = state.stores
-            .map(s => `<option ${row.store === s ? "selected" : ""}>${s}</option>`)
+        const storeOptions = getAllStores()
+            .map(s => {
+                const selected = row.store === s.name ? "selected" : "";
+                return `<option ${selected}>${s.name}</option>`;
+            })
             .join("");
+
 
         div.innerHTML = `
             <input class="ingName" placeholder="Ingredient name" value="${row.name || ""}">
@@ -523,7 +577,9 @@ function addIngredientRow() {
     // Sync what the user already typed BEFORE adding a new row
     syncIngredientsFromDOM();
 
-    const defaultStore = state.stores[0] || "";
+    const allStores = getAllStores();
+    const defaultStore = allStores[0]?.name || "";
+
 
     ingredientRows.push({
         id: makeId(),   // <-- Correct fixed ID assignment
@@ -1107,12 +1163,14 @@ function togglePlannerIngredient(mealId, ingId) {
 function renderPlannerExtras() {
 
     // 🔥 Always repopulate store dropdown
-    const sel = document.getElementById("plannerExtraStore");
-    if (sel && state.stores.length) {
-        sel.innerHTML = state.stores
-            .map(store => `<option>${store}</option>`)
-            .join("");
+   const sel = document.getElementById("plannerExtraStore");
+    if (sel) {
+        const allStores = getAllStores();
+        sel.innerHTML = allStores
+            .map(s => `<option>${s.name}</option>`)
+               .join("");
     }
+
 
     const list = document.getElementById("plannerExtrasList");
     if (!list) return;
