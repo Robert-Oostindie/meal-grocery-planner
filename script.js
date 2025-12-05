@@ -128,11 +128,17 @@ function makeId() {
     );
 }
 function getAllMeals() {
+    const userIds = new Set((state.userMeals || []).map(m => m.id));
+
+    // global recipes that are NOT overridden
+    const filteredGlobals = GLOBAL_RECIPES.filter(m => !userIds.has(m.id));
+
     return [
-        ...GLOBAL_RECIPES,
+        ...filteredGlobals,
         ...(state.userMeals || [])
     ];
 }
+
 
 function toggleMealCollapse(mealId) {
     state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
@@ -494,10 +500,10 @@ function renderRecipes() {
 }
 
 function deleteRecipe(id) {
-    const isGlobal = GLOBAL_RECIPES.some(m => m.id === id);
+    const isUser = state.userMeals.some(m => m.id === id);
 
-    if (isGlobal) {
-        alert("Starter recipes cannot be deleted.");
+    if (!isUser) {
+        alert("You can't delete starter recipes, but you CAN edit them.");
         return;
     }
 
@@ -507,6 +513,7 @@ function deleteRecipe(id) {
     renderRecipes();
     renderPlanner();
 }
+
 
 
 // ==============================
@@ -531,17 +538,19 @@ function openRecipeModalNew() {
 }
 
 function openRecipeModalEdit(mealId) {
-    const meal = getAllMeals().find(m => m.id === mealId);
+    let meal = getAllMeals().find(m => m.id === mealId);
     if (!meal) return;
 
-    // Prevent editing of starter recipes
     const isGlobal = GLOBAL_RECIPES.some(m => m.id === mealId);
+
+    // If the user tries to edit a global recipe, clone it into userMeals
     if (isGlobal) {
-        alert("Starter recipes cannot be edited.");
-        return;
+        meal = JSON.parse(JSON.stringify(meal)); // deep clone
+        state.userMeals.push(meal);
+        saveState();
     }
 
-    editingMealId = mealId;
+    editingMealId = meal.id;
     currentStep = 1;
 
     document.getElementById("recipeModalTitle").textContent = "Edit Recipe";
@@ -1645,25 +1654,19 @@ function saveRecipe() {
     const category = document.getElementById("modalRecipeCategory").value.trim();
 
     const mealData = {
-        id: editingMealId || makeId(),
+        id: editingMealId,
         name,
         category,
         ingredients: ingredientRows
     };
 
-    const isGlobal = GLOBAL_RECIPES.some(m => m.id === mealData.id);
-
-    if (isGlobal) {
-        alert("Starter recipes cannot be edited.");
-        return;
-    }
-
-    // Update existing user recipe
-    const idx = state.userMeals.findIndex(m => m.id === mealData.id);
+    // Update if exists
+    const idx = state.userMeals.findIndex(m => m.id === editingMealId);
 
     if (idx !== -1) {
         state.userMeals[idx] = mealData;
     } else {
+        // new user meal
         state.userMeals.push(mealData);
     }
 
@@ -1671,4 +1674,5 @@ function saveRecipe() {
     closeRecipeModal();
     renderRecipes();
 }
+
 
