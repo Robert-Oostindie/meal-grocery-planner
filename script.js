@@ -21,6 +21,7 @@ let state = {
     plannerExtras: [],   // each item: { id, name, qty, unit, store }
     plannerMealMultipliers: {}, // { [mealId]: number }
     collapsedCategories: [], // which category accordions are collapsed
+    collapsedMeals: {},   // { [mealId]: true/false }
     plannerIngredientChecks: {},
     plannerIngredientComments: {},
     plannerSubstituteSelections: {}  // { [mealId]: { [groupName]: ingredientId } } 
@@ -928,6 +929,8 @@ function renderPlanner() {
                 // Main row with checkbox + multiplier
                 const multiplier = state.plannerMealMultipliers[meal.id] || 1;
 
+                const isMealCollapsed = state.collapsedMeals[meal.id] === true;
+
                 mainRow.innerHTML = `
                     <input 
                         type="checkbox"
@@ -935,8 +938,17 @@ function renderPlanner() {
                         onchange="togglePlannerMeal('${meal.id}')"
                         onclick="event.stopPropagation();"
                     >
+
+                    <span 
+                        class="meal-collapse-toggle"
+                        onclick="toggleMealCollapse('${meal.id}')"
+                        style="cursor:pointer; user-select:none; margin-right:6px;"
+                    >
+                        ${isMealCollapsed ? "▶" : "▼"}
+                    </span>
+
                     <span>${meal.name}</span>
-    
+
                     <select 
                         class="meal-multiplier"
                         onchange="updateMealMultiplier('${meal.id}', this.value)"
@@ -949,6 +961,7 @@ function renderPlanner() {
                         <option value="5" ${multiplier==5?"selected":""}>5×</option>
                     </select>
                 `;
+
 
                 mealRow.appendChild(mainRow);
 
