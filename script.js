@@ -1283,6 +1283,35 @@ function renderGroceryList() {
     console.groupEnd();
 
     console.log("[GL] FINAL itemsByStore:", JSON.stringify(itemsByStore, null, 2));
+    // =============================================
+    // STEP 2: MERGE DUPLICATES BY name + unit + store
+    // =============================================
+    for (const store of Object.keys(itemsByStore)) {
+        const merged = {};
+
+        itemsByStore[store].forEach(text => {
+            // Extract structured data from your existing string
+            // Example string: "Pancake Mix (2 CT)" OR "Pancake Mix"
+            const match = text.match(/^(.+?)(?: \((\d+) ?(.*)?\))?$/);
+
+            let name = match[1].trim();
+            let qty = match[2] ? Number(match[2]) : 1;
+            let unit = match[3] ? match[3].trim() : "CT";
+
+            // Generate merge key (case-insensitive)
+            const key = name.toLowerCase() + "|" + unit.toLowerCase();
+
+            if (!merged[key]) {
+                merged[key] = { name, qty, unit };
+            } else {
+                merged[key].qty += qty; // SUM QTY
+            }
+        });
+
+        // Replace store items with merged array
+        itemsByStore[store] = Object.values(merged);
+    }
+
 
     const storeKeys = Object.keys(itemsByStore);
     console.log("[GL] storeKeys:", storeKeys);
@@ -1299,12 +1328,15 @@ function renderGroceryList() {
         block.className = "grocery-store-card";
         block.innerHTML = `<h3>${store}</h3>`;
 
-        itemsByStore[store].forEach(text => {
+        itemsByStore[store].forEach(item => {
+            const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
+    
             const line = document.createElement("div");
             line.className = "grocery-item";
-            line.textContent = text;   // CSS ::before adds bullet
+            line.textContent = `${item.name}${qtyPart}`;
             block.appendChild(line);
         });
+
 
         container.appendChild(block);
     });
