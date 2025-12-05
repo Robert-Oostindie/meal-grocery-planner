@@ -30,7 +30,7 @@ const GLOBAL_RECIPES = [
         id: "global_pasta",
         name: "Pasta with Sauce",
         category: "Low Prep",
-        ingredients: [...]
+        ingredients: []
     }
 ];
 
@@ -368,6 +368,54 @@ tabButtons.forEach(btn => {
         switchTab(tabId);
     });
 });
+function renderCategoriesTab() {
+    const globalDiv = document.getElementById("globalCategoryList");
+    const userDiv = document.getElementById("userCategoryList");
+
+    if (!globalDiv || !userDiv) return;
+
+    // Render global categories (read-only)
+    globalDiv.innerHTML = GLOBAL_CATEGORIES
+        .map(cat => `<div class="store-row">${cat} (default)</div>`)
+        .join("");
+
+    // Render user categories (editable)
+    userDiv.innerHTML = (state.userCategories || [])
+        .map((cat, idx) => `
+            <div class="store-row" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>${cat}</span>
+                <button class="danger" onclick="removeUserCategory(${idx})">Remove</button>
+            </div>
+        `)
+        .join("");
+}
+function addUserCategory() {
+    const input = document.getElementById("newCategoryName");
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (!state.userCategories) state.userCategories = [];
+
+    // Prevent duplicates (global or user)
+    if (GLOBAL_CATEGORIES.includes(name) || state.userCategories.includes(name)) {
+        alert("Category already exists.");
+        return;
+    }
+
+    state.userCategories.push(name);
+
+    saveState();
+    input.value = "";
+    renderCategoriesTab();
+}
+function removeUserCategory(index) {
+    if (!state.userCategories) return;
+
+    state.userCategories.splice(index, 1);
+
+    saveState();
+    renderCategoriesTab();
+}
 
 function switchTab(tabId) {
     tabPages.forEach(page => {
@@ -380,6 +428,8 @@ function switchTab(tabId) {
 
     if (tabId === "groceryTab") renderGroceryList();
     if (tabId === "storesTab") renderStoresTab();   // 👈 NEW
+    if (tabId === "categoriesTab") renderCategoriesTab();
+
 }
 
 
