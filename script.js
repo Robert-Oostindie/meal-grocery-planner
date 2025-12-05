@@ -322,6 +322,12 @@ function loadState() {
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
+       
+        // MIGRATION: bring old recipes into userMeals
+        if (saved.meals && !saved.userMeals) {
+            saved.userMeals = saved.meals;
+            delete saved.meals;
+        }
 
         state = { ...state, ...saved };
 
