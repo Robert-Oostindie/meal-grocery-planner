@@ -1299,7 +1299,27 @@ function renderGroceryList() {
     console.log("[GL] RENDER COMPLETE. container.innerHTML:", container.innerHTML);
     console.groupEnd();
 }
+// ==============================
+// REVIEW PANEL (STEP 3)
+// ==============================
+function updateReview() {
+    const name = document.getElementById("modalRecipeName").value.trim();
+    const category = document.getElementById("modalRecipeCategory").value.trim();
 
+    document.getElementById("reviewName").textContent = name || "(none)";
+    document.getElementById("reviewCategory").textContent = category || "(none)";
+
+    const list = document.getElementById("reviewIngredients");
+    list.innerHTML = "";
+
+    ingredientRows.forEach(ing => {
+        const li = document.createElement("li");
+        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
+        const groupPart = ing.group ? ` [${ing.group}]` : "";
+        li.textContent = `${ing.name}${qtyPart}${groupPart} – ${ing.store}`;
+        list.appendChild(li);
+    });
+}
 // ==============================
 // SAVE RECIPE (FROM STEP 3)
 // ==============================
@@ -1347,23 +1367,5 @@ function saveRecipe() {
     closeRecipeModal();
     renderRecipes();
 }
-function updateReview() {
-    const name = document.getElementById("modalRecipeName").value.trim();
-    const category = document.getElementById("modalRecipeCategory").value.trim();
 
-    document.getElementById("reviewName").textContent = name || "(none)";
-    document.getElementById("reviewCategory").textContent = category || "(none)";
-
-    const list = document.getElementById("reviewIngredients");
-    list.innerHTML = "";
-
-    ingredientRows.forEach(ing => {
-        const li = document.createElement("li");
-        const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
-        const groupPart = ing.group ? ` [${ing.group}]` : "";
-
-        li.textContent = `${ing.name}${qtyPart}${groupPart} – ${ing.store}`;
-        list.appendChild(li);
-    });
-}
 
