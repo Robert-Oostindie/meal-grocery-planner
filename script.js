@@ -248,10 +248,17 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 
 
 function renderApp() {
+    const activeTab = document.querySelector(".tab-page.active")?.id;
+
     renderRecipes();
     renderPlanner();
-    renderGroceryList();   // ← PUT THIS BACK
+
+    // Only render grocery list IF the grocery tab is active
+    if (activeTab === "groceryTab") {
+        renderGroceryList();
+    }
 }
+
 
 
 // ==============================
