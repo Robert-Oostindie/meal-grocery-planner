@@ -42,6 +42,11 @@ function makeId() {
     );
 }
 
+function toggleMealCollapse(mealId) {
+    state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
+    saveState();
+    renderPlanner();
+}
 
 
 // for the recipe modal
