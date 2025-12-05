@@ -946,11 +946,12 @@ function renderPlanner() {
 
                     <span 
                         class="meal-collapse-toggle"
-                        onclick="toggleMealCollapse('${meal.id}')"
+                        onclick="event.stopPropagation(); toggleMealCollapse('${meal.id}')"
                         style="cursor:pointer; user-select:none; margin-right:6px;"
                     >
                         ${isMealCollapsed ? "▶" : "▼"}
                     </span>
+
 
                     <span>${meal.name}</span>
 
