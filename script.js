@@ -1660,6 +1660,7 @@ function saveRecipe() {
     saveState();
     closeRecipeModal();
     renderRecipes();
+    renderPlanner();
 }
 
 
