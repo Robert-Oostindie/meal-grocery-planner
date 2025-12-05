@@ -62,6 +62,20 @@ const DELIVERY_SERVICES = [
         buttonClass: "delivery-btn doordash-btn"
     }
 ];
+// ==============================
+// MERGED MEAL LIST (GLOBAL + USER)
+// ==============================
+function getAllMeals() {
+    const userIds = new Set((state.userMeals || []).map(m => m.id));
+
+    // global recipes that are NOT overridden (currently none, but future-safe)
+    const filteredGlobals = GLOBAL_RECIPES.filter(m => !userIds.has(m.id));
+
+    return [
+        ...filteredGlobals,
+        ...(state.userMeals || [])
+    ];
+}
 
 // Return global + user stores together
 function getAllStores() {
