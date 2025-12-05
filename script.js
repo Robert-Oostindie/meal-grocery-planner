@@ -1284,66 +1284,29 @@ function renderGroceryList() {
 
     console.log("[GL] FINAL itemsByStore:", JSON.stringify(itemsByStore, null, 2));
     // =============================================
-    // STEP 2: MERGE DUPLICATES BY name + unit + store
+    // STEP 2: MERGE DUPLICATES (OBJECT VERSION)
     // =============================================
     for (const store of Object.keys(itemsByStore)) {
         const merged = {};
 
-        itemsByStore[store].forEach(text => {
-            // Extract structured data from your existing string
-            // Example string: "Pancake Mix (2 CT)" OR "Pancake Mix"
-            const match = text.match(/^(.+?)(?: \((\d+) ?(.*)?\))?$/);
+        itemsByStore[store].forEach(item => {
+            const name = item.name.trim();
+            const unit = (item.unit || "CT").trim();
+            const qty  = item.qty || 1;
 
-            let name = match[1].trim();
-            let qty = match[2] ? Number(match[2]) : 1;
-            let unit = match[3] ? match[3].trim() : "CT";
-
-            // Generate merge key (case-insensitive)
+            // unique key to combine identical items
             const key = name.toLowerCase() + "|" + unit.toLowerCase();
 
             if (!merged[key]) {
                 merged[key] = { name, qty, unit };
             } else {
-                merged[key].qty += qty; // SUM QTY
+                merged[key].qty += qty; // sum quantities!
             }
         });
 
-        // Replace store items with merged array
         itemsByStore[store] = Object.values(merged);
     }
 
-
-    const storeKeys = Object.keys(itemsByStore);
-    console.log("[GL] storeKeys:", storeKeys);
-
-    if (!storeKeys.length) {
-        console.warn("[GL] NO storeKeys → nothing to render");
-        container.innerHTML = `<p class="section-note">No grocery items to show. (DEBUG: itemsByStore is empty – see console.)</p>`;
-        console.groupEnd();
-        return;
-    }
-
-    storeKeys.sort().forEach(store => {
-        const block = document.createElement("div");
-        block.className = "grocery-store-card";
-        block.innerHTML = `<h3>${store}</h3>`;
-
-        itemsByStore[store].forEach(item => {
-            const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
-    
-            const line = document.createElement("div");
-            line.className = "grocery-item";
-            line.textContent = `${item.name}${qtyPart}`;
-            block.appendChild(line);
-        });
-
-
-        container.appendChild(block);
-    });
-
-    console.log("[GL] RENDER COMPLETE. container.innerHTML:", container.innerHTML);
-    console.groupEnd();
-}
 // ==============================
 // REVIEW PANEL (STEP 3)
 // ==============================
