@@ -1152,9 +1152,7 @@ function buildGroceryList() {
     renderGroceryList();
 }
 
-// ==============================
-// GROCERY LIST TAB (FULL FUNCTION)
-// ==============================
+
 function renderGroceryList() {
     const container = document.getElementById("groceryContainer");
     if (!container) {
@@ -1164,136 +1162,150 @@ function renderGroceryList() {
 
     console.group("renderGroceryList TRACER");
 
+    console.log("[GL] plannerMeals IDs:", JSON.stringify(state.plannerMeals));
+    console.log("[GL] plannerExtras:", JSON.stringify(state.plannerExtras));
+    console.log("[GL] all meals:", state.meals.map(m => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        ingCount: (m.ingredients || []).length
+    })));
+
     container.innerHTML = "";
 
-    // Collect selected meals
     const selectedMeals = state.meals.filter(m => state.plannerMeals.includes(m.id));
+    console.log("[GL] selectedMeals:", selectedMeals.map(m => ({
+        id: m.id,
+        name: m.name,
+        ingCount: (m.ingredients || []).length
+    })));
 
     if (!selectedMeals.length && !state.plannerExtras.length) {
+        console.log("[GL] EARLY RETURN: no selected meals and no extras");
         container.innerHTML = `<p class="section-note">Select meals in the Planner and click "Build Grocery List".</p>`;
         console.groupEnd();
         return;
     }
 
-    // Bucket items by store
     const itemsByStore = {};
 
-    // Utility to push items BEFORE merging
-    function addItem(store, ingObj) {
+    function addItem(store, ing, source) {
         const key = store || "Other";
+
         if (!itemsByStore[key]) itemsByStore[key] = [];
 
         itemsByStore[key].push({
-            name: ingObj.name,
-            qty: ingObj.qty || 1,
-            unit: ingObj.unit || "CT",
-            comment: ingObj.comment || ""
+            name: ing.name,
+            qty: ing.qty || 1,
+            unit: ing.unit || "",
+            comment: ing.comment || "",
         });
     }
 
-    // ---------------------------
-    // 1. INGREDIENTS FROM MEALS
-    -----------------------------
+
+    // -------- FROM SELECTED MEALS --------
     selectedMeals.forEach(meal => {
+        console.group(`[GL] Meal: ${meal.name} (${meal.id})`);
+
+        let activeIngredientsRaw;
         let activeIngredients = [];
 
         try {
-            activeIngredients = getActiveIngredientsForMeal(meal) || [];
+            activeIngredientsRaw = getActiveIngredientsForMeal(meal);
+            console.log("[GL] getActiveIngredientsForMeal raw:", activeIngredientsRaw);
+            activeIngredients = Array.isArray(activeIngredientsRaw) ? activeIngredientsRaw : [];
         } catch (e) {
-            console.error("[GL] ERROR in getActiveIngredientsForMeal:", meal.id, e);
+            console.error("[GL] ERROR in getActiveIngredientsForMeal for meal:", meal.id, e);
             activeIngredients = [];
         }
 
-        activeIngredients.forEach(ing => {
-            if (!ing) return;
+        console.log("[GL] activeIngredients (final):", activeIngredients);
 
-            // Checkbox filtering
+        if (!activeIngredients.length) {
+            console.warn("[GL] Meal has NO active ingredients, skipping meal:", meal.name);
+            console.groupEnd();
+            return;
+        }
+
+        activeIngredients.forEach(ing => {
+            if (!ing) {
+                console.warn("[GL] Skipping falsy ingredient:", ing);
+                return;
+            }
+
+            // =====================================================
+            // ⭐ FIXED BLOCK — THIS WAS THE BUG ⭐
+            // =====================================================
+
+            // Ensure dictionary exists
             if (!state.plannerIngredientChecks[meal.id]) {
                 state.plannerIngredientChecks[meal.id] = {};
             }
+
+            // Default undefined → TRUE (was incorrectly treated as false)
             if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
                 state.plannerIngredientChecks[meal.id][ing.id] = true;
-            }
-            if (state.plannerIngredientChecks[meal.id][ing.id] === false) {
-                return; // skip unchecked
+                console.log(`[GL] Defaulting ingredient checked=true → ${ing.name} (id=${ing.id})`);
             }
 
-            // Comment (optional)
+            const checked = state.plannerIngredientChecks[meal.id][ing.id];
+
+            // Skip only if explicitly false, not if undefined
+            if (checked === false) {
+                console.log(`[GL] Skipping UNCHECKED ingredient "${ing.name}"`);
+                return;
+            }
+
+            // =====================================================
+
             const comment =
                 state.plannerIngredientComments?.[meal.id]?.[ing.id]?.trim() || "";
 
-            addItem(ing.store, {
-                name: ing.name,
-                qty: ing.qty,
-                unit: ing.unit,
-                comment
-            });
+            const qtyPart =
+                ing.qty && ing.qty > 1 ? ` (${ing.qty} ${ing.unit || ""})` : "";
+
+            const commentPart = comment ? ` (${comment})` : "";
+
+            const lineText = `${ing.name}${qtyPart}${commentPart}`;
+            addItem(ing.store, lineText, `meal:${meal.name}`);
         });
+
+        console.groupEnd();
     });
 
-    // ---------------------------
-    // 2. EXTRAS ADDED IN PLANNER
-    -----------------------------
+    // -------- FROM EXTRAS --------
+    console.group("[GL] Planner Extras");
     state.plannerExtras.forEach(item => {
-        addItem(item.store, {
-            name: item.name,
-            qty: item.qty,
-            unit: item.unit || "CT"
-        });
+        const qtyPart = item.qty > 1 ? ` (${item.qty})` : "";
+        const text = `${item.name}${qtyPart}`;
+        addItem(item.store, text, "extra");
     });
+    console.groupEnd();
 
-    // ---------------------------
-    // 3. MERGE DUPLICATES
-    -----------------------------
+    console.log("[GL] FINAL itemsByStore:", JSON.stringify(itemsByStore, null, 2));
+    // =============================================
+    // STEP 2: MERGE DUPLICATES (OBJECT VERSION)
+    // =============================================
     for (const store of Object.keys(itemsByStore)) {
         const merged = {};
 
         itemsByStore[store].forEach(item => {
             const name = item.name.trim();
             const unit = (item.unit || "CT").trim();
-            const qty = item.qty || 1;
+            const qty  = item.qty || 1;
 
+            // unique key to combine identical items
             const key = name.toLowerCase() + "|" + unit.toLowerCase();
 
             if (!merged[key]) {
                 merged[key] = { name, qty, unit };
             } else {
-                merged[key].qty += qty;
+                merged[key].qty += qty; // sum quantities!
             }
         });
 
         itemsByStore[store] = Object.values(merged);
     }
-
-    // ---------------------------
-    // 4. RENDER RESULT TO SCREEN
-    -----------------------------
-    const storeKeys = Object.keys(itemsByStore).sort();
-
-    storeKeys.forEach(store => {
-        const card = document.createElement("div");
-        card.className = "grocery-store-card";
-
-        const title = document.createElement("h3");
-        title.textContent = store;
-        card.appendChild(title);
-
-        itemsByStore[store].forEach(item => {
-            const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
-
-            const line = document.createElement("div");
-            line.className = "grocery-item";
-            line.textContent = `${item.name}${qtyPart}`;
-
-            card.appendChild(line);
-        });
-
-        container.appendChild(card);
-    });
-
-    console.groupEnd();
-}
-
 
 // ==============================
 // REVIEW PANEL (STEP 3)
@@ -1363,5 +1375,3 @@ function saveRecipe() {
     closeRecipeModal();
     renderRecipes();
 }
-
-
