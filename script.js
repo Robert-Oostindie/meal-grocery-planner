@@ -14,8 +14,7 @@ const GLOBAL_CATEGORIES = [
     "Breakfast",
     "Crock Pot",
     "Sides",
-    "Appetizers",
-    "Baby Meals"
+    "Appetizers"
 ];
 const GLOBAL_RECIPES = [
     {
