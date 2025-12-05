@@ -202,17 +202,44 @@ function importAppData(event) {
         try {
             const imported = JSON.parse(e.target.result);
 
-            // Minimal validation
-            if (typeof imported !== "object" || !imported.meals) {
+            // ================================
+            // BASIC VALIDATION
+            // ================================
+            if (typeof imported !== "object") {
                 alert("Invalid backup file.");
                 return;
             }
 
-            state = { ...state, ...imported };
+            // If meals existed in the old schema, map them into userMeals
+            if (imported.meals && !imported.userMeals) {
+                imported.userMeals = imported.meals;
+            }
+
+            // ================================
+            // APPLY IMPORTED DATA
+            // ================================
+            state.userMeals = imported.userMeals || [];
+            state.userStores = imported.userStores || [];
+            state.userCategories = imported.userCategories || [];
+
+            state.plannerMeals = imported.plannerMeals || [];
+            state.plannerExtras = imported.plannerExtras || [];
+            state.collapsedCategories = imported.collapsedCategories || [];
+            state.collapsedMeals = imported.collapsedMeals || {};
+            
+            state.plannerIngredientChecks = imported.plannerIngredientChecks || {};
+            state.plannerIngredientComments = imported.plannerIngredientComments || {};
+            state.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
+            state.plannerMealMultipliers = imported.plannerMealMultipliers || {};
+
+            // ================================
+            // SAVE + RENDER
+            // ================================
             saveState();
             renderApp();
 
             alert("Data imported successfully!");
+
         } catch (err) {
             console.error(err);
             alert("There was an error importing the file.");
@@ -457,6 +484,13 @@ function openRecipeModalEdit(mealId) {
     const meal = getAllMeals().find(m => m.id === mealId);
     if (!meal) return;
 
+    // Prevent editing of starter recipes
+    const isGlobal = GLOBAL_RECIPES.some(m => m.id === mealId);
+    if (isGlobal) {
+        alert("Starter recipes cannot be edited.");
+        return;
+    }
+
     editingMealId = mealId;
     currentStep = 1;
 
@@ -465,7 +499,6 @@ function openRecipeModalEdit(mealId) {
 
     populateCategoryDropdown(meal.category || "");
 
-    // copy ingredients into working rows
     ingredientRows = (meal.ingredients || []).map(ing => ({ ...ing }));
     renderIngredientsEditor();
 
@@ -473,6 +506,7 @@ function openRecipeModalEdit(mealId) {
     showModal(true);
     updateStepUI();
 }
+
 
 function closeRecipeModal() {
     showModal(false);
