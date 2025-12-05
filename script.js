@@ -2,6 +2,7 @@
 // STORAGE & APP STATE
 // ==============================
 const LS_KEY = "mealPlanner_rebuild_v1";
+
 // ==============================
 // GLOBAL STORES (Built-in)
 // ==============================
@@ -9,19 +10,44 @@ const GLOBAL_STORES = [
     {
         id: "aldi",
         name: "Aldi",
-        affiliateUrl: "https://www.aldi.us/?q={ITEM}"
+        affiliateUrl: "https://www.aldi.us/search?q={ITEM}",
+        storeHomeUrl: "https://www.aldi.us/"
     },
     {
         id: "walmart",
         name: "Walmart",
-        affiliateUrl: "https://www.walmart.com/search?q={ITEM}"
+        affiliateUrl: "https://www.walmart.com/search?q={ITEM}",
+        storeHomeUrl: "https://www.walmart.com/"
     },
     {
         id: "amazon",
         name: "Amazon",
-        affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID"
+        affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID",
+        storeHomeUrl: "https://www.amazon.com/"
     }
     // add more later as needed
+];
+
+// ==============================
+// DELIVERY SERVICES (Instacart, DoorDash, etc.)
+// ==============================
+const DELIVERY_SERVICES = [
+    {
+        id: "instacart",
+        name: "Instacart",
+        // store-level search (used for header buttons)
+        storeUrl: "https://www.instacart.com/store/search?q={STORE}",
+        // item-level search (used for user-store items)
+        itemUrl: "https://www.instacart.com/store/search?q={ITEM}",
+        buttonClass: "delivery-btn instacart-btn"
+    },
+    {
+        id: "doordash",
+        name: "DoorDash",
+        storeUrl: "https://www.doordash.com/search/store/{STORE}",
+        itemUrl: "https://www.doordash.com/search/store/{ITEM}",
+        buttonClass: "delivery-btn doordash-btn"
+    }
 ];
 
 // Return global + user stores together
@@ -32,11 +58,12 @@ function getAllStores() {
     ];
 }
 
-// Find a store by its display name (for affiliate links)
+// Find a store by its display name (for affiliate links & shop button)
 function findStoreByName(name) {
     if (!name) return null;
     return getAllStores().find(s => s.name === name) || null;
 }
+
 
 let state = {
     meals: [],
@@ -1216,6 +1243,8 @@ function addUserStore() {
 
     if (!state.userStores) state.userStores = [];
 
+    // For now we only store name + id; delivery links
+    // come from DELIVERY_SERVICES and use the store name.
     state.userStores.push({
         id: makeId(),
         name
@@ -1225,6 +1254,7 @@ function addUserStore() {
     input.value = "";
     renderStoresTab();
 }
+
 
 function removeUserStore(index) {
     if (!state.userStores) return;
@@ -1395,34 +1425,90 @@ function renderGroceryList() {
         const card = document.createElement("div");
         card.className = "grocery-store-card";
 
+        const headerRow = document.createElement("div");
+        headerRow.className = "grocery-store-header";
+        headerRow.style.display = "flex";
+        headerRow.style.alignItems = "center";
+        headerRow.style.justifyContent = "space-between";
+
         const title = document.createElement("h3");
+        title.textContent = store;
 
         const storeInfo = findStoreByName(store);
+        const buttonGroup = document.createElement("div");
+        buttonGroup.className = "grocery-store-actions";
 
-        if (storeInfo?.affiliateUrl) {
-            // Create a store-level affiliate link using a generic “store page” search
-            const url = storeInfo.affiliateUrl.replace("{ITEM}", encodeURIComponent(""));
-
-            title.innerHTML = `
-                <a href="${url}" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   style="text-decoration:none; color:inherit;">
-                    ${store}
-                </a>
-            `;
-        } else {
-            title.textContent = store;
+        // SHOP button (only for global stores with a home link)
+        if (storeInfo && storeInfo.storeHomeUrl) {
+            const shopBtn = document.createElement("button");
+            shopBtn.className = "primary";
+            shopBtn.textContent = "Shop";
+            shopBtn.style.marginRight = "6px";
+            shopBtn.onclick = () => {
+                window.open(storeInfo.storeHomeUrl, "_blank", "noopener,noreferrer");
+            };
+            buttonGroup.appendChild(shopBtn);
         }
 
-        card.appendChild(title);
+        // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
+        DELIVERY_SERVICES.forEach(service => {
+            const url = service.storeUrl.replace(
+                "{STORE}",
+                encodeURIComponent(store)
+            );
 
+            const btn = document.createElement("button");
+            btn.className = service.buttonClass || "secondary";
+            btn.textContent = service.name;
+            btn.style.marginLeft = "4px";
+            btn.onclick = () => {
+                window.open(url, "_blank", "noopener,noreferrer");
+            };
 
+            buttonGroup.appendChild(btn);
+        });
+
+        headerRow.appendChild(title);
+        headerRow.appendChild(buttonGroup);
+        card.appendChild(headerRow);
+
+        // ITEMS
         itemsByStore[store].forEach(item => {
             const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
             const line = document.createElement("div");
             line.className = "grocery-item";
-            line.textContent = `${item.name}${qtyPart}`;
+
+            let linkUrl = null;
+
+            // 1) If store has a dedicated affiliateUrl (e.g., Amazon/Walmart), use that
+            if (storeInfo && storeInfo.affiliateUrl) {
+                linkUrl = storeInfo.affiliateUrl.replace(
+                    "{ITEM}",
+                    encodeURIComponent(item.name)
+                );
+            } else {
+                // 2) Otherwise, fall back to Instacart item-level link for user stores / unknown stores
+                const instacart = DELIVERY_SERVICES.find(s => s.id === "instacart");
+                if (instacart) {
+                    linkUrl = instacart.itemUrl.replace(
+                        "{ITEM}",
+                        encodeURIComponent(item.name)
+                    );
+                }
+            }
+
+            if (linkUrl) {
+                line.innerHTML = `
+                    <a href="${linkUrl}" 
+                       target="_blank" 
+                       rel="noopener noreferrer">
+                        ${item.name}${qtyPart}
+                    </a>
+                `;
+            } else {
+                line.textContent = `${item.name}${qtyPart}`;
+            }
+
             card.appendChild(line);
         });
 
@@ -1431,7 +1517,6 @@ function renderGroceryList() {
 
     console.groupEnd();
 }
-
 
 // ==============================
 // REVIEW PANEL (STEP 3)
