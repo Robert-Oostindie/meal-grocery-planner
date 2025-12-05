@@ -1477,37 +1477,10 @@ function renderGroceryList() {
             const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
             const line = document.createElement("div");
             line.className = "grocery-item";
+            // NO ITEM LINKS — plain text only
+            line.textContent = `${item.name}${qtyPart}`;
 
-            let linkUrl = null;
-
-            // 1) If store has a dedicated affiliateUrl (e.g., Amazon/Walmart), use that
-            if (storeInfo && storeInfo.affiliateUrl) {
-                linkUrl = storeInfo.affiliateUrl.replace(
-                    "{ITEM}",
-                    encodeURIComponent(item.name)
-                );
-            } else {
-                // 2) Otherwise, fall back to Instacart item-level link for user stores / unknown stores
-                const instacart = DELIVERY_SERVICES.find(s => s.id === "instacart");
-                if (instacart) {
-                    linkUrl = instacart.itemUrl.replace(
-                        "{ITEM}",
-                        encodeURIComponent(item.name)
-                    );
-                }
-            }
-
-            if (linkUrl) {
-                line.innerHTML = `
-                    <a href="${linkUrl}" 
-                       target="_blank" 
-                       rel="noopener noreferrer">
-                        ${item.name}${qtyPart}
-                    </a>
-                `;
-            } else {
-                line.textContent = `${item.name}${qtyPart}`;
-            }
+            
 
             card.appendChild(line);
         });
