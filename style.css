@@ -472,11 +472,11 @@ textarea {
 }
 /* Fix Grocery List Layout */
 #groceryTab {
-    display: block !important;
-    width: 100% !important;
+    width: 100%;
     max-width: 800px;
     margin: 0 auto;
 }
+
 
 #groceryContainer {
     width: 100%;
