@@ -1396,8 +1396,27 @@ function renderGroceryList() {
         card.className = "grocery-store-card";
 
         const title = document.createElement("h3");
-        title.textContent = store;
+
+        const storeInfo = findStoreByName(store);
+
+        if (storeInfo?.affiliateUrl) {
+            // Create a store-level affiliate link using a generic “store page” search
+            const url = storeInfo.affiliateUrl.replace("{ITEM}", encodeURIComponent(""));
+
+            title.innerHTML = `
+                <a href="${url}" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style="text-decoration:none; color:inherit;">
+                    ${store}
+                </a>
+            `;
+        } else {
+            title.textContent = store;
+        }
+
         card.appendChild(title);
+
 
         itemsByStore[store].forEach(item => {
             const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
