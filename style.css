@@ -483,4 +483,21 @@ textarea {
     max-width: 800px;
     margin: 0 auto;
 }
+.delivery-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.instacart-btn {
+    background-color: #03a66a;
+    color: white;
+}
+
+.doordash-btn {
+    background-color: #ff3008;
+    color: white;
+}
 
