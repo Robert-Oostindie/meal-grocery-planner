@@ -367,8 +367,9 @@ function renderCategoriesTab() {
 
     // Render global categories (read-only)
     globalDiv.innerHTML = GLOBAL_CATEGORIES
-        .map(cat => `<div class="store-row">${cat} (default)</div>`)
+        .map(cat => `<div class="store-row">${cat}</div>`)
         .join("");
+
 
     // Render user categories (editable)
     userDiv.innerHTML = (state.userCategories || [])
@@ -1340,8 +1341,9 @@ function renderStoresTab() {
     
     // Render global stores
     globalDiv.innerHTML = GLOBAL_STORES
-        .map(s => `<div class="store-row">${s.name} (default)</div>`)
+        .map(store => `<div class="store-row">${store.name}</div>`)
         .join("");
+
 
     // Render user stores
     userDiv.innerHTML = (state.userStores || [])
