@@ -921,7 +921,11 @@ function renderPlanner() {
 
                 const isSelected = state.plannerMeals.includes(meal.id);
 
-                // Main row with checkbox
+                // 🔹 create the main row element
+                const mainRow = document.createElement("label");
+                mainRow.className = "planner-meal-row";
+
+                // Main row with checkbox + multiplier
                 const multiplier = state.plannerMealMultipliers[meal.id] || 1;
 
                 mainRow.innerHTML = `
