@@ -102,27 +102,27 @@ let state = {
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
 // ==============================
 function makeId() {
-    if (window.crypto && typeof window.crypto.randomUUID === "function") {
-        return window.crypto.randomUUID();
+    // Mobile-safe UUID v4 fallback
+    if (window.crypto && window.crypto.getRandomValues) {
+        const buf = new Uint8Array(16);
+        window.crypto.getRandomValues(buf);
+
+        // RFC4122 version 4 UUID
+        buf[6] = (buf[6] & 0x0f) | 0x40;
+        buf[8] = (buf[8] & 0x3f) | 0x80;
+
+        return [...buf].map((b, i) => {
+            const hex = b.toString(16).padStart(2, "0");
+            // Insert hyphens
+            if ([4, 6, 8, 10].includes(i)) return "-" + hex;
+            return hex;
+        }).join("");
     }
-    return (
-        "id_" +
-        Date.now().toString(36) +
-        "_" +
-        Math.random().toString(16).slice(2)
-    );
-}
-function getAllMeals() {
-    const userIds = new Set((state.userMeals || []).map(m => m.id));
 
-    // global recipes that are NOT overridden
-    const filteredGlobals = GLOBAL_RECIPES.filter(m => !userIds.has(m.id));
-
-    return [
-        ...filteredGlobals,
-        ...(state.userMeals || [])
-    ];
+    // Absolute fallback
+    return "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
 }
+
 
 
 function toggleMealCollapse(mealId) {
