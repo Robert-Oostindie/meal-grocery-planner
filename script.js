@@ -1177,13 +1177,14 @@ function applySubstituteChoice() {
 }
 
 function findIngredientById(id) {
-    for (const meal of getAllMeals()) {
+    for (const meal of state.data.userMeals) {
         for (const ing of (meal.ingredients || [])) {
             if (ing.id === id) return ing;
         }
     }
     return null;
 }
+
 
 
 // ==============================
