@@ -33,6 +33,10 @@
             <button class="primary add-recipe-btn" onclick="openRecipeModalNew()">
                 + Add Recipe
             </button>
+            <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                <button class="primary" onclick="expandAllRecipeCategories()">Expand All</button>
+                <button class="primary" onclick="collapseAllRecipeCategories()">Collapse All</button>
+            </div>
 
             <div id="recipesList"></div>
         </div>
@@ -43,6 +47,11 @@
             <p class="section-note">
                 Select meals for this trip, then build your grocery list.
             </p>
+            <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                <button class="primary" onclick="expandAllPlannerCategories()">Expand All</button>
+                <button class="primary" onclick="collapseAllPlannerCategories()">Collapse All</button>
+            </div>
+
 
             <div id="plannerContainer"></div>
 
