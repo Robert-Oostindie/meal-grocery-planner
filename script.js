@@ -1,3 +1,5 @@
+// FORCE GITHUB PAGES REDEPLOY - <today's date>
+
 const CURRENT_SCHEMA_VERSION = 2;
 
 function migrateState(loadedState) {
