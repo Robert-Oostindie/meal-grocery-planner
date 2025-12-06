@@ -1349,6 +1349,21 @@ function collapseAllPlannerCategories() {
     saveState();
     renderPlanner();
 }
+function selectAllPlannerMeals() {
+    // Add every meal ID to plannerMeals
+    state.plannerMeals = getAllMeals().map(m => m.id);
+
+    saveState();
+    renderPlanner();
+}
+
+function unselectAllPlannerMeals() {
+    // Empty selected meals list
+    state.plannerMeals = [];
+
+    saveState();
+    renderPlanner();
+}
 
 function toggleRecipeCategory(cat) {
     const list = state.collapsedRecipeCategories || [];
