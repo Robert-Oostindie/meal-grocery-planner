@@ -1323,6 +1323,33 @@ function toggleCategory(cat) {
     saveState();
     renderPlanner();
 }
+function expandAllPlannerCategories() {
+    state.collapsedCategories = [];     // open all categories
+    state.collapsedMeals = {};          // open all meals too (optional)
+    saveState();
+    renderPlanner();
+}
+
+function collapseAllPlannerCategories() {
+    const categories = Object.keys(
+        getAllMeals().reduce((acc, meal) => {
+            acc[meal.category || "Uncategorized"] = true;
+            return acc;
+        }, {})
+    );
+
+    state.collapsedCategories = [...categories];  // collapse all categories
+
+    // Optional: also collapse all meals
+    state.collapsedMeals = {};
+    getAllMeals().forEach(m => {
+        state.collapsedMeals[m.id] = true;
+    });
+
+    saveState();
+    renderPlanner();
+}
+
 function toggleRecipeCategory(cat) {
     const list = state.collapsedRecipeCategories || [];
     const idx = list.indexOf(cat);
@@ -1331,6 +1358,31 @@ function toggleRecipeCategory(cat) {
     else list.splice(idx, 1);
 
     state.collapsedRecipeCategories = list;
+    saveState();
+    renderRecipes();
+}
+function expandAllRecipeCategories() {
+    const categories = Object.keys(
+        getAllMeals().reduce((acc, meal) => {
+            acc[meal.category || "Uncategorized"] = true;
+            return acc;
+        }, {})
+    );
+
+    state.collapsedRecipeCategories = []; // expand everything
+    saveState();
+    renderRecipes();
+}
+
+function collapseAllRecipeCategories() {
+    const categories = Object.keys(
+        getAllMeals().reduce((acc, meal) => {
+            acc[meal.category || "Uncategorized"] = true;
+            return acc;
+        }, {})
+    );
+
+    state.collapsedRecipeCategories = [...categories]; // collapse all
     saveState();
     renderRecipes();
 }
