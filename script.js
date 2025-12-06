@@ -1364,6 +1364,32 @@ function unselectAllPlannerMeals() {
     saveState();
     renderPlanner();
 }
+function showAllIngredients() {
+    // Expand ALL categories
+    state.collapsedCategories = [];
+
+    // Expand ALL meals
+    Object.keys(state.collapsedMeals).forEach(id => {
+        state.collapsedMeals[id] = false;
+    });
+
+    // Make sure all meals have entries
+    getAllMeals().forEach(m => {
+        state.collapsedMeals[m.id] = false;
+    });
+
+    saveState();
+    renderPlanner();
+}
+function collapseAllIngredients() {
+    // Collapse ALL meals (ingredients hidden)
+    getAllMeals().forEach(m => {
+        state.collapsedMeals[m.id] = true;
+    });
+
+    saveState();
+    renderPlanner();
+}
 
 function toggleRecipeCategory(cat) {
     const list = state.collapsedRecipeCategories || [];
