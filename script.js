@@ -199,7 +199,7 @@ async function resolveConflict(localState, remoteState) {
 
 
 
-function toggleMealCollapse(mealId) {
+async function toggleMealCollapse(mealId) {
     state.ui.collapsedMeals[mealId] = !state.ui.collapsedMeals[mealId];
     await persistState();
     renderPlanner();
@@ -295,7 +295,7 @@ async function importAppData(event) {
             state.ui.plannerIngredientChecks = imported.plannerIngredientChecks || {};
             state.ui.plannerIngredientComments = imported.plannerIngredientComments || {};
             state.ui.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
-            state.plannerMealMultipliers = imported.plannerMealMultipliers || {};
+            state.ui.plannerMealMultipliers = imported.plannerMealMultipliers || {};
 
             // ================================
             // SAVE + RENDER
@@ -399,20 +399,28 @@ function loadState() {
         let loaded = JSON.parse(raw);
         loaded = migrateState(loaded);
 
-        state = { ...state, ...loaded };
+        // Merge shallow properties
+        state = {
+            ...state,
+            ...loaded,
+
+            // Merge nested data structures correctly
+            data: {
+                ...state.data,
+                ...(loaded.data || {})
+            },
+
+            ui: {
+                ...state.ui,
+                ...(loaded.ui || {})
+            }
+        };
+
     } catch (err) {
         console.error("Failed to load state:", err);
     }
 }
 
-
-function saveState() {
-    try {
-        localStorage.setItem(LS_KEY, JSON.stringify(state));
-    } catch (e) {
-        console.warn("Could not save state:", e);
-    }
-}
 
 // ==============================
 // TABS
@@ -534,7 +542,7 @@ function renderRecipes() {
     const categories = Object.keys(byCategory).sort();
 
     categories.forEach(cat => {
-        const isCollapsed = state.collapsedRecipeCategories?.includes(cat);
+        const isCollapsed = state.ui.collapsedRecipeCategories?.includes(cat);
 
         // CATEGORY HEADER
         const catDiv = document.createElement("div");
@@ -1230,7 +1238,7 @@ function renderPlanner() {
                 const mainRow = document.createElement("label");
                 mainRow.className = "planner-meal-row";
 
-                const multiplier = state.plannerMealMultipliers[meal.id] || 1;
+                const multiplier = state.ui.plannerMealMultipliers[meal.id] || 1;
                 const isMealCollapsed = state.ui.collapsedMeals[meal.id] === true;
 
                 mainRow.innerHTML = `
@@ -1354,7 +1362,7 @@ function renderPlanner() {
 
 
 async function updateMealMultiplier(mealId, value) {
-    state.plannerMealMultipliers[mealId] = Number(value);
+    state.ui.plannerMealMultipliers[mealId] = Number(value);
     await persistState();
     renderPlanner(); // optional: re-render preview
 }
@@ -1438,13 +1446,13 @@ async function collapseAllIngredients() {
 }
 
 async function toggleRecipeCategory(cat) {
-    const list = state.collapsedRecipeCategories || [];
+    const list = state.ui.collapsedRecipeCategories || [];
     const idx = list.indexOf(cat);
 
     if (idx === -1) list.push(cat);
     else list.splice(idx, 1);
 
-    state.collapsedRecipeCategories = list;
+    state.ui.collapsedRecipeCategories = list;
     await persistState();
     renderRecipes();
 }
@@ -1456,7 +1464,7 @@ async function expandAllRecipeCategories() {
         }, {})
     );
 
-    state.collapsedRecipeCategories = []; // expand everything
+    state.ui.collapsedRecipeCategories = []; // expand everything
     await persistState();
     renderRecipes();
 }
@@ -1469,7 +1477,7 @@ async function collapseAllRecipeCategories() {
         }, {})
     );
 
-    state.collapsedRecipeCategories = [...categories]; // collapse all
+    state.ui.collapsedRecipeCategories = [...categories]; // collapse all
     await persistState();
     renderRecipes();
 }
@@ -1697,7 +1705,7 @@ function renderGroceryList() {
             const comment =
                 state.ui.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
-            const mult = state.plannerMealMultipliers[meal.id] || 1;
+            const mult = state.ui.plannerMealMultipliers[meal.id] || 1;
 
             addItem(ing.store, {
                 name: ing.name,
