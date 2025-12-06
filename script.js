@@ -257,7 +257,7 @@ function exportAppData() {
     URL.revokeObjectURL(url);
 }
 
-function importAppData(event) {
+async function importAppData(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -626,7 +626,7 @@ function openRecipeModalNew() {
     updateStepUI();
 }
 
-function openRecipeModalEdit(mealId) {
+async function openRecipeModalEdit(mealId) {
     let meal = getAllMeals().find(m => m.id === mealId);
     if (!meal) return;
 
@@ -1369,14 +1369,14 @@ async function toggleCategory(cat) {
     await persistState();
     renderPlanner();
 }
-function expandAllPlannerCategories() {
+async function expandAllPlannerCategories() {
     state.ui.collapsedCategories = [];     // open all categories
     state.ui.collapsedMeals = {};          // open all meals too (optional)
     await persistState();
     renderPlanner();
 }
 
-function collapseAllPlannerCategories() {
+async function collapseAllPlannerCategories() {
     const categories = Object.keys(
         getAllMeals().reduce((acc, meal) => {
             acc[meal.category || "Uncategorized"] = true;
@@ -1395,7 +1395,7 @@ function collapseAllPlannerCategories() {
     await persistState();
     renderPlanner();
 }
-function selectAllPlannerMeals() {
+async function selectAllPlannerMeals() {
     // Add every meal ID to plannerMeals
     state.ui.plannerMeals = getAllMeals().map(m => m.id);
 
@@ -1403,14 +1403,14 @@ function selectAllPlannerMeals() {
     renderPlanner();
 }
 
-function unselectAllPlannerMeals() {
+async function unselectAllPlannerMeals() {
     // Empty selected meals list
     state.ui.plannerMeals = [];
 
     await persistState();
     renderPlanner();
 }
-function showAllIngredients() {
+async function showAllIngredients() {
     // Expand ALL categories
     state.ui.collapsedCategories = [];
 
@@ -1427,7 +1427,7 @@ function showAllIngredients() {
     await persistState();
     renderPlanner();
 }
-function collapseAllIngredients() {
+async function collapseAllIngredients() {
     // Collapse ALL meals (ingredients hidden)
     getAllMeals().forEach(m => {
         state.ui.collapsedMeals[m.id] = true;
@@ -1437,7 +1437,7 @@ function collapseAllIngredients() {
     renderPlanner();
 }
 
-function toggleRecipeCategory(cat) {
+async function toggleRecipeCategory(cat) {
     const list = state.collapsedRecipeCategories || [];
     const idx = list.indexOf(cat);
 
@@ -1448,7 +1448,7 @@ function toggleRecipeCategory(cat) {
     await persistState();
     renderRecipes();
 }
-function expandAllRecipeCategories() {
+async function expandAllRecipeCategories() {
     const categories = Object.keys(
         getAllMeals().reduce((acc, meal) => {
             acc[meal.category || "Uncategorized"] = true;
@@ -1461,7 +1461,7 @@ function expandAllRecipeCategories() {
     renderRecipes();
 }
 
-function collapseAllRecipeCategories() {
+async function collapseAllRecipeCategories() {
     const categories = Object.keys(
         getAllMeals().reduce((acc, meal) => {
             acc[meal.category || "Uncategorized"] = true;
@@ -1474,7 +1474,7 @@ function collapseAllRecipeCategories() {
     renderRecipes();
 }
 
-function updateIngredientComment(mealId, ingId, text) {
+async function updateIngredientComment(mealId, ingId, text) {
     if (!state.ui.plannerIngredientComments[mealId]) {
         state.ui.plannerIngredientComments[mealId] = {};
     }
@@ -1586,7 +1586,7 @@ async function removeUserStore(index) {
 }
 
 
-function addPlannerExtra() {
+async function addPlannerExtra() {
     const nameEl = document.getElementById("plannerExtraInput");
     const qtyEl = document.getElementById("plannerExtraQty");
     const storeEl = document.getElementById("plannerExtraStore");
@@ -1615,7 +1615,7 @@ function addPlannerExtra() {
 }
 
 
-function removePlannerExtra(index) {
+async function removePlannerExtra(index) {
     state.ui.plannerExtras.splice(index, 1);
     await persistState();
     renderPlannerExtras();
@@ -1624,7 +1624,7 @@ function removePlannerExtra(index) {
 // ==============================
 // GROCERY LIST TAB
 // ==============================
-function buildGroceryList() {
+async function buildGroceryList() {
     await persistState();
 
     // 🔥 FORCE grocery tab visible BEFORE rendering the list
