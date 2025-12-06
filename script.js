@@ -108,7 +108,8 @@ let state = {
     plannerIngredientComments: {},
     plannerSubstituteSelections: {},
     plannerMealMultipliers: {},
-    userMeals: []
+    userMeals: [],
+    collapsedRecipeCategories: []
 
 };
 
@@ -469,39 +470,75 @@ function renderRecipes() {
 
     container.innerHTML = "";
 
-    if (!getAllMeals().length) {
-        const empty = document.createElement("p");
-        empty.className = "section-note";
-        empty.textContent = "No recipes yet. Tap + Add Recipe to create one.";
-        container.appendChild(empty);
+    const meals = getAllMeals();
+    if (!meals.length) {
+        container.innerHTML = `<p class="section-note">No recipes yet. Tap + Add Recipe to create one.</p>`;
         return;
     }
 
-    getAllMeals().forEach(meal => {
-        const card = document.createElement("div");
-        card.className = "card";
+    // 1️⃣ GROUP meals by category
+    const byCategory = {};
+    meals.forEach(meal => {
+        const cat = meal.category || "Uncategorized";
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(meal);
+    });
 
-        const ingredientCount = (meal.ingredients || []).length;
-        const countText = ingredientCount === 1
-            ? "1 ingredient"
-            : `${ingredientCount} ingredients`;
+    // 2️⃣ SORT categories alphabetically
+    const categories = Object.keys(byCategory).sort();
 
-        card.innerHTML = `
-            <div class="recipe-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div class="recipe-title" style="font-weight:600; font-size:1rem;">${meal.name}</div>
-                    <div class="recipe-meta" style="font-size:0.9rem; color:#6b7280;">
-                        ${meal.category} · ${countText}
-                    </div>
-                </div>
-                <div style="display:flex; gap:0.4rem;">
-                    <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
-                    <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
-                </div>
-            </div>
+    categories.forEach(cat => {
+        const isCollapsed = state.collapsedRecipeCategories?.includes(cat);
+
+        // CATEGORY HEADER
+        const catDiv = document.createElement("div");
+        catDiv.className = "planner-category"; // reuse existing styling
+
+        const header = document.createElement("div");
+        header.className = "planner-category-header";
+        header.onclick = () => toggleRecipeCategory(cat);
+        header.innerHTML = `
+            <span>${isCollapsed ? "▶" : "▼"}</span>
+            <span>${cat}</span>
         `;
 
-        container.appendChild(card);
+        catDiv.appendChild(header);
+
+        // If collapsed → do not render meals inside it
+        if (!isCollapsed) {
+            // 3️⃣ SORT meals A–Z inside category
+            byCategory[cat]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(meal => {
+                    const ingredientCount = meal.ingredients?.length || 0;
+                    const countText =
+                        ingredientCount === 1
+                            ? "1 ingredient"
+                            : `${ingredientCount} ingredients`;
+
+                    const card = document.createElement("div");
+                    card.className = "card";
+                    card.style.marginLeft = "1rem";
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
+                                <div style="font-size:0.9rem; color:#6b7280;">
+                                    ${countText}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:0.4rem;">
+                                <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
+                                <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                    catDiv.appendChild(card);
+                });
+        }
+
+        container.appendChild(catDiv);
     });
 }
 
@@ -1286,6 +1323,18 @@ function toggleCategory(cat) {
     saveState();
     renderPlanner();
 }
+function toggleRecipeCategory(cat) {
+    const list = state.collapsedRecipeCategories || [];
+    const idx = list.indexOf(cat);
+
+    if (idx === -1) list.push(cat);
+    else list.splice(idx, 1);
+
+    state.collapsedRecipeCategories = list;
+    saveState();
+    renderRecipes();
+}
+
 function toggleMealCollapse(mealId) {
     state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
     saveState();
