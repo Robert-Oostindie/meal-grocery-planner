@@ -1845,7 +1845,7 @@ function updateReview() {
 // ==============================
 // SAVE RECIPE (FROM STEP 3)
 // ==============================
-function saveRecipe() {
+async function saveRecipe() {
     syncIngredientsFromDOM();
 
     const name = document.getElementById("modalRecipeName").value.trim();
