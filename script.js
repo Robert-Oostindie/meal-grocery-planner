@@ -7,12 +7,12 @@ function migrateState(loadedState) {
         // migrate meals into new data container
         loadedState.data = {
             userMeals: loadedState.userMeals || [],
-            userStores: loadedState.userStores || [],
-            userCategories: loadedState.userCategories || []
+            userStores: loadedstate.data.userStores || [],
+            userCategories: loadedstate.data.userCategories || []
         };
         delete loadedState.userMeals;
-        delete loadedState.userStores;
-        delete loadedState.userCategories;
+        delete loadedstate.data.userStores;
+        delete loadedstate.data.userCategories;
 
         // migrate UI fields
         loadedState.ui = {
@@ -22,7 +22,7 @@ function migrateState(loadedState) {
             collapsedMeals: loadedState.collapsedMeals || {},
             plannerIngredientChecks: loadedstate.ui.plannerIngredientChecks || {},
             plannerIngredientComments: loadedstate.ui.plannerIngredientComments || {},
-            plannerSubstituteSelections: loadedState.plannerSubstituteSelections || {},
+            plannerSubstituteSelections: loadedstate.ui.plannerSubstituteSelections || {},
             plannerMealMultipliers: loadedState.plannerMealMultipliers || {},
             collapsedRecipeCategories: loadedState.collapsedRecipeCategories || []
         };
@@ -116,7 +116,7 @@ function getAllMeals() {
 function getAllStores() {
     return [
         ...GLOBAL_STORES,
-        ...(state.userStores || [])
+        ...(state.data.userStores || [])
     ];
 }
 
@@ -200,7 +200,7 @@ function toggleMealCollapse(mealId) {
     renderPlanner();
 }
 function getAllCategories() {
-    return [...GLOBAL_CATEGORIES, ...(state.userCategories || [])];
+    return [...GLOBAL_CATEGORIES, ...(state.data.userCategories || [])];
 }
 
 
@@ -279,8 +279,8 @@ function importAppData(event) {
             // APPLY IMPORTED DATA
             // ================================
             state.data.userMeals = imported.userMeals || [];
-            state.userStores = imported.userStores || [];
-            state.userCategories = imported.userCategories || [];
+            state.data.userStores = imported.userStores || [];
+            state.data.userCategories = imported.userCategories || [];
 
             state.ui.plannerMeals = imported.plannerMeals || [];
             state.ui.plannerExtras = imported.plannerExtras || [];
@@ -289,7 +289,7 @@ function importAppData(event) {
             
             state.ui.plannerIngredientChecks = imported.plannerIngredientChecks || {};
             state.ui.plannerIngredientComments = imported.plannerIngredientComments || {};
-            state.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
+            state.ui.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
             state.plannerMealMultipliers = imported.plannerMealMultipliers || {};
 
             // ================================
@@ -434,7 +434,7 @@ function renderCategoriesTab() {
 
 
     // Render user categories (editable)
-    userDiv.innerHTML = (state.userCategories || [])
+    userDiv.innerHTML = (state.data.userCategories || [])
         .map((cat, idx) => `
             <div class="store-row" style="display:flex; justify-content:space-between; margin-bottom:4px;">
                 <span>${cat}</span>
@@ -448,24 +448,24 @@ async function addUserCategory() {
     const name = input.value.trim();
     if (!name) return;
 
-    if (!state.userCategories) state.userCategories = [];
+    if (!state.data.userCategories) state.data.userCategories = [];
 
     // Prevent duplicates (global or user)
-    if (GLOBAL_CATEGORIES.includes(name) || state.userCategories.includes(name)) {
+    if (GLOBAL_CATEGORIES.includes(name) || state.data.userCategories.includes(name)) {
         alert("Category already exists.");
         return;
     }
 
-    state.userCategories.push(name);
+    state.data.userCategories.push(name);
 
     await persistState();
     input.value = "";
     renderCategoriesTab();
 }
 async function removeUserCategory(index) {
-    if (!state.userCategories) return;
+    if (!state.data.userCategories) return;
 
-    state.userCategories.splice(index, 1);
+    state.data.userCategories.splice(index, 1);
 
     await persistState();
     renderCategoriesTab();
@@ -916,7 +916,7 @@ function getActiveIngredientsForMeal(meal) {
 
     // Load user's selected substitutes
     const selectionsForMeal =
-        state.plannerSubstituteSelections?.[meal.id] || {};
+        state.ui.plannerSubstituteSelections?.[meal.id] || {};
 
     // Handle groups safely
     Object.keys(groupsMap).forEach(groupName => {
@@ -979,7 +979,7 @@ function openSubstituteModal(mealId, groupName) {
     // ---------------------------------------------------------
     // 3. Determine CURRENT selected ingredient (user override)
     // ---------------------------------------------------------
-    const selectionsForMeal = state.plannerSubstituteSelections[mealId] || {};
+    const selectionsForMeal = state.ui.plannerSubstituteSelections[mealId] || {};
 
     const selectedId =
         selectionsForMeal[groupName] ||      // user selection
@@ -1151,12 +1151,12 @@ function applySubstituteChoice() {
     const ingId = selected.value;
 
     // Ensure dictionary entry exists
-    if (!state.plannerSubstituteSelections[subModalMealId]) {
-        state.plannerSubstituteSelections[subModalMealId] = {};
+    if (!state.ui.plannerSubstituteSelections[subModalMealId]) {
+        state.ui.plannerSubstituteSelections[subModalMealId] = {};
     }
 
     // Save selection
-    state.plannerSubstituteSelections[subModalMealId][subModalGroupName] = ingId;
+    state.ui.plannerSubstituteSelections[subModalMealId][subModalGroupName] = ingId;
 
     await persistState();
     closeSubstituteModal();
@@ -1348,13 +1348,13 @@ function renderPlanner() {
 }
 
 
-function updateMealMultiplier(mealId, value) {
+async function updateMealMultiplier(mealId, value) {
     state.plannerMealMultipliers[mealId] = Number(value);
     await persistState();
     renderPlanner(); // optional: re-render preview
 }
 
-function toggleCategory(cat) {
+async function toggleCategory(cat) {
     const idx = state.ui.collapsedCategories.indexOf(cat);
     if (idx === -1) {
         state.ui.collapsedCategories.push(cat);
@@ -1478,7 +1478,7 @@ function updateIngredientComment(mealId, ingId, text) {
 }
 
 
-function togglePlannerMeal(mealId) {
+async function togglePlannerMeal(mealId) {
     const idx = state.ui.plannerMeals.indexOf(mealId);
     if (idx === -1) {
         state.ui.plannerMeals.push(mealId);
@@ -1488,7 +1488,7 @@ function togglePlannerMeal(mealId) {
     await persistState();
     renderPlanner();
 }
-function togglePlannerIngredient(mealId, ingId) {
+async function togglePlannerIngredient(mealId, ingId) {
     if (!state.ui.plannerIngredientChecks[mealId]) {
         state.ui.plannerIngredientChecks[mealId] = {};
     }
@@ -1543,7 +1543,7 @@ function renderStoresTab() {
 
 
     // Render user stores
-    userDiv.innerHTML = (state.userStores || [])
+    userDiv.innerHTML = (state.data.userStores || [])
         .map((s, idx) => `
             <div class="store-row" style="display:flex; justify-content:space-between; margin-bottom:4px;">
                 <span>${s.name}</span>
@@ -1557,11 +1557,11 @@ async function addUserStore() {
     const name = input.value.trim();
     if (!name) return;
 
-    if (!state.userStores) state.userStores = [];
+    if (!state.data.userStores) state.data.userStores = [];
 
     // For now we only store name + id; delivery links
     // come from DELIVERY_SERVICES and use the store name.
-    state.userStores.push({
+    state.data.userStores.push({
         id: makeId(),
         name
     });
@@ -1573,9 +1573,9 @@ async function addUserStore() {
 
 
 async function removeUserStore(index) {
-    if (!state.userStores) return;
+    if (!state.data.userStores) return;
 
-    state.userStores.splice(index, 1);
+    state.data.userStores.splice(index, 1);
     await persistState();
     renderStoresTab();
 }
