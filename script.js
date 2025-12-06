@@ -1,3 +1,38 @@
+const CURRENT_SCHEMA_VERSION = 2;
+
+function migrateState(loadedState) {
+    const v = loadedState.schemaVersion || 1;
+
+    if (v < 2) {
+        // migrate meals into new data container
+        loadedState.data = {
+            userMeals: loadedState.userMeals || [],
+            userStores: loadedState.userStores || [],
+            userCategories: loadedState.userCategories || []
+        };
+        delete loadedState.userMeals;
+        delete loadedState.userStores;
+        delete loadedState.userCategories;
+
+        // migrate UI fields
+        loadedState.ui = {
+            plannerMeals: loadedState.plannerMeals || [],
+            plannerExtras: loadedState.plannerExtras || [],
+            collapsedCategories: loadedState.collapsedCategories || [],
+            collapsedMeals: loadedState.collapsedMeals || {},
+            plannerIngredientChecks: loadedState.plannerIngredientChecks || {},
+            plannerIngredientComments: loadedState.plannerIngredientComments || {},
+            plannerSubstituteSelections: loadedState.plannerSubstituteSelections || {},
+            plannerMealMultipliers: loadedState.plannerMealMultipliers || {},
+            collapsedRecipeCategories: loadedState.collapsedRecipeCategories || []
+        };
+
+        loadedState.schemaVersion = 2;
+    }
+
+    return loadedState;
+}
+
 // ==============================
 // STORAGE & APP STATE
 // ==============================
@@ -66,14 +101,14 @@ const DELIVERY_SERVICES = [
 // MERGED MEAL LIST (GLOBAL + USER)
 // ==============================
 function getAllMeals() {
-    const userIds = new Set((state.userMeals || []).map(m => m.id));
+    const userIds = new Set((state.data.userMeals || []).map(m => m.id));
 
     // global recipes that are NOT overridden (currently none, but future-safe)
     const filteredGlobals = GLOBAL_RECIPES.filter(m => !userIds.has(m.id));
 
     return [
         ...filteredGlobals,
-        ...(state.userMeals || [])
+        ...(state.data.userMeals || [])
     ];
 }
 
@@ -93,56 +128,75 @@ function findStoreByName(name) {
 
 
 let state = {
-    userCategories: [],
+    schemaVersion: 2,
+    user: {
+        id: null,
+        email: null,
+        name: null,
+        createdAt: null,
+        lastLogin: null
+    },
 
-    // user-defined stores only; globals come from GLOBAL_STORES
-    userStores: [
-        { id: makeId(), name: "Festival Foods" },
-        { id: makeId(), name: "Woodmans" }
-    ],
-    plannerMeals: [],
-    plannerExtras: [],
-    collapsedCategories: [],
-    collapsedMeals: {},
-    plannerIngredientChecks: {},
-    plannerIngredientComments: {},
-    plannerSubstituteSelections: {},
-    plannerMealMultipliers: {},
-    userMeals: [],
-    collapsedRecipeCategories: []
+    data: {
+        userMeals: [],
+        userStores: [],
+        userCategories: []
+    },
 
+    ui: {
+        plannerMeals: [],
+        plannerExtras: [],
+        collapsedCategories: [],
+        collapsedMeals: {},
+        plannerIngredientChecks: {},
+        plannerIngredientComments: {},
+        plannerSubstituteSelections: {},
+        plannerMealMultipliers: {},
+        collapsedRecipeCategories: []
+    },
+
+    dirty: false
 };
+
 
 // ==============================
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
 // ==============================
 function makeId() {
-    // Mobile-safe UUID v4 fallback
-    if (window.crypto && window.crypto.getRandomValues) {
-        const buf = new Uint8Array(16);
-        window.crypto.getRandomValues(buf);
-
-        // RFC4122 version 4 UUID
-        buf[6] = (buf[6] & 0x0f) | 0x40;
-        buf[8] = (buf[8] & 0x3f) | 0x80;
-
-        return [...buf].map((b, i) => {
-            const hex = b.toString(16).padStart(2, "0");
-            // Insert hyphens
-            if ([4, 6, 8, 10].includes(i)) return "-" + hex;
-            return hex;
-        }).join("");
+    if (crypto.randomUUID) {
+        return crypto.randomUUID();
     }
-
-    // Absolute fallback
-    return "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+    // fallback
+    return 'id-' + ([1e7]+-1e3+-4e3+-8e3+-1e11)
+        .replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+}
+async function persistState() {
+    try {
+        const json = JSON.stringify(state);
+        localStorage.setItem(LS_KEY, json);
+    } catch (err) {
+        console.error("Failed to persist state:", err);
+    }
+}
+function markDirty() {
+    state.dirty = true;
+}
+async function resolveConflict(localState, remoteState) {
+    // TODO: custom merge logic
+    // For now, newest wins:
+    if (remoteState.updatedAt > localState.updatedAt) {
+        return remoteState;
+    }
+    return localState;
 }
 
 
 
 function toggleMealCollapse(mealId) {
-    state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
-    saveState();
+    state.ui.collapsedMeals[mealId] = !state.ui.collapsedMeals[mealId];
+    await persistState();
     renderPlanner();
 }
 function getAllCategories() {
@@ -224,14 +278,14 @@ function importAppData(event) {
             // ================================
             // APPLY IMPORTED DATA
             // ================================
-            state.userMeals = imported.userMeals || [];
+            state.data.userMeals = imported.userMeals || [];
             state.userStores = imported.userStores || [];
             state.userCategories = imported.userCategories || [];
 
             state.plannerMeals = imported.plannerMeals || [];
             state.plannerExtras = imported.plannerExtras || [];
             state.collapsedCategories = imported.collapsedCategories || [];
-            state.collapsedMeals = imported.collapsedMeals || {};
+            state.ui.collapsedMeals = imported.collapsedMeals || {};
             
             state.plannerIngredientChecks = imported.plannerIngredientChecks || {};
             state.plannerIngredientComments = imported.plannerIngredientComments || {};
@@ -241,7 +295,7 @@ function importAppData(event) {
             // ================================
             // SAVE + RENDER
             // ================================
-            saveState();
+            await persistState();
             renderApp();
 
             alert("Data imported successfully!");
@@ -336,26 +390,13 @@ function loadState() {
     try {
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return;
-        const saved = JSON.parse(raw);
-       
-        // MIGRATION: bring old recipes into userMeals
-        if (saved.meals && !saved.userMeals) {
-            saved.userMeals = saved.meals;
-            delete saved.meals;
-        }
 
-        state = { ...state, ...saved };
+        let loaded = JSON.parse(raw);
+        loaded = migrateState(loaded);
 
-        // Backwards compatibility: if old "stores" exist and no userStores yet
-        if (!state.userStores && Array.isArray(saved.stores)) {
-            state.userStores = saved.stores.map(name => ({
-                id: makeId(),
-                name
-            }));
-        }
-
-    } catch (e) {
-        console.warn("Could not load saved state:", e);
+        state = { ...state, ...loaded };
+    } catch (err) {
+        console.error("Failed to load state:", err);
     }
 }
 
@@ -417,7 +458,7 @@ function addUserCategory() {
 
     state.userCategories.push(name);
 
-    saveState();
+    await persistState();
     input.value = "";
     renderCategoriesTab();
 }
@@ -426,7 +467,7 @@ function removeUserCategory(index) {
 
     state.userCategories.splice(index, 1);
 
-    saveState();
+    await persistState();
     renderCategoriesTab();
 }
 
@@ -543,16 +584,16 @@ function renderRecipes() {
 }
 
 function deleteRecipe(id) {
-    const isUser = state.userMeals.some(m => m.id === id);
+    const isUser = state.data.userMeals.some(m => m.id === id);
 
     if (!isUser) {
         alert("You can't delete starter recipes, but you CAN edit them.");
         return;
     }
 
-    state.userMeals = state.userMeals.filter(m => m.id !== id);
+    state.data.userMeals = state.data.userMeals.filter(m => m.id !== id);
 
-    saveState();
+    await persistState();
     renderRecipes();
     renderPlanner();
 }
@@ -589,8 +630,8 @@ function openRecipeModalEdit(mealId) {
     // If the user tries to edit a global recipe, clone it into userMeals
     if (isGlobal) {
         meal = JSON.parse(JSON.stringify(meal)); // deep clone
-        state.userMeals.push(meal);
-        saveState();
+        state.data.userMeals.push(meal);
+        await persistState();
     }
 
     editingMealId = meal.id;
@@ -1117,7 +1158,7 @@ function applySubstituteChoice() {
     // Save selection
     state.plannerSubstituteSelections[subModalMealId][subModalGroupName] = ingId;
 
-    saveState();
+    await persistState();
     closeSubstituteModal();
     renderPlanner();
 }
@@ -1185,7 +1226,7 @@ function renderPlanner() {
                 mainRow.className = "planner-meal-row";
 
                 const multiplier = state.plannerMealMultipliers[meal.id] || 1;
-                const isMealCollapsed = state.collapsedMeals[meal.id] === true;
+                const isMealCollapsed = state.ui.collapsedMeals[meal.id] === true;
 
                 mainRow.innerHTML = `
                     <input 
@@ -1309,7 +1350,7 @@ function renderPlanner() {
 
 function updateMealMultiplier(mealId, value) {
     state.plannerMealMultipliers[mealId] = Number(value);
-    saveState();
+    await persistState();
     renderPlanner(); // optional: re-render preview
 }
 
@@ -1320,13 +1361,13 @@ function toggleCategory(cat) {
     } else {
         state.collapsedCategories.splice(idx, 1);
     }
-    saveState();
+    await persistState();
     renderPlanner();
 }
 function expandAllPlannerCategories() {
     state.collapsedCategories = [];     // open all categories
-    state.collapsedMeals = {};          // open all meals too (optional)
-    saveState();
+    state.ui.collapsedMeals = {};          // open all meals too (optional)
+    await persistState();
     renderPlanner();
 }
 
@@ -1341,19 +1382,19 @@ function collapseAllPlannerCategories() {
     state.collapsedCategories = [...categories];  // collapse all categories
 
     // Optional: also collapse all meals
-    state.collapsedMeals = {};
+    state.ui.collapsedMeals = {};
     getAllMeals().forEach(m => {
-        state.collapsedMeals[m.id] = true;
+        state.ui.collapsedMeals[m.id] = true;
     });
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
 function selectAllPlannerMeals() {
     // Add every meal ID to plannerMeals
     state.plannerMeals = getAllMeals().map(m => m.id);
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
 
@@ -1361,7 +1402,7 @@ function unselectAllPlannerMeals() {
     // Empty selected meals list
     state.plannerMeals = [];
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
 function showAllIngredients() {
@@ -1369,25 +1410,25 @@ function showAllIngredients() {
     state.collapsedCategories = [];
 
     // Expand ALL meals
-    Object.keys(state.collapsedMeals).forEach(id => {
-        state.collapsedMeals[id] = false;
+    Object.keys(state.ui.collapsedMeals).forEach(id => {
+        state.ui.collapsedMeals[id] = false;
     });
 
     // Make sure all meals have entries
     getAllMeals().forEach(m => {
-        state.collapsedMeals[m.id] = false;
+        state.ui.collapsedMeals[m.id] = false;
     });
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
 function collapseAllIngredients() {
     // Collapse ALL meals (ingredients hidden)
     getAllMeals().forEach(m => {
-        state.collapsedMeals[m.id] = true;
+        state.ui.collapsedMeals[m.id] = true;
     });
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
 
@@ -1399,7 +1440,7 @@ function toggleRecipeCategory(cat) {
     else list.splice(idx, 1);
 
     state.collapsedRecipeCategories = list;
-    saveState();
+    await persistState();
     renderRecipes();
 }
 function expandAllRecipeCategories() {
@@ -1411,7 +1452,7 @@ function expandAllRecipeCategories() {
     );
 
     state.collapsedRecipeCategories = []; // expand everything
-    saveState();
+    await persistState();
     renderRecipes();
 }
 
@@ -1424,13 +1465,13 @@ function collapseAllRecipeCategories() {
     );
 
     state.collapsedRecipeCategories = [...categories]; // collapse all
-    saveState();
+    await persistState();
     renderRecipes();
 }
 
 function toggleMealCollapse(mealId) {
-    state.collapsedMeals[mealId] = !state.collapsedMeals[mealId];
-    saveState();
+    state.ui.collapsedMeals[mealId] = !state.ui.collapsedMeals[mealId];
+    await persistState();
     renderPlanner();
 }
 
@@ -1439,7 +1480,7 @@ function updateIngredientComment(mealId, ingId, text) {
         state.plannerIngredientComments[mealId] = {};
     }
     state.plannerIngredientComments[mealId][ingId] = text;
-    saveState();
+    await persistState();
 }
 
 
@@ -1450,7 +1491,7 @@ function togglePlannerMeal(mealId) {
     } else {
         state.plannerMeals.splice(idx, 1);
     }
-    saveState();
+    await persistState();
     renderPlanner();
 }
 function togglePlannerIngredient(mealId, ingId) {
@@ -1461,7 +1502,7 @@ function togglePlannerIngredient(mealId, ingId) {
     const prev = state.plannerIngredientChecks[mealId][ingId];
     state.plannerIngredientChecks[mealId][ingId] = !prev;
 
-    saveState();
+    await persistState();
     renderPlanner();
 }
     
@@ -1531,7 +1572,7 @@ function addUserStore() {
         name
     });
 
-    saveState();
+    await persistState();
     input.value = "";
     renderStoresTab();
 }
@@ -1541,7 +1582,7 @@ function removeUserStore(index) {
     if (!state.userStores) return;
 
     state.userStores.splice(index, 1);
-    saveState();
+    await persistState();
     renderStoresTab();
 }
 
@@ -1567,7 +1608,7 @@ function addPlannerExtra() {
       });
 
 
-    saveState();
+    await persistState();
     renderPlannerExtras(); // ONLY update the list; do NOT rerender the whole planner
 
     nameEl.value = "";
@@ -1577,7 +1618,7 @@ function addPlannerExtra() {
 
 function removePlannerExtra(index) {
     state.plannerExtras.splice(index, 1);
-    saveState();
+    await persistState();
     renderPlannerExtras();
 }
 
@@ -1585,7 +1626,7 @@ function removePlannerExtra(index) {
 // GROCERY LIST TAB
 // ==============================
 function buildGroceryList() {
-    saveState();
+    await persistState();
 
     // 🔥 FORCE grocery tab visible BEFORE rendering the list
     document.querySelectorAll(".tab-page").forEach(t => t.classList.remove("active"));
@@ -1810,16 +1851,16 @@ function saveRecipe() {
     };
 
     // Update if exists
-    const idx = state.userMeals.findIndex(m => m.id === editingMealId);
+    const idx = state.data.userMeals.findIndex(m => m.id === editingMealId);
 
     if (idx !== -1) {
-        state.userMeals[idx] = mealData;
+        state.data.userMeals[idx] = mealData;
     } else {
         // new user meal
-        state.userMeals.push(mealData);
+        state.data.userMeals.push(mealData);
     }
 
-    saveState();
+    await persistState();
     closeRecipeModal();
     renderRecipes();
     renderPlanner();
