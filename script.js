@@ -4,34 +4,39 @@ function migrateState(loadedState) {
     const v = loadedState.schemaVersion || 1;
 
     if (v < 2) {
-        // migrate meals into new data container
+        // meals / stores / categories used to live at the root
         loadedState.data = {
             userMeals: loadedState.userMeals || [],
-            userStores: loadedstate.data.userStores || [],
-            userCategories: loadedstate.data.userCategories || []
+            userStores: loadedState.userStores || [],
+            userCategories: loadedState.userCategories || []
         };
         delete loadedState.userMeals;
-        delete loadedstate.data.userStores;
-        delete loadedstate.data.userCategories;
+        delete loadedState.userStores;
+        delete loadedState.userCategories;
 
-        // migrate UI fields
+        // old UI fields may or may not exist
+        const oldUi = loadedState.ui || {};
+
         loadedState.ui = {
-            plannerMeals: loadedstate.ui.plannerMeals || [],
-            plannerExtras: loadedstate.ui.plannerExtras || [],
-            collapsedCategories: loadedstate.ui.collapsedCategories || [],
-            collapsedMeals: loadedState.collapsedMeals || {},
-            plannerIngredientChecks: loadedstate.ui.plannerIngredientChecks || {},
-            plannerIngredientComments: loadedstate.ui.plannerIngredientComments || {},
-            plannerSubstituteSelections: loadedstate.ui.plannerSubstituteSelections || {},
-            plannerMealMultipliers: loadedState.plannerMealMultipliers || {},
-            collapsedRecipeCategories: loadedState.collapsedRecipeCategories || []
+            plannerMeals: oldUi.plannerMeals || [],
+            plannerExtras: oldUi.plannerExtras || [],
+            collapsedCategories: oldUi.collapsedCategories || [],
+            collapsedMeals: oldUi.collapsedMeals || {},
+            plannerIngredientChecks: oldUi.plannerIngredientChecks || {},
+            plannerIngredientComments: oldUi.plannerIngredientComments || {},
+            plannerSubstituteSelections: oldUi.plannerSubstituteSelections || {},
+            plannerMealMultipliers: oldUi.plannerMealMultipliers || {},
+            collapsedRecipeCategories: oldUi.collapsedRecipeCategories || []
         };
 
         loadedState.schemaVersion = 2;
     }
 
+    // if you bump to 3, 4, etc. add more blocks here
+
     return loadedState;
 }
+
 
 // ==============================
 // STORAGE & APP STATE
