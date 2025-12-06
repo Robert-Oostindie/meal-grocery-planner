@@ -1120,7 +1120,7 @@ function closeSubstituteModal() {
 }
 
 
-function applySubstituteChoice() {
+async function applySubstituteChoice() {
     // ----------------------------------------------------
     // MODE 1: Choosing an ingredient inside the RECIPE EDITOR
     // ----------------------------------------------------
