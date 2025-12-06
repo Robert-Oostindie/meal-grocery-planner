@@ -388,10 +388,11 @@ document.addEventListener("mousedown", (e) => {
 
 
 
-loadState();
 document.addEventListener("DOMContentLoaded", () => {
+    loadState();
     renderApp();
 });
+
 
 function loadState() {
     try {
