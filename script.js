@@ -16,12 +16,12 @@ function migrateState(loadedState) {
 
         // migrate UI fields
         loadedState.ui = {
-            plannerMeals: loadedState.plannerMeals || [],
-            plannerExtras: loadedState.plannerExtras || [],
-            collapsedCategories: loadedState.collapsedCategories || [],
+            plannerMeals: loadedstate.ui.plannerMeals || [],
+            plannerExtras: loadedstate.ui.plannerExtras || [],
+            collapsedCategories: loadedstate.ui.collapsedCategories || [],
             collapsedMeals: loadedState.collapsedMeals || {},
-            plannerIngredientChecks: loadedState.plannerIngredientChecks || {},
-            plannerIngredientComments: loadedState.plannerIngredientComments || {},
+            plannerIngredientChecks: loadedstate.ui.plannerIngredientChecks || {},
+            plannerIngredientComments: loadedstate.ui.plannerIngredientComments || {},
             plannerSubstituteSelections: loadedState.plannerSubstituteSelections || {},
             plannerMealMultipliers: loadedState.plannerMealMultipliers || {},
             collapsedRecipeCategories: loadedState.collapsedRecipeCategories || []
@@ -282,13 +282,13 @@ function importAppData(event) {
             state.userStores = imported.userStores || [];
             state.userCategories = imported.userCategories || [];
 
-            state.plannerMeals = imported.plannerMeals || [];
-            state.plannerExtras = imported.plannerExtras || [];
-            state.collapsedCategories = imported.collapsedCategories || [];
+            state.ui.plannerMeals = imported.plannerMeals || [];
+            state.ui.plannerExtras = imported.plannerExtras || [];
+            state.ui.collapsedCategories = imported.collapsedCategories || [];
             state.ui.collapsedMeals = imported.collapsedMeals || {};
             
-            state.plannerIngredientChecks = imported.plannerIngredientChecks || {};
-            state.plannerIngredientComments = imported.plannerIngredientComments || {};
+            state.ui.plannerIngredientChecks = imported.plannerIngredientChecks || {};
+            state.ui.plannerIngredientComments = imported.plannerIngredientComments || {};
             state.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
             state.plannerMealMultipliers = imported.plannerMealMultipliers || {};
 
@@ -443,7 +443,7 @@ function renderCategoriesTab() {
         `)
         .join("");
 }
-function addUserCategory() {
+async function addUserCategory() {
     const input = document.getElementById("newCategoryName");
     const name = input.value.trim();
     if (!name) return;
@@ -462,7 +462,7 @@ function addUserCategory() {
     input.value = "";
     renderCategoriesTab();
 }
-function removeUserCategory(index) {
+async function removeUserCategory(index) {
     if (!state.userCategories) return;
 
     state.userCategories.splice(index, 1);
@@ -1201,7 +1201,7 @@ function renderPlanner() {
         const catWrapper = document.createElement("div");
         catWrapper.className = "planner-category";
 
-        const isCollapsedCategory = state.collapsedCategories.includes(cat);
+        const isCollapsedCategory = state.ui.collapsedCategories.includes(cat);
 
         // Category header (accordion)
         const header = document.createElement("div");
@@ -1219,7 +1219,7 @@ function renderPlanner() {
                 const mealRow = document.createElement("div");
                 mealRow.className = "planner-meal-block";
 
-                const isSelected = state.plannerMeals.includes(meal.id);
+                const isSelected = state.ui.plannerMeals.includes(meal.id);
 
                 // main row container
                 const mainRow = document.createElement("label");
@@ -1284,16 +1284,16 @@ function renderPlanner() {
                         activeIngredients.forEach(ing => {
                             const qtyPart = ing.qty > 1 ? ` (${ing.qty} ${ing.unit})` : "";
 
-                            if (!state.plannerIngredientChecks[meal.id]) {
-                                state.plannerIngredientChecks[meal.id] = {};
+                            if (!state.ui.plannerIngredientChecks[meal.id]) {
+                                state.ui.plannerIngredientChecks[meal.id] = {};
                             }
-                            if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
-                                state.plannerIngredientChecks[meal.id][ing.id] = true;
+                            if (state.ui.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+                                state.ui.plannerIngredientChecks[meal.id][ing.id] = true;
                             }
 
-                            const checked = state.plannerIngredientChecks[meal.id][ing.id];
+                            const checked = state.ui.plannerIngredientChecks[meal.id][ing.id];
                             const existingComment =
-                                state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
+                                state.ui.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
                             const line = document.createElement("div");
                             line.className = "planner-ingredient-check";
@@ -1355,17 +1355,17 @@ function updateMealMultiplier(mealId, value) {
 }
 
 function toggleCategory(cat) {
-    const idx = state.collapsedCategories.indexOf(cat);
+    const idx = state.ui.collapsedCategories.indexOf(cat);
     if (idx === -1) {
-        state.collapsedCategories.push(cat);
+        state.ui.collapsedCategories.push(cat);
     } else {
-        state.collapsedCategories.splice(idx, 1);
+        state.ui.collapsedCategories.splice(idx, 1);
     }
     await persistState();
     renderPlanner();
 }
 function expandAllPlannerCategories() {
-    state.collapsedCategories = [];     // open all categories
+    state.ui.collapsedCategories = [];     // open all categories
     state.ui.collapsedMeals = {};          // open all meals too (optional)
     await persistState();
     renderPlanner();
@@ -1379,7 +1379,7 @@ function collapseAllPlannerCategories() {
         }, {})
     );
 
-    state.collapsedCategories = [...categories];  // collapse all categories
+    state.ui.collapsedCategories = [...categories];  // collapse all categories
 
     // Optional: also collapse all meals
     state.ui.collapsedMeals = {};
@@ -1392,7 +1392,7 @@ function collapseAllPlannerCategories() {
 }
 function selectAllPlannerMeals() {
     // Add every meal ID to plannerMeals
-    state.plannerMeals = getAllMeals().map(m => m.id);
+    state.ui.plannerMeals = getAllMeals().map(m => m.id);
 
     await persistState();
     renderPlanner();
@@ -1400,14 +1400,14 @@ function selectAllPlannerMeals() {
 
 function unselectAllPlannerMeals() {
     // Empty selected meals list
-    state.plannerMeals = [];
+    state.ui.plannerMeals = [];
 
     await persistState();
     renderPlanner();
 }
 function showAllIngredients() {
     // Expand ALL categories
-    state.collapsedCategories = [];
+    state.ui.collapsedCategories = [];
 
     // Expand ALL meals
     Object.keys(state.ui.collapsedMeals).forEach(id => {
@@ -1469,38 +1469,32 @@ function collapseAllRecipeCategories() {
     renderRecipes();
 }
 
-function toggleMealCollapse(mealId) {
-    state.ui.collapsedMeals[mealId] = !state.ui.collapsedMeals[mealId];
-    await persistState();
-    renderPlanner();
-}
-
 function updateIngredientComment(mealId, ingId, text) {
-    if (!state.plannerIngredientComments[mealId]) {
-        state.plannerIngredientComments[mealId] = {};
+    if (!state.ui.plannerIngredientComments[mealId]) {
+        state.ui.plannerIngredientComments[mealId] = {};
     }
-    state.plannerIngredientComments[mealId][ingId] = text;
+    state.ui.plannerIngredientComments[mealId][ingId] = text;
     await persistState();
 }
 
 
 function togglePlannerMeal(mealId) {
-    const idx = state.plannerMeals.indexOf(mealId);
+    const idx = state.ui.plannerMeals.indexOf(mealId);
     if (idx === -1) {
-        state.plannerMeals.push(mealId);
+        state.ui.plannerMeals.push(mealId);
     } else {
-        state.plannerMeals.splice(idx, 1);
+        state.ui.plannerMeals.splice(idx, 1);
     }
     await persistState();
     renderPlanner();
 }
 function togglePlannerIngredient(mealId, ingId) {
-    if (!state.plannerIngredientChecks[mealId]) {
-        state.plannerIngredientChecks[mealId] = {};
+    if (!state.ui.plannerIngredientChecks[mealId]) {
+        state.ui.plannerIngredientChecks[mealId] = {};
     }
 
-    const prev = state.plannerIngredientChecks[mealId][ingId];
-    state.plannerIngredientChecks[mealId][ingId] = !prev;
+    const prev = state.ui.plannerIngredientChecks[mealId][ingId];
+    state.ui.plannerIngredientChecks[mealId][ingId] = !prev;
 
     await persistState();
     renderPlanner();
@@ -1523,12 +1517,12 @@ function renderPlannerExtras() {
 
     list.innerHTML = "";
 
-    if (!state.plannerExtras.length) {
+    if (!state.ui.plannerExtras.length) {
         list.innerHTML = `<p class="small-note">No other items yet.</p>`;
         return;
     }
 
-    state.plannerExtras.forEach((item, idx) => {
+    state.ui.plannerExtras.forEach((item, idx) => {
         const row = document.createElement("div");
         row.className = "planner-extra-item";
         row.innerHTML = `
@@ -1558,7 +1552,7 @@ function renderStoresTab() {
         `)
         .join("");
 }
-function addUserStore() {
+async function addUserStore() {
     const input = document.getElementById("newStoreName");
     const name = input.value.trim();
     if (!name) return;
@@ -1578,7 +1572,7 @@ function addUserStore() {
 }
 
 
-function removeUserStore(index) {
+async function removeUserStore(index) {
     if (!state.userStores) return;
 
     state.userStores.splice(index, 1);
@@ -1599,7 +1593,7 @@ function addPlannerExtra() {
     const store = storeEl.value || "";
 
     // Save as full object
-    state.plannerExtras.push({
+    state.ui.plannerExtras.push({
         id: makeId(),
         name,
         qty,
@@ -1617,7 +1611,7 @@ function addPlannerExtra() {
 
 
 function removePlannerExtra(index) {
-    state.plannerExtras.splice(index, 1);
+    state.ui.plannerExtras.splice(index, 1);
     await persistState();
     renderPlannerExtras();
 }
@@ -1651,9 +1645,9 @@ function renderGroceryList() {
 
     container.innerHTML = "";
 
-    const selectedMeals = getAllMeals().filter(m => state.plannerMeals.includes(m.id));
+    const selectedMeals = getAllMeals().filter(m => state.ui.plannerMeals.includes(m.id));
 
-    if (!selectedMeals.length && !state.plannerExtras.length) {
+    if (!selectedMeals.length && !state.ui.plannerExtras.length) {
         container.innerHTML = `<p class="section-note">Select meals in the Planner and click "Build Grocery List".</p>`;
         console.groupEnd();
         return;
@@ -1687,16 +1681,16 @@ function renderGroceryList() {
         activeIngredients.forEach(ing => {
             if (!ing) return;
 
-            if (!state.plannerIngredientChecks[meal.id]) {
-                state.plannerIngredientChecks[meal.id] = {};
+            if (!state.ui.plannerIngredientChecks[meal.id]) {
+                state.ui.plannerIngredientChecks[meal.id] = {};
             }
-            if (state.plannerIngredientChecks[meal.id][ing.id] === undefined) {
-                state.plannerIngredientChecks[meal.id][ing.id] = true;
+            if (state.ui.plannerIngredientChecks[meal.id][ing.id] === undefined) {
+                state.ui.plannerIngredientChecks[meal.id][ing.id] = true;
             }
-            if (state.plannerIngredientChecks[meal.id][ing.id] === false) return;
+            if (state.ui.plannerIngredientChecks[meal.id][ing.id] === false) return;
 
             const comment =
-                state.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
+                state.ui.plannerIngredientComments?.[meal.id]?.[ing.id] || "";
 
             const mult = state.plannerMealMultipliers[meal.id] || 1;
 
@@ -1711,7 +1705,7 @@ function renderGroceryList() {
     });
 
     // 2. ADD PLANNER EXTRAS
-    state.plannerExtras.forEach(item => {
+    state.ui.plannerExtras.forEach(item => {
         addItem(item.store, {
             name: item.name,
             qty: item.qty,
