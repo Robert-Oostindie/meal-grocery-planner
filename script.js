@@ -596,7 +596,7 @@ function renderRecipes() {
     });
 }
 
-function deleteRecipe(id) {
+async function deleteRecipe(id) {
     const isUser = state.data.userMeals.some(m => m.id === id);
 
     if (!isUser) {
