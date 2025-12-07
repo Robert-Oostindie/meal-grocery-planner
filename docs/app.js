@@ -265,13 +265,12 @@ async function importAppData(event) {
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    // ✅ make the callback async
+    reader.onload = async (e) => {
         try {
             const imported = JSON.parse(e.target.result);
 
-            // ================================
             // BASIC VALIDATION
-            // ================================
             if (typeof imported !== "object") {
                 alert("Invalid backup file.");
                 return;
@@ -282,9 +281,7 @@ async function importAppData(event) {
                 imported.userMeals = imported.meals;
             }
 
-            // ================================
             // APPLY IMPORTED DATA
-            // ================================
             state.data.userMeals = imported.userMeals || [];
             state.data.userStores = imported.userStores || [];
             state.data.userCategories = imported.userCategories || [];
@@ -293,20 +290,17 @@ async function importAppData(event) {
             state.ui.plannerExtras = imported.plannerExtras || [];
             state.ui.collapsedCategories = imported.collapsedCategories || [];
             state.ui.collapsedMeals = imported.collapsedMeals || {};
-            
+
             state.ui.plannerIngredientChecks = imported.plannerIngredientChecks || {};
             state.ui.plannerIngredientComments = imported.plannerIngredientComments || {};
             state.ui.plannerSubstituteSelections = imported.plannerSubstituteSelections || {};
             state.ui.plannerMealMultipliers = imported.plannerMealMultipliers || {};
 
-            // ================================
             // SAVE + RENDER
-            // ================================
             await persistState();
             renderApp();
 
             alert("Data imported successfully!");
-
         } catch (err) {
             console.error(err);
             alert("There was an error importing the file.");
