@@ -1,0 +1,23 @@
+{
+  "Baked Products": "Bakery",
+  "Beef Products": "Meat",
+  "Beverages": "Drinks",
+  "Cereal Grains and Pasta": "Dry Goods",
+  "Dairy and Egg Products": "Dairy",
+  "Fats and Oils": "Oils",
+  "Finfish and Shellfish Products": "Seafood",
+  "Fruits and Fruit Juices": "Produce",
+  "Lamb, Veal, and Game Products": "Meat",
+  "Legumes and Legume Products": "Dry Goods",
+  "Nut and Seed Products": "Snacks",
+  "Pork Products": "Meat",
+  "Poultry Products": "Meat",
+  "Restaurant Foods": "Prepared Foods",
+  "Sausages and Luncheon Meats": "Meat",
+  "Soups, Sauces, and Gravies": "Canned Goods",
+  "Spices and Herbs": "Spices",
+  "Sweets": "Snacks",
+  "Vegetables and Vegetable Products": "Produce",
+
+  "DEFAULT_UNKNOWN_CATEGORY": "Other"
+}
