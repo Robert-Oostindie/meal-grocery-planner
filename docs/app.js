@@ -151,9 +151,11 @@ function findIngredientInIndex(rawName) {
 }
 
 function determineAisleForIngredient(rawName) {
+    if (!rawName || !window.INGREDIENT_INDEX) return "Other";
+
     const normalized = normalizeIngredientName(rawName);
 
-    let bestMatch = null;
+    let bestAisle = "Other";
     let bestScore = -1;
 
     for (const key in window.INGREDIENT_INDEX) {
@@ -161,11 +163,13 @@ function determineAisleForIngredient(rawName) {
         const entryNorm = entry?.usda?.normalized;
         if (!entryNorm) continue;
 
-        const matches =
-            entryNorm.includes(normalized) ||
-            normalized.includes(entryNorm);
-
-        if (!matches) continue;
+        // fuzzy match
+        if (
+            !entryNorm.includes(normalized) &&
+            !normalized.includes(entryNorm)
+        ) {
+            continue;
+        }
 
         let score = 0;
 
@@ -174,23 +178,29 @@ function determineAisleForIngredient(rawName) {
             score += 10;
         }
 
-        // 2️⃣ Prefer more specific matches (longer normalized text)
-        score += Math.min(entryNorm.length, 50);
+        // 2️⃣ Prefer more specific matches (longer normalized strings)
+        score += Math.min(entryNorm.length, 40);
 
-        // 3️⃣ Prefer form-based matches if debug exists
-        if (entry._debug?.aisleReason && entry._debug.aisleReason !== "no strong signal") {
+        // 3️⃣ Prefer form-based USDA matches (from Python)
+        if (
+            entry._debug &&
+            entry._debug.aisleReason &&
+            entry._debug.aisleReason !== "no strong signal"
+        ) {
             score += 20;
         }
 
+        // 4️⃣ Prefer closer-length matches (penalize generic words)
+        score -= Math.abs(entryNorm.length - normalized.length);
+
         if (score > bestScore) {
             bestScore = score;
-            bestMatch = entry;
+            bestAisle = entry.aisle || "Other";
         }
     }
 
-    return bestMatch?.aisle || "Other";
+    return bestAisle;
 }
-
 
 // ==============================
 // INGREDIENT AUTOCOMPLETE ENGINE
