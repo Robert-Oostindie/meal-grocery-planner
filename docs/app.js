@@ -2031,99 +2031,111 @@ function renderGroceryList() {
         });
     });
 
-    // 3. MERGE DUPLICATES
-    for (const store of Object.keys(itemsByStore)) {
-        const merged = {};
+        // 3. MERGE DUPLICATES (per store + aisle)
+        for (const storeName of Object.keys(itemsByStore)) {
+            const aislesObj = itemsByStore[storeName]; // { aisleName: [items...] }
 
-        itemsByStore[store].forEach(item => {
-            const name = item.name.trim();
-            const unit = (item.unit || "CT").trim();
-            const qty  = item.qty || 1;
+            Object.keys(aislesObj).forEach(aisleName => {
+                const merged = {};
 
-            const key = name.toLowerCase() + "|" + unit.toLowerCase();
+                aislesObj[aisleName].forEach(item => {
+                    const name = (item.name || "").trim();
+                    const unit = (item.unit || "CT").trim();
+                    const qty  = item.qty || 1;
 
-            if (!merged[key]) {
-                merged[key] = { name, qty, unit };
-            } else {
-                merged[key].qty += qty;
-            }
-        });
+                    const key = name.toLowerCase() + "|" + unit.toLowerCase();
 
-        itemsByStore[store] = Object.values(merged);
-    }
+                    if (!merged[key]) {
+                        merged[key] = { name, qty, unit };
+                    } else {
+                        merged[key].qty += qty;
+                    }
+                });
 
-    // 4. RENDER GROCERY LIST TO SCREEN
-    const storeKeys = Object.keys(itemsByStore).sort();
-
-    storeKeys.forEach(store => {
-        const card = document.createElement("div");
-        card.className = "grocery-store-card";
-
-        const headerRow = document.createElement("div");
-        headerRow.className = "grocery-store-header";
-        headerRow.style.display = "flex";
-        headerRow.style.alignItems = "center";
-        headerRow.style.justifyContent = "space-between";
-
-        const title = document.createElement("h3");
-        title.textContent = store;
-
-        const storeInfo = findStoreByName(store);
-        const buttonGroup = document.createElement("div");
-        buttonGroup.className = "grocery-store-actions";
-
-        // SHOP button (only for global stores with a home link)
-        if (storeInfo && storeInfo.storeHomeUrl) {
-            const shopBtn = document.createElement("button");
-            shopBtn.className = "primary";
-            shopBtn.textContent = "Shop";
-            shopBtn.style.marginRight = "6px";
-            shopBtn.onclick = () => {
-                window.open(storeInfo.storeHomeUrl, "_blank", "noopener,noreferrer");
-            };
-            buttonGroup.appendChild(shopBtn);
+                aislesObj[aisleName] = Object.values(merged);
+            });
         }
 
-        // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
-        DELIVERY_SERVICES.forEach(service => {
-            const url = service.storeUrl.replace(
-                "{STORE}",
-                encodeURIComponent(store)
-            );
+        // 4. RENDER GROCERY LIST TO SCREEN (stores → aisles → items)
+        const storeKeys = Object.keys(itemsByStore).sort();
 
-            const btn = document.createElement("button");
-            btn.className = service.buttonClass || "secondary";
-            btn.textContent = service.name;
-            btn.style.marginLeft = "4px";
-            btn.onclick = () => {
-                window.open(url, "_blank", "noopener,noreferrer");
-            };
+        storeKeys.forEach(storeName => {
+            const card = document.createElement("div");
+            card.className = "grocery-store-card";
 
-            buttonGroup.appendChild(btn);
+            const headerRow = document.createElement("div");
+            headerRow.className = "grocery-store-header";
+            headerRow.style.display = "flex";
+            headerRow.style.alignItems = "center";
+            headerRow.style.justifyContent = "space-between";
+
+            const title = document.createElement("h3");
+            title.textContent = storeName;
+
+            const storeInfo = findStoreByName(storeName);
+            const buttonGroup = document.createElement("div");
+            buttonGroup.className = "grocery-store-actions";
+
+            // SHOP button (only for global stores with a home link)
+            if (storeInfo && storeInfo.storeHomeUrl) {
+                const shopBtn = document.createElement("button");
+                shopBtn.className = "primary";
+                shopBtn.textContent = "Shop";
+                shopBtn.style.marginRight = "6px";
+                shopBtn.onclick = () => {
+                    window.open(storeInfo.storeHomeUrl, "_blank", "noopener,noreferrer");
+                };
+                buttonGroup.appendChild(shopBtn);
+            }
+
+            // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
+            DELIVERY_SERVICES.forEach(service => {
+                const url = service.storeUrl.replace(
+                    "{STORE}",
+                    encodeURIComponent(storeName)
+                );
+
+                const btn = document.createElement("button");
+                btn.className = service.buttonClass || "secondary";
+                btn.textContent = service.name;
+                btn.style.marginLeft = "4px";
+                btn.onclick = () => {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                };
+
+                buttonGroup.appendChild(btn);
+            });
+
+            headerRow.appendChild(title);
+            headerRow.appendChild(buttonGroup);
+            card.appendChild(headerRow);
+
+            // ITEMS, grouped by aisle
+            const aislesObj = itemsByStore[storeName];
+            const aisleNames = Object.keys(aislesObj).sort();
+
+            aisleNames.forEach(aisleName => {
+                // small aisle header
+                const aisleHeader = document.createElement("div");
+                aisleHeader.className = "grocery-aisle-header";
+                aisleHeader.textContent = aisleName;
+                card.appendChild(aisleHeader);
+
+                aislesObj[aisleName].forEach(item => {
+                    const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
+                    const line = document.createElement("div");
+                    line.className = "grocery-item";
+                    line.textContent = `${item.name}${qtyPart}`;
+                    card.appendChild(line);
+                });
+            });
+
+            container.appendChild(card);
         });
 
-        headerRow.appendChild(title);
-        headerRow.appendChild(buttonGroup);
-        card.appendChild(headerRow);
+        console.groupEnd();
+    }
 
-        // ITEMS
-        itemsByStore[store].forEach(item => {
-            const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
-            const line = document.createElement("div");
-            line.className = "grocery-item";
-            // NO ITEM LINKS — plain text only
-            line.textContent = `${item.name}${qtyPart}`;
-
-            
-
-            card.appendChild(line);
-        });
-
-        container.appendChild(card);
-    });
-
-    console.groupEnd();
-}
 
 // ==============================
 // REVIEW PANEL (STEP 3)
