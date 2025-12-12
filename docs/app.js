@@ -155,7 +155,7 @@ function determineAisleForIngredient(rawName) {
 
     let fallbackMatch = null;
 
-    for (const key in ingredientCategoryIndex) {
+    for (const key in window.INGREDIENT_INDEX) {
         const entry = ingredientCategoryIndex[key];
         const entryNorm = entry?.usda?.normalized;
         if (!entryNorm) continue;
