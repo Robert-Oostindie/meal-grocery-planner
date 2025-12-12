@@ -157,6 +157,141 @@ function determineAisleForIngredient(rawName) {
     return match.aisle || "Other";
 }
 // ==============================
+// INGREDIENT AUTOCOMPLETE ENGINE
+// ==============================
+
+// Config: number of results to show
+const AUTOCOMPLETE_LIMIT = 8;
+
+// Autocomplete state tracking (one menu at a time)
+let activeAutocompleteMenu = null;
+let activeAutocompleteIndex = -1;
+
+function searchIngredientIndex(query) {
+    if (!window.INGREDIENT_INDEX || query.length < 2) return [];
+
+    const norm = normalizeIngredientName(query);
+
+    const results = [];
+
+    for (const fdcId in window.INGREDIENT_INDEX) {
+        const entry = window.INGREDIENT_INDEX[fdcId];
+        const candidate = entry.usda.normalized;
+
+        if (!candidate) continue;
+
+        // Strong match: starts with
+        if (candidate.startsWith(norm)) {
+            results.push({ fdcId, entry, score: 1 });
+        }
+        // Medium match: contains
+        else if (candidate.includes(norm)) {
+            results.push({ fdcId, entry, score: 2 });
+        }
+
+        if (results.length >= AUTOCOMPLETE_LIMIT) break;
+    }
+
+    return results.sort((a, b) => a.score - b.score);
+}
+
+function closeAutocompleteMenu() {
+    if (activeAutocompleteMenu) {
+        activeAutocompleteMenu.remove();
+        activeAutocompleteMenu = null;
+        activeAutocompleteIndex = -1;
+    }
+}
+
+function openAutocompleteMenu(inputEl, results, ingredientIndex) {
+    closeAutocompleteMenu();
+
+    if (!results.length) return;
+
+    const rect = inputEl.getBoundingClientRect();
+    const menu = document.createElement("div");
+    menu.className = "group-suggest-menu"; 
+    menu.style.position = "absolute";
+    menu.style.top = rect.bottom + window.scrollY + "px";
+    menu.style.left = rect.left + window.scrollX + "px";
+    menu.style.width = rect.width + "px";
+    menu.style.zIndex = 99999;
+    menu.style.maxHeight = "200px";
+    menu.style.overflowY = "auto";
+
+    results.forEach((r, idx) => {
+        const item = document.createElement("div");
+        item.className = "group-suggest-item";
+        item.textContent = r.entry.usda.description;
+        item.dataset.index = idx;
+
+        item.onclick = () => {
+            ingredientRows[ingredientIndex].name = r.entry.usda.description;
+            renderIngredientsEditor();
+            closeAutocompleteMenu();
+        };
+
+        menu.appendChild(item);
+    });
+
+    document.body.appendChild(menu);
+    activeAutocompleteMenu = menu;
+}
+
+function handleAutocompleteKey(inputEl, e) {
+    if (!activeAutocompleteMenu) return false;
+
+    const items = Array.from(activeAutocompleteMenu.querySelectorAll(".group-suggest-item"));
+
+    if (e.key === "ArrowDown") {
+        activeAutocompleteIndex = (activeAutocompleteIndex + 1) % items.length;
+    } else if (e.key === "ArrowUp") {
+        activeAutocompleteIndex = (activeAutocompleteIndex - 1 + items.length) % items.length;
+    } else if (e.key === "Enter") {
+        if (activeAutocompleteIndex >= 0) {
+            items[activeAutocompleteIndex].click();
+            return true;
+        }
+    } else {
+        return false;
+    }
+
+    items.forEach((el, idx) => {
+        el.style.background = idx === activeAutocompleteIndex ? "#e5e7eb" : "white";
+    });
+
+    return true;
+}
+
+document.addEventListener("click", (e) => {
+    if (activeAutocompleteMenu && !activeAutocompleteMenu.contains(e.target)) {
+        closeAutocompleteMenu();
+    }
+});
+// Input handler for ingredient name fields
+function handleIngredientNameInput(inputEl, ingredientIndex) {
+    const q = inputEl.value.trim();
+
+    if (!q) {
+        closeAutocompleteMenu();
+        ingredientRows[ingredientIndex].name = "";
+        return;
+    }
+
+    ingredientRows[ingredientIndex].name = q;
+
+    const results = searchIngredientIndex(q);
+    openAutocompleteMenu(inputEl, results, ingredientIndex);
+}
+
+// Allow arrow keys & Enter to navigate autocomplete
+function handleIngredientInputKey(inputEl, e) {
+    if (handleAutocompleteKey(inputEl, e)) {
+        e.preventDefault();
+    }
+}
+
+// ==============================
 // AUTO REBUILD GROCERY LIST (DEBOUNCED)
 // ==============================
 function scheduleGroceryRebuild() {
@@ -863,7 +998,15 @@ function renderIngredientsEditor() {
 
 
         div.innerHTML = `
-            <input class="ingName" placeholder="Ingredient name" value="${row.name || ""}">
+            <input
+                type="text"
+                class="ingName"
+                value="${row.name || ""}"
+                oninput="handleIngredientNameInput(this, ${i})"
+                onkeydown="handleIngredientInputKey(this, event)"
+            >
+
+
 
             <div style="display:flex; gap:0.5rem;">
                 <input class="ingQty" type="number" min="1" placeholder="Qty" value="${row.qty || 1}">
