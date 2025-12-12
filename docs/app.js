@@ -2136,20 +2136,6 @@ function renderGroceryList() {
                     row.appendChild(right);
                     card.appendChild(row);
 
-
-                    // left: item text
-                    const left = document.createElement("span");
-                    left.textContent = `${item.name}${qtyPart}`;
-
-                    // right: aisle label (light grey)
-                    const right = document.createElement("span");
-                    right.textContent = aisle;
-                    right.style.color = "#9ca3af";   // Tailwind gray-400
-                    right.style.fontSize = "0.85rem";
-
-                    row.appendChild(left);
-                    row.appendChild(right);
-                    card.appendChild(row);
                 });
             });
 
