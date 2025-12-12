@@ -149,12 +149,39 @@ function findIngredientInIndex(rawName) {
     // Nothing matched
     return null;
 }
+function getSemanticIngredientName(rawName) {
+    if (!rawName) return "";
+
+    let cleaned = rawName.toLowerCase();
+
+    // 1️⃣ Remove store suffix: " - Aldi"
+    // App guarantees store is appended with " - "
+    cleaned = cleaned.split(" - ")[0];
+
+    // 2️⃣ Remove anything in parentheses: "(4 CT)", "(organic)", "(note)"
+    cleaned = cleaned.replace(/\([^)]*\)/g, "");
+
+    // 3️⃣ Remove count / unit artifacts (ct, count, numbers)
+    cleaned = cleaned
+        .replace(/\b\d+\b/g, " ")        // numbers
+        .replace(/\bct\b/g, " ")         // ct
+        .replace(/\bcount\b/g, " ");     // count
+
+    // 4️⃣ Normalize spacing & punctuation
+    cleaned = cleaned
+        .replace(/[^a-z\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return cleaned;
+}
 
 function determineAisleForIngredient(rawName) {
     if (!rawName || !window.INGREDIENT_INDEX) return "Other";
 
-    const normalized = normalizeIngredientName(rawName);
+    const normalized = getSemanticIngredientName(rawName);
     const normTokens = normalized.split(" ");
+
 
     let bestAisle = "Other";
     let bestScore = -Infinity;
