@@ -1005,7 +1005,7 @@ function renderIngredientsEditor() {
                 type="text"
                 class="ingName"
                 value="${row.name || ""}"
-                oninput="handleIngredientNameInput(this, ${i})"
+                oninput="handleIngredientNameInput(this, ${index})"
                 onkeydown="handleIngredientInputKey(this, event)"
                 autocomplete="off"
             >
