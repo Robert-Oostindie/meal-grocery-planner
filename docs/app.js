@@ -1,4 +1,4 @@
-// FORCE GITHUB PAGES REDEPLOY - 12/6/25
+// FORCE GITHUB PAGES REDEPLOY - 12/11/25
 
 const CURRENT_SCHEMA_VERSION = 2;
 
@@ -104,6 +104,59 @@ const DELIVERY_SERVICES = [
         buttonClass: "delivery-btn doordash-btn"
     }
 ];
+// ==============================
+// INGREDIENT NORMALIZATION + INDEX LOOKUP
+// ==============================
+
+// Normalize ingredient name the same way the Python script does
+function normalizeIngredientName(name) {
+    if (!name) return "";
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s\-]/g, " ")
+        .split(/\s+/)
+        .filter(t => t.length > 1)
+        .join(" ")
+        .trim();
+}
+
+// Find best match in USDA ingredient index
+function findIngredientInIndex(rawName) {
+    if (!window.INGREDIENT_INDEX) return null;
+    if (!rawName) return null;
+
+    const normalized = normalizeIngredientName(rawName);
+
+    // Direct exact match first
+    for (const fdcId in window.INGREDIENT_INDEX) {
+        const entry = window.INGREDIENT_INDEX[fdcId];
+        if (entry.usda.normalized === normalized) {
+            return entry;
+        }
+    }
+
+    // Fallback fuzzy contains match
+    for (const fdcId in window.INGREDIENT_INDEX) {
+        const entry = window.INGREDIENT_INDEX[fdcId];
+        if (entry.usda.normalized.includes(normalized)) {
+            return entry;
+        }
+        if (normalized.includes(entry.usda.normalized)) {
+            return entry;
+        }
+    }
+
+    // Nothing matched
+    return null;
+}
+
+function determineAisleForIngredient(rawName) {
+    const match = findIngredientInIndex(rawName);
+    if (!match) return "Other";  // fallback
+
+    return match.aisle || "Other";
+}
+
 // ==============================
 // MERGED MEAL LIST (GLOBAL + USER)
 // ==============================
@@ -1648,20 +1701,78 @@ async function removePlannerExtra(index) {
 // GROCERY LIST TAB
 // ==============================
 async function buildGroceryList() {
-    await persistState();
+    const meals = getAllMeals();
+    const selectedMeals = state.ui.plannerMeals || [];
+    const extras = state.ui.plannerExtras || [];
 
-    // 🔥 FORCE grocery tab visible BEFORE rendering the list
-    document.querySelectorAll(".tab-page").forEach(t => t.classList.remove("active"));
-    document.getElementById("groceryTab").classList.add("active");
+    // Final structure: aisle → [ items ]
+    const grouped = {};
 
-    // 🔥 Update tab buttons too
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.tab === "groceryTab");
+    /* ------------------------------
+       1. Gather all ingredients
+    ------------------------------ */
+    selectedMeals.forEach(mealId => {
+        const meal = meals.find(m => m.id === mealId);
+        if (!meal || !meal.ingredients) return;
+
+        meal.ingredients.forEach(ing => {
+            const storeName = ing.store || "Other";
+            const rawName = ing.name || "";
+
+            const aisle = determineAisleForIngredient(rawName);
+
+            if (!grouped[aisle]) grouped[aisle] = [];
+            grouped[aisle].push({
+                name: rawName,
+                qty: ing.qty || 1,
+                unit: ing.unit || "",
+                store: storeName
+            });
+        });
     });
 
-    // 🔥 Now render the grocery list while the tab is visible
-    renderGroceryList();
+    /* ------------------------------
+       2. Add planner extras
+    ------------------------------ */
+    extras.forEach(item => {
+        const aisle = determineAisleForIngredient(item.name);
+
+        if (!grouped[aisle]) grouped[aisle] = [];
+        grouped[aisle].push({
+            name: item.name,
+            qty: item.qty,
+            unit: "",
+            store: item.store
+        });
+    });
+
+    /* ------------------------------
+       3. Render Grocery List
+    ------------------------------ */
+    const container = document.getElementById("groceryContainer");
+    container.innerHTML = "";
+
+    const aisles = Object.keys(grouped).sort();
+
+    aisles.forEach(aisle => {
+        const card = document.createElement("div");
+        card.className = "grocery-store-card";
+
+        card.innerHTML = `<h3>${aisle}</h3>`;
+
+        grouped[aisle].forEach(item => {
+            const div = document.createElement("div");
+            div.className = "grocery-item";
+            div.textContent = `${item.qty} ${item.unit} ${item.name}`;
+            card.appendChild(div);
+        });
+
+        container.appendChild(card);
+    });
+
+    switchTab("groceryTab");
 }
+
 function renderGroceryList() {
     const container = document.getElementById("groceryContainer");
     if (!container) {
