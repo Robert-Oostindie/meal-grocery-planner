@@ -151,7 +151,7 @@ function findIngredientInIndex(rawName) {
 }
 
 function determineAisleForIngredient(rawName) {
-    const normalized = normalizeIngredient(rawName);
+    const normalized = normalizeIngredientName(rawName);
 
     let fallbackMatch = null;
 
