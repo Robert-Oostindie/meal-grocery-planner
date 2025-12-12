@@ -2120,12 +2120,22 @@ function renderGroceryList() {
                     const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
 
                     const row = document.createElement("div");
-                    row.className = "grocery-item";
-                    row.style.display = "flex";
-                    row.style.justifyContent = "space-between";
-                    row.style.alignItems = "center";
-                    row.style.padding = "4px 0";
-                    row.style.borderBottom = "1px solid #f3f4f6";
+                    row.className = "grocery-item";   // Let CSS control layout
+
+                    // left: item text
+                    const left = document.createElement("span");
+                    left.className = "grocery-item-name";
+                    left.textContent = `${item.name}${qtyPart}`;
+
+                    // right: aisle label
+                    const right = document.createElement("span");
+                    right.className = "grocery-item-aisle";
+                    right.textContent = aisle;
+
+                    row.appendChild(left);
+                    row.appendChild(right);
+                    card.appendChild(row);
+
 
                     // left: item text
                     const left = document.createElement("span");
