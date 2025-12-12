@@ -180,6 +180,13 @@ function determineAisleForIngredient(rawName) {
     if (!rawName || !window.INGREDIENT_INDEX) return "Other";
 
     const normalized = getSemanticIngredientName(rawName);
+    // ✅ EXACT MATCH SHORT-CIRCUIT
+    for (const entry of Object.values(window.INGREDIENT_INDEX)) {
+        if (entry?.usda?.normalized === normalized) {
+            return entry.aisle || "Other";
+        }
+    }
+
     const normTokens = normalized.split(" ");
 
 
