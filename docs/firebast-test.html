@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Firebase Test</title>
+  </head>
+  <body>
+    <h1>Firebase Auth Test</h1>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+      import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "PASTE_THE_NEW_UNRESTRICTED_KEY_HERE",
+        authDomain: "meal-grocery-planner.firebaseapp.com",
+        projectId: "meal-grocery-planner",
+        appId: "1:1064158049824:web:e50f951ef3f23cc988ee45"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      signInAnonymously(auth)
+        .then((cred) => {
+          console.log("✅ Firebase auth works. UID:", cred.user.uid);
+          document.body.insertAdjacentHTML(
+            "beforeend",
+            `<p>Auth success. UID: ${cred.user.uid}</p>`
+          );
+        })
+        .catch((err) => {
+          console.error("❌ Firebase auth failed", err);
+        });
+    </script>
+  </body>
+</html>
