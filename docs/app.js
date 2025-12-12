@@ -153,29 +153,44 @@ function findIngredientInIndex(rawName) {
 function determineAisleForIngredient(rawName) {
     const normalized = normalizeIngredientName(rawName);
 
-    let fallbackMatch = null;
+    let bestMatch = null;
+    let bestScore = -1;
 
     for (const key in window.INGREDIENT_INDEX) {
         const entry = window.INGREDIENT_INDEX[key];
         const entryNorm = entry?.usda?.normalized;
         if (!entryNorm) continue;
 
-        const isMatch =
+        const matches =
             entryNorm.includes(normalized) ||
             normalized.includes(entryNorm);
 
-        if (!isMatch) continue;
+        if (!matches) continue;
 
-        // 🔥 STRONG MATCH: non-Other aisle
+        let score = 0;
+
+        // 1️⃣ Prefer non-Other aisles
         if (entry.aisle && entry.aisle !== "Other") {
-            return entry.aisle;
+            score += 10;
         }
 
-        // 🧊 Weak match fallback (keep first one only)
-        if (!fallbackMatch) {
-            fallbackMatch = entry;
+        // 2️⃣ Prefer more specific matches (longer normalized text)
+        score += Math.min(entryNorm.length, 50);
+
+        // 3️⃣ Prefer form-based matches if debug exists
+        if (entry._debug?.aisleReason && entry._debug.aisleReason !== "no strong signal") {
+            score += 20;
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = entry;
         }
     }
+
+    return bestMatch?.aisle || "Other";
+}
+
 
     return fallbackMatch?.aisle || "Other";
 }
