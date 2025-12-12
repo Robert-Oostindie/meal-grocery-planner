@@ -1585,11 +1585,12 @@ async function togglePlannerMeal(mealId) {
     } else {
         state.ui.plannerMeals.splice(idx, 1);
     }
+
     await persistState();
     renderPlanner();
-    scheduleGroceryRebuild();
-
+    scheduleGroceryRebuild();   // 🔥 auto-refresh grocery
 }
+
 async function togglePlannerIngredient(mealId, ingId) {
     if (!state.ui.plannerIngredientChecks[mealId]) {
         state.ui.plannerIngredientChecks[mealId] = {};
@@ -1600,7 +1601,9 @@ async function togglePlannerIngredient(mealId, ingId) {
 
     await persistState();
     renderPlanner();
+    scheduleGroceryRebuild();   // 🔥 keep grocery list in sync
 }
+
     
 function renderPlannerExtras() {
 
