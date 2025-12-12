@@ -156,6 +156,18 @@ function determineAisleForIngredient(rawName) {
 
     return match.aisle || "Other";
 }
+// ==============================
+// AUTO REBUILD GROCERY LIST (DEBOUNCED)
+// ==============================
+function scheduleGroceryRebuild() {
+    clearTimeout(window._groceryDebounce);
+    window._groceryDebounce = setTimeout(() => {
+        const groceryTab = document.getElementById("groceryTab");
+        if (groceryTab && groceryTab.classList.contains("active")) {
+            renderGroceryList();
+        }
+    }, 250);
+}
 
 // ==============================
 // MERGED MEAL LIST (GLOBAL + USER)
@@ -560,7 +572,9 @@ function switchTab(tabId) {
         btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
 
-    if (tabId === "groceryTab") renderGroceryList();
+    if (tabId === "groceryTab") {
+        renderGroceryList();
+    }
     if (tabId === "storesTab") renderStoresTab();   // 👈 NEW
     if (tabId === "categoriesTab") renderCategoriesTab();
 
@@ -1216,6 +1230,7 @@ async function applySubstituteChoice() {
 
         renderIngredientsEditor();
         closeSubstituteModal();
+        scheduleGroceryRebuild();
         return;
     }
 
@@ -1433,6 +1448,7 @@ async function updateMealMultiplier(mealId, value) {
     state.ui.plannerMealMultipliers[mealId] = Number(value);
     await persistState();
     renderPlanner(); // optional: re-render preview
+    scheduleGroceryRebuild();
 }
 
 async function toggleCategory(cat) {
@@ -1477,6 +1493,7 @@ async function selectAllPlannerMeals() {
 
     await persistState();
     renderPlanner();
+    scheduleGroceryRebuild();
 }
 
 async function unselectAllPlannerMeals() {
@@ -1485,6 +1502,8 @@ async function unselectAllPlannerMeals() {
 
     await persistState();
     renderPlanner();
+    scheduleGroceryRebuild();
+
 }
 async function showAllIngredients() {
     // Expand ALL categories
@@ -1568,6 +1587,8 @@ async function togglePlannerMeal(mealId) {
     }
     await persistState();
     renderPlanner();
+    scheduleGroceryRebuild();
+
 }
 async function togglePlannerIngredient(mealId, ingId) {
     if (!state.ui.plannerIngredientChecks[mealId]) {
@@ -1685,6 +1706,8 @@ async function addPlannerExtra() {
 
     await persistState();
     renderPlannerExtras(); // ONLY update the list; do NOT rerender the whole planner
+    scheduleGroceryRebuild();
+
 
     nameEl.value = "";
     qtyEl.value = 1;
@@ -1695,6 +1718,7 @@ async function removePlannerExtra(index) {
     state.ui.plannerExtras.splice(index, 1);
     await persistState();
     renderPlannerExtras();
+    scheduleGroceryRebuild();
 }
 
 // ==============================
