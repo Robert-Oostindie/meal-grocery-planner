@@ -2114,21 +2114,35 @@ function renderGroceryList() {
             const aislesObj = itemsByStore[storeName];
             const aisleNames = Object.keys(aislesObj).sort();
 
-            aisleNames.forEach(aisleName => {
-                // small aisle header
-                const aisleHeader = document.createElement("div");
-                aisleHeader.className = "grocery-aisle-header";
-                aisleHeader.textContent = aisleName;
-                card.appendChild(aisleHeader);
-
-                aislesObj[aisleName].forEach(item => {
+            // Render items sorted by aisle, but without aisle group headers
+            Object.keys(aislesObj).sort().forEach(aisle => {
+                aislesObj[aisle].forEach(item => {
                     const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
-                    const line = document.createElement("div");
-                    line.className = "grocery-item";
-                    line.textContent = `${item.name}${qtyPart}`;
-                    card.appendChild(line);
+
+                    const row = document.createElement("div");
+                    row.className = "grocery-item";
+                    row.style.display = "flex";
+                    row.style.justifyContent = "space-between";
+                    row.style.alignItems = "center";
+                    row.style.padding = "4px 0";
+                    row.style.borderBottom = "1px solid #f3f4f6";
+
+                    // left: item text
+                    const left = document.createElement("span");
+                    left.textContent = `${item.name}${qtyPart}`;
+
+                    // right: aisle label (light grey)
+                    const right = document.createElement("span");
+                    right.textContent = aisle;
+                    right.style.color = "#9ca3af";   // Tailwind gray-400
+                    right.style.fontSize = "0.85rem";
+
+                    row.appendChild(left);
+                    row.appendChild(right);
+                    card.appendChild(row);
                 });
             });
+
 
             container.appendChild(card);
         });
