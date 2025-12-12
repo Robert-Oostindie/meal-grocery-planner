@@ -229,12 +229,15 @@ function openAutocompleteMenu(inputEl, results, ingredientIndex) {
             ingredientRows[ingredientIndex].name = r.entry.usda.description;
             renderIngredientsEditor();
             closeAutocompleteMenu();
+            markDirty();
         };
 
         menu.appendChild(item);
     });
 
-    document.body.appendChild(menu);
+    const modalContent = document.querySelector("#recipeModal .modal-content");
+    modalContent.appendChild(menu);
+
     activeAutocompleteMenu = menu;
 }
 
@@ -1004,7 +1007,9 @@ function renderIngredientsEditor() {
                 value="${row.name || ""}"
                 oninput="handleIngredientNameInput(this, ${i})"
                 onkeydown="handleIngredientInputKey(this, event)"
+                autocomplete="off"
             >
+
 
 
 
