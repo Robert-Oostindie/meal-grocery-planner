@@ -358,13 +358,27 @@ h1 {
 /* each grocery line */
 .grocery-item {
     display: flex;
-    justify-content: space-between;   /* 👈 THIS IS THE FIX */
+    justify-content: space-between; /* LEFT and RIGHT alignment */
     align-items: center;
     padding: 6px 0;
     border-bottom: 1px solid #eee;
     font-size: 16px;
-    color: #111827;
 }
+
+/* Left side item text — stays left aligned */
+.grocery-item-name {
+    flex: 1;
+    text-align: left;
+}
+
+/* Right side aisle text — light grey */
+.grocery-item-aisle {
+    color: #9ca3af;         /* Tailwind gray-400 */
+    font-size: 0.85rem;
+    margin-left: 1rem;
+    white-space: nowrap;
+}
+
 
 
 .grocery-item:last-child {
