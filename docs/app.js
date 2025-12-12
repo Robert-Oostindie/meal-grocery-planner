@@ -1970,16 +1970,20 @@ function renderGroceryList() {
     const itemsByStore = {};
 
     function addItem(store, ingObj) {
-        const key = store || "Other";
-        if (!itemsByStore[key]) itemsByStore[key] = [];
+        const storeKey = store || "Other";
+        const aisle = determineAisleForIngredient(ingObj.name);
 
-        itemsByStore[key].push({
+        if (!itemsByStore[storeKey]) itemsByStore[storeKey] = {};
+        if (!itemsByStore[storeKey][aisle]) itemsByStore[storeKey][aisle] = [];
+
+        itemsByStore[storeKey][aisle].push({
             name: ingObj.name,
             qty: ingObj.qty || 1,
             unit: ingObj.unit || "CT",
             comment: ingObj.comment || ""
         });
     }
+
 
     // 1. ADD INGREDIENTS FROM SELECTED MEALS
     selectedMeals.forEach(meal => {
