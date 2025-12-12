@@ -151,11 +151,35 @@ function findIngredientInIndex(rawName) {
 }
 
 function determineAisleForIngredient(rawName) {
-    const match = findIngredientInIndex(rawName);
-    if (!match) return "Other";  // fallback
+    const normalized = normalizeIngredient(rawName);
 
-    return match.aisle || "Other";
+    let fallbackMatch = null;
+
+    for (const key in ingredientCategoryIndex) {
+        const entry = ingredientCategoryIndex[key];
+        const entryNorm = entry?.usda?.normalized;
+        if (!entryNorm) continue;
+
+        const isMatch =
+            entryNorm.includes(normalized) ||
+            normalized.includes(entryNorm);
+
+        if (!isMatch) continue;
+
+        // 🔥 STRONG MATCH: non-Other aisle
+        if (entry.aisle && entry.aisle !== "Other") {
+            return entry.aisle;
+        }
+
+        // 🧊 Weak match fallback (keep first one only)
+        if (!fallbackMatch) {
+            fallbackMatch = entry;
+        }
+    }
+
+    return fallbackMatch?.aisle || "Other";
 }
+
 // ==============================
 // INGREDIENT AUTOCOMPLETE ENGINE
 // ==============================
