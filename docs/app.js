@@ -192,9 +192,6 @@ function determineAisleForIngredient(rawName) {
 }
 
 
-    return fallbackMatch?.aisle || "Other";
-}
-
 // ==============================
 // INGREDIENT AUTOCOMPLETE ENGINE
 // ==============================
