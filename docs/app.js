@@ -154,43 +154,44 @@ function determineAisleForIngredient(rawName) {
     if (!rawName || !window.INGREDIENT_INDEX) return "Other";
 
     const normalized = normalizeIngredientName(rawName);
+    const normTokens = normalized.split(" ");
 
     let bestAisle = "Other";
-    let bestScore = -1;
+    let bestScore = -Infinity;
 
     for (const key in window.INGREDIENT_INDEX) {
         const entry = window.INGREDIENT_INDEX[key];
         const entryNorm = entry?.usda?.normalized;
         if (!entryNorm) continue;
 
-        // fuzzy match
-        if (
-            !entryNorm.includes(normalized) &&
-            !normalized.includes(entryNorm)
-        ) {
-            continue;
+        const entryTokens = entryNorm.split(" ");
+
+        // 🔒 HARD FILTER: must share at least one meaningful token
+        let sharedTokens = 0;
+        for (const t of entryTokens) {
+            if (normTokens.includes(t)) sharedTokens++;
         }
+        if (sharedTokens === 0) continue;
 
         let score = 0;
 
-        // 1️⃣ Prefer non-Other aisles
+        // 1️⃣ Strong token overlap (most important)
+        score += sharedTokens * 20;
+
+        // 2️⃣ Prefer non-Other aisles
         if (entry.aisle && entry.aisle !== "Other") {
-            score += 10;
+            score += 30;
         }
 
-        // 2️⃣ Prefer more specific matches (longer normalized strings)
-        score += Math.min(entryNorm.length, 40);
+        // 3️⃣ Prefer more specific USDA entries
+        score += Math.min(entryTokens.length * 10, 40);
 
-        // 3️⃣ Prefer form-based USDA matches (from Python)
-        if (
-            entry._debug &&
-            entry._debug.aisleReason &&
-            entry._debug.aisleReason !== "no strong signal"
-        ) {
-            score += 20;
+        // 4️⃣ Penalize overly generic entries
+        if (entryTokens.length === 1) {
+            score -= 25;
         }
 
-        // 4️⃣ Prefer closer-length matches (penalize generic words)
+        // 5️⃣ Length proximity (tight match > loose)
         score -= Math.abs(entryNorm.length - normalized.length);
 
         if (score > bestScore) {
@@ -201,6 +202,7 @@ function determineAisleForIngredient(rawName) {
 
     return bestAisle;
 }
+
 
 // ==============================
 // INGREDIENT AUTOCOMPLETE ENGINE
