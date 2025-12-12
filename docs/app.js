@@ -119,6 +119,31 @@ function normalizeIngredientName(name) {
         .join(" ")
         .trim();
 }
+async function loadIngredientIndex() {
+    try {
+        const res = await fetch("ingredient_category_index.json");
+        const data = await res.json();
+        window.INGREDIENT_INDEX = data;
+
+        // ✅ Build fast exact-match lookup
+        window.INGREDIENT_EXACT_LOOKUP = {};
+        for (const entry of Object.values(data)) {
+            if (entry?.usda?.normalized) {
+                window.INGREDIENT_EXACT_LOOKUP[entry.usda.normalized] = entry;
+            }
+        }
+
+        console.log(
+            "Ingredient index loaded:",
+            Object.keys(data).length,
+            "items"
+        );
+    } catch (err) {
+        console.error("Failed to load ingredient index:", err);
+        window.INGREDIENT_INDEX = {};
+        window.INGREDIENT_EXACT_LOOKUP = {};
+    }
+}
 
 // Find best match in USDA ingredient index
 function findIngredientInIndex(rawName) {
@@ -181,11 +206,11 @@ function determineAisleForIngredient(rawName) {
 
     const normalized = getSemanticIngredientName(rawName);
     // ✅ EXACT MATCH SHORT-CIRCUIT
-    for (const entry of Object.values(window.INGREDIENT_INDEX)) {
-        if (entry?.usda?.normalized === normalized) {
-            return entry.aisle || "Other";
+    const exact = window.INGREDIENT_EXACT_LOOKUP?.[normalized];
+        if (exact) {
+            return exact.aisle || "Other";
         }
-    }
+
 
     const normTokens = normalized.split(" ");
 
