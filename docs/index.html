@@ -6,6 +6,25 @@
     <title>Meal Planner</title>
     <link rel="stylesheet" href="style.css" />
 </head>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDe1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
+      authDomain: "meal-grocery-planner.firebaseapp.com",
+      projectId: "meal-grocery-planner",
+      storageBucket: "meal-grocery-planner.firebasestorage.app"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  signInAnonymously(auth)
+    .then((cred) => console.log("UID:", cred.user.uid))
+    .catch(console.error);
+</script>
+
 <script src="app.js?v=1" defer></script>
 
 <body>
