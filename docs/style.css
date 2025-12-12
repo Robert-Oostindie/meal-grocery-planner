@@ -358,13 +358,14 @@ h1 {
 /* each grocery line */
 .grocery-item {
     display: flex;
+    justify-content: space-between;   /* 👈 THIS IS THE FIX */
     align-items: center;
-    gap: 0.25rem;
     padding: 6px 0;
     border-bottom: 1px solid #eee;
     font-size: 16px;
     color: #111827;
 }
+
 
 .grocery-item:last-child {
     border-bottom: none;
