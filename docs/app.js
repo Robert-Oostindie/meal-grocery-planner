@@ -1,15 +1,15 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+// app.js (top of file)
+import { auth } from "./firebase.js";
+import { signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDe1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
-  authDomain: "meal-grocery-planner.firebaseapp.com",
-  projectId: "meal-grocery-planner",
-  storageBucket: "meal-grocery-planner.firebasestorage.app"
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
+signInAnonymously(auth)
+  .then(cred => {
+    console.log("✅ Firebase signed in:", cred.user.uid);
+    state.user.id = cred.user.uid;
+  })
+  .catch(err => {
+    console.error("❌ Firebase auth failed:", err);
+  });
 
 
 
