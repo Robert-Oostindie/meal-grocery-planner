@@ -11,14 +11,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 
-signInAnonymously(auth)
-  .then(cred => {
-    console.log("Firebase signed in:", cred.user.uid);
-    state.user.id = cred.user.uid;
-  })
-  .catch(err => {
-    console.error("Firebase auth failed:", err);
-  });
+
 
 const CURRENT_SCHEMA_VERSION = 2;
 
@@ -494,7 +487,14 @@ let state = {
 
     dirty: false
 };
-
+signInAnonymously(auth)
+  .then(cred => {
+    console.log("Firebase signed in:", cred.user.uid);
+    state.user.id = cred.user.uid;
+  })
+  .catch(err => {
+    console.error("Firebase auth failed:", err);
+  });
 
 // ==============================
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
