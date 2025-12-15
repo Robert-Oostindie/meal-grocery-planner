@@ -520,20 +520,7 @@ async function persistState() {
 function markDirty() {
     state.dirty = true;
 }
-// ==============================
-// LOAD INGREDIENT CATEGORY INDEX
-// ==============================
-async function loadIngredientIndex() {
-    try {
-        const res = await fetch("ingredient_category_index.json");
-        const data = await res.json();
-        window.INGREDIENT_INDEX = data;
-        console.log("Ingredient index loaded:", Object.keys(data).length, "items");
-    } catch (err) {
-        console.error("Failed to load ingredient index:", err);
-        window.INGREDIENT_INDEX = {};
-    }
-}
+
 
 async function resolveConflict(localState, remoteState) {
     // TODO: custom merge logic
