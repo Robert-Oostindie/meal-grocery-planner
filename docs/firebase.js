@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
+  apiKey: "AIzaSyDE1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
   authDomain: "meal-grocery-planner.firebaseapp.com",
   projectId: "meal-grocery-planner",
   appId: "1:1064158049824:web:e50f951ef3f23cc988ee45"
