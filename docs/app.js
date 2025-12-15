@@ -1,4 +1,24 @@
-// FORCE GITHUB PAGES REDEPLOY - 12/11/25
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDe1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
+  authDomain: "meal-grocery-planner.firebaseapp.com",
+  projectId: "meal-grocery-planner",
+  storageBucket: "meal-grocery-planner.firebasestorage.app"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+export const auth = getAuth(firebaseApp);
+
+signInAnonymously(auth)
+  .then(cred => {
+    console.log("Firebase signed in:", cred.user.uid);
+    state.user.id = cred.user.uid;
+  })
+  .catch(err => {
+    console.error("Firebase auth failed:", err);
+  });
 
 const CURRENT_SCHEMA_VERSION = 2;
 
