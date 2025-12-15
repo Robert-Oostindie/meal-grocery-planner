@@ -12,12 +12,8 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// HARD proof of correct init
-console.log("✅ Firebase initialized:", app.options.projectId);
-
-// Promise that resolves only when auth is ready
 export const authReady = new Promise((resolve) => {
-  onAuthStateChanged(auth, (user) => {
-    resolve(user);
-  });
+  onAuthStateChanged(auth, (user) => resolve(user));
 });
+
+console.log("✅ Firebase initialized once:", app.options.projectId);
