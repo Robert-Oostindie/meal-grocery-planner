@@ -11,7 +11,44 @@ signInAnonymously(auth)
     console.error("❌ Firebase auth failed:", err);
   });
 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { db } from "./firebase.js";
+
+async function loadUserState(uid) {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data();
+    if (data.appState) {
+      restoreAppState(data.appState); // your existing function
+    }
+  } else {
+    await setDoc(ref, {
+      appState: getCurrentAppState(), // your existing state getter
+      createdAt: serverTimestamp(),
+      lastActive: serverTimestamp()
+    });
+  }
+}
+let saveTimeout = null;
+
+function scheduleSave(uid) {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    const ref = doc(db, "users", uid);
+    await setDoc(ref, {
+      appState: getCurrentAppState(),
+      lastActive: serverTimestamp()
+    }, { merge: true });
+  }, 1000);
+}
 
 const CURRENT_SCHEMA_VERSION = 2;
 
