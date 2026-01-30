@@ -1276,7 +1276,6 @@ function renderIngredientsEditor() {
     });
 }
 
-}
 
 function addIngredientRow() {
     // Sync what the user already typed BEFORE adding a new row
