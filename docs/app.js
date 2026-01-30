@@ -1,16 +1,8 @@
-// app.js (top of file)
-import { auth } from "./firebase.js";
-import { signInAnonymously } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-
-signInAnonymously(auth)
-  .then(cred => {
-    console.log("✅ Firebase signed in:", cred.user.uid);
-    state.user.id = cred.user.uid;
-  })
-  .catch(err => {
-    console.error("❌ Firebase auth failed:", err);
-  });
-
+// ==============================
+// FIREBASE IMPORTS - ALL v10.7.1
+// ==============================
+import { auth, db } from "./firebase.js";
+import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   doc,
   getDoc,
@@ -18,38 +10,88 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { db } from "./firebase.js";
-
 async function loadUserState(uid) {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
+    try {
+        console.log("📥 Loading user state from Firestore...");
+        const ref = doc(db, "users", uid);
+        const snap = await getDoc(ref);
 
-  if (snap.exists()) {
-    const data = snap.data();
-    if (data.appState) {
-      restoreAppState(data.appState); // your existing function
+        if (snap.exists()) {
+            const data = snap.data();
+            console.log("✅ Found existing user data in Firestore");
+            
+            if (data.appState) {
+                restoreAppState(data.appState);
+            }
+        } else {
+            console.log("📝 No existing data - creating new user document");
+            await setDoc(ref, {
+                appState: getCurrentAppState(),
+                createdAt: serverTimestamp(),
+                lastActive: serverTimestamp()
+            });
+        }
+    } catch (err) {
+        console.error("❌ Error loading from Firestore:", err);
+        console.log("⚠️ Falling back to localStorage");
+        loadState();
     }
-  } else {
-    await setDoc(ref, {
-      appState: getCurrentAppState(), // your existing state getter
-      createdAt: serverTimestamp(),
-      lastActive: serverTimestamp()
-    });
-  }
 }
 let saveTimeout = null;
 
 function scheduleSave(uid) {
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(async () => {
-    const ref = doc(db, "users", uid);
-    await setDoc(ref, {
-      appState: getCurrentAppState(),
-      lastActive: serverTimestamp()
-    }, { merge: true });
-  }, 1000);
+    if (!uid) {
+        console.warn("⚠️ Cannot save - no user ID");
+        return;
+    }
+    
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        try {
+            console.log("💾 Saving to Firestore...");
+            const ref = doc(db, "users", uid);
+            await setDoc(ref, {
+                appState: getCurrentAppState(),
+                lastActive: serverTimestamp()
+            }, { merge: true });
+            console.log("✅ Saved to Firestore successfully");
+            state.dirty = false;
+        } catch (err) {
+            console.error("❌ Firestore save failed:", err);
+        }
+    }, 1000);
+}
+/**
+ * Get current app state for saving to Firestore
+ */
+function getCurrentAppState() {
+    return {
+        schemaVersion: state.schemaVersion,
+        data: state.data,
+        ui: state.ui
+    };
 }
 
+/**
+ * Restore app state from Firestore data
+ */
+function restoreAppState(appState) {
+    console.log("🔄 Restoring app state from Firestore...");
+    
+    const migrated = migrateState(appState);
+    
+    if (migrated.data) {
+        state.data = { ...state.data, ...migrated.data };
+    }
+    
+    if (migrated.ui) {
+        state.ui = { ...state.ui, ...migrated.ui };
+    }
+    
+    console.log("✅ State restored successfully");
+    console.log("📊 Loaded meals:", state.data.userMeals.length);
+    console.log("📊 Selected for planner:", state.ui.plannerMeals.length);
+}
 const CURRENT_SCHEMA_VERSION = 2;
 
 function migrateState(loadedState) {
@@ -524,14 +566,33 @@ let state = {
 
     dirty: false
 };
+// ==============================
+// FIREBASE AUTHENTICATION
+// ==============================
 signInAnonymously(auth)
-  .then(cred => {
-    console.log("Firebase signed in:", cred.user.uid);
-    state.user.id = cred.user.uid;
-  })
-  .catch(err => {
-    console.error("Firebase auth failed:", err);
-  });
+    .then(async (cred) => {
+        console.log("✅ Firebase authentication successful");
+        console.log("👤 User ID:", cred.user.uid);
+        
+        state.user.id = cred.user.uid;
+        state.user.createdAt = new Date().toISOString();
+        state.user.lastLogin = new Date().toISOString();
+        
+        // Load user's saved data from Firestore
+        await loadUserState(cred.user.uid);
+        
+        // Render the app with loaded data
+        renderApp();
+        
+        console.log("✅ App ready!");
+    })
+    .catch(err => {
+        console.error("❌ Firebase authentication failed:", err);
+        console.log("⚠️ Falling back to localStorage only");
+        
+        loadState();
+        renderApp();
+    });
 
 // ==============================
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
@@ -548,27 +609,24 @@ function makeId() {
 }
 async function persistState() {
     try {
+        // Save to localStorage (immediate)
         const json = JSON.stringify(state);
         localStorage.setItem(LS_KEY, json);
+        console.log("💾 Saved to localStorage");
+        
+        // Save to Firestore (debounced)
+        if (state.user.id) {
+            scheduleSave(state.user.id);
+        } else {
+            console.warn("⚠️ No user ID - skipping Firestore save");
+        }
     } catch (err) {
-        console.error("Failed to persist state:", err);
+        console.error("❌ Failed to persist state:", err);
     }
 }
 function markDirty() {
     state.dirty = true;
 }
-
-
-async function resolveConflict(localState, remoteState) {
-    // TODO: custom merge logic
-    // For now, newest wins:
-    if (remoteState.updatedAt > localState.updatedAt) {
-        return remoteState;
-    }
-    return localState;
-}
-
-
 
 async function toggleMealCollapse(mealId) {
     state.ui.collapsedMeals[mealId] = !state.ui.collapsedMeals[mealId];
@@ -748,13 +806,16 @@ document.addEventListener("mousedown", (e) => {
     // Otherwise: close it
     menu.remove();
 });
-
-
-
 document.addEventListener("DOMContentLoaded", async () => {
-    await loadIngredientIndex();   // <-- NEW
-    loadState();
-    renderApp();
+    console.log("🚀 Meal Planner app starting...");
+    
+    // Load ingredient index first
+    await loadIngredientIndex();
+    
+    // DON'T call loadState() or renderApp() here!
+    // The Firebase auth handler will do it after successful sign-in
+    
+    console.log("✅ Ingredient index loaded, waiting for Firebase auth...");
 });
 
 
@@ -2352,5 +2413,44 @@ async function saveRecipe() {
     renderRecipes();
     renderPlanner();
 }
+// ============================================================
+// DEBUG HELPERS (for console testing)
+// ============================================================
+window.debugState = () => {
+    console.log("Current state:", state);
+    console.log("User ID:", state.user.id);
+    console.log("Meals:", state.data.userMeals.length);
+    console.log("Firestore enabled:", !!state.user.id);
+};
 
+window.forceSave = async () => {
+    console.log("🔧 Force saving to Firestore...");
+    if (state.user.id) {
+        const ref = doc(db, "users", state.user.id);
+        await setDoc(ref, {
+            appState: getCurrentAppState(),
+            lastActive: serverTimestamp()
+        }, { merge: true });
+        console.log("✅ Force save complete");
+    } else {
+        console.error("❌ No user ID");
+    }
+};
+
+window.clearFirestore = async () => {
+    if (confirm("⚠️ Delete ALL Firestore data for this user?")) {
+        const ref = doc(db, "users", state.user.id);
+        await setDoc(ref, {
+            appState: getCurrentAppState(),
+            createdAt: serverTimestamp(),
+            lastActive: serverTimestamp()
+        });
+        console.log("✅ Firestore cleared and reset");
+    }
+};
+
+// Use in browser console:
+// debugState()     - view current state
+// forceSave()      - immediately save to Firestore
+// clearFirestore() - reset Firestore data
 
