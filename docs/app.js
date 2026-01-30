@@ -1275,17 +1275,7 @@ function renderIngredientsEditor() {
         }
     });
 }
-        
-        // Attach event listener for group input
-        const groupInput = div.querySelector('.ingGroup');
-        if (groupInput) {
-            groupInput.addEventListener('input', function() {
-                ingredientRows[index].group = this.value;
-                showGroupSuggestions(this, index);
-            });
-        }
-      
-    });
+
 }
 
 function addIngredientRow() {
