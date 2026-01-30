@@ -1231,7 +1231,7 @@ function renderIngredientsEditor() {
                 <select class="ingStore">${storeOptions}</select>
             </div>
 
-           <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
+                  <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
                 <input class="ingGroup" 
                    style="flex:1;" 
                    value="${row.group || ""}" 
@@ -1263,7 +1263,18 @@ function renderIngredientsEditor() {
         `;
 
         container.appendChild(div);
-      container.appendChild(div);
+        
+        // ✅ ADD EVENT LISTENER FOR GROUP INPUT (attach after element is in DOM)
+        const groupInput = div.querySelector('.ingGroup');
+        if (groupInput) {
+            groupInput.addEventListener('input', function() {
+                const idx = parseInt(this.dataset.index);
+                ingredientRows[idx].group = this.value;
+                showGroupSuggestions(this, idx);
+            });
+        }
+    });
+}
         
         // Attach event listener for group input
         const groupInput = div.querySelector('.ingGroup');
