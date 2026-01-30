@@ -1,9 +1,11 @@
 // firebase.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+// ✅ Using consistent Firebase SDK version 10.7.1 throughout
 
-// Your actual config (already working)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDE1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
   authDomain: "meal-grocery-planner.firebaseapp.com",
@@ -13,13 +15,13 @@ const firebaseConfig = {
   appId: "1:1064158049824:web:e50f951ef3f23cc988ee45"
 };
 
-// ✅ Initialize FIRST
+// ✅ Initialize Firebase FIRST
 export const app = initializeApp(firebaseConfig);
 
-// ✅ THEN services
+// ✅ THEN initialize services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-console.log("🔥 Firebase + Firestore initialized");
+console.log("🔥 Firebase initialized successfully");
 
  
