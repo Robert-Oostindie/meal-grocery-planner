@@ -2414,6 +2414,59 @@ async function saveRecipe() {
     renderPlanner();
 }
 // ============================================================
+// EXPOSE FUNCTIONS TO GLOBAL SCOPE FOR HTML onclick HANDLERS
+// ADD THIS SECTION TO THE END OF YOUR app.js FILE
+// ============================================================
+
+// ES modules have their own scope - we need to expose functions
+// that are called from HTML inline onclick handlers
+
+window.openRecipeModalNew = openRecipeModalNew;
+window.openRecipeModalEdit = openRecipeModalEdit;
+window.closeRecipeModal = closeRecipeModal;
+window.deleteRecipe = deleteRecipe;
+window.expandAllRecipeCategories = expandAllRecipeCategories;
+window.collapseAllRecipeCategories = collapseAllRecipeCategories;
+
+window.expandAllPlannerCategories = expandAllPlannerCategories;
+window.collapseAllPlannerCategories = collapseAllPlannerCategories;
+window.showAllIngredients = showAllIngredients;
+window.collapseAllIngredients = collapseAllIngredients;
+window.selectAllPlannerMeals = selectAllPlannerMeals;
+window.unselectAllPlannerMeals = unselectAllPlannerMeals;
+window.addPlannerExtra = addPlannerExtra;
+window.removePlannerExtra = removePlannerExtra;
+window.buildGroceryList = buildGroceryList;
+window.exportAppData = exportAppData;
+window.importAppData = importAppData;
+
+window.addUserCategory = addUserCategory;
+window.removeUserCategory = removeUserCategory;
+window.addUserStore = addUserStore;
+window.removeUserStore = removeUserStore;
+
+window.togglePlannerMeal = togglePlannerMeal;
+window.togglePlannerIngredient = togglePlannerIngredient;
+window.toggleMealCollapse = toggleMealCollapse;
+window.toggleRecipeCategory = toggleRecipeCategory;
+window.updateMealMultiplier = updateMealMultiplier;
+window.updateIngredientComment = updateIngredientComment;
+window.openSubstituteModal = openSubstituteModal;
+window.closeSubstituteModal = closeSubstituteModal;
+window.applySubstituteChoice = applySubstituteChoice;
+
+window.goToStep = goToStep;
+window.addIngredientRow = addIngredientRow;
+window.removeIngredientRow = removeIngredientRow;
+window.toggleDefault = toggleDefault;
+window.saveRecipe = saveRecipe;
+window.handleGroupFinished = handleGroupFinished;
+window.showGroupSuggestions = showGroupSuggestions;
+window.handleIngredientNameInput = handleIngredientNameInput;
+window.handleIngredientInputKey = handleIngredientInputKey;
+
+console.log("✅ All functions exposed to global scope");
+// ============================================================
 // DEBUG HELPERS (for console testing)
 // ============================================================
 window.debugState = () => {
