@@ -1231,19 +1231,18 @@ function renderIngredientsEditor() {
                 <select class="ingStore">${storeOptions}</select>
             </div>
 
-            <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
+           <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.3rem;">
                 <input class="ingGroup" 
                    style="flex:1;" 
-                   value="${row.group}" 
+                   value="${row.group || ""}" 
                    placeholder="Substitute group"
-                   oninput="ingredientRows[${index}].group = this.value; showGroupSuggestions(this, ${index})"
+                   data-index="${index}"
                    onfocus="showGroupSuggestions(this, ${index})"
-                      onblur="setTimeout(() => {
+                   onblur="setTimeout(() => {
                         const menu = document.querySelector('.group-suggest-menu');
                         const picked = window.__clickedGroupItem;
 
                         if (picked) {
-                            ingredientRows[${index}].group = picked;
                             this.value = picked;
                         } else {
                             handleGroupFinished(${index}, this.value);
@@ -1264,6 +1263,17 @@ function renderIngredientsEditor() {
         `;
 
         container.appendChild(div);
+      container.appendChild(div);
+        
+        // Attach event listener for group input
+        const groupInput = div.querySelector('.ingGroup');
+        if (groupInput) {
+            groupInput.addEventListener('input', function() {
+                ingredientRows[index].group = this.value;
+                showGroupSuggestions(this, index);
+            });
+        }
+      
     });
 }
 
