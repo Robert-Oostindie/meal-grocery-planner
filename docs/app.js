@@ -56,31 +56,6 @@ googleSignInBtn.addEventListener('click', async () => {
         // Reset button text
     }
 });
-import { 
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-// ==============================
-// EMAIL AUTH DOM ELEMENTS
-// Add these after your existing DOM elements
-// ==============================
-const authEmail = document.getElementById('authEmail');
-const authPassword = document.getElementById('authPassword');
-const signInEmailBtn = document.getElementById('signInEmailBtn');
-const signUpEmailBtn = document.getElementById('signUpEmailBtn');
-const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-const authError = document.getElementById('authError');
-const verificationMessage = document.getElementById('verificationMessage');
-const verificationEmail = document.getElementById('verificationEmail');
-const resendVerificationBtn = document.getElementById('resendVerificationBtn');
-const backToSignInBtn = document.getElementById('backToSignInBtn');
-const emailAuthForm = document.getElementById('emailAuthForm');
 
 // ==============================
 // HELPER: Show Error Message
