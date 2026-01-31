@@ -665,3 +665,206 @@ textarea {
         height: 32px;
     }
 }
+/* ================================
+   EMAIL AUTHENTICATION STYLES
+   ADD TO THE END OF YOUR style.css
+================================= */
+
+/* Auth divider (OR separator) */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.auth-divider span {
+    padding: 0 1rem;
+}
+
+/* Email/Password Form */
+.email-auth-form {
+    width: 100%;
+}
+
+.email-auth-form input[type="email"],
+.email-auth-form input[type="password"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.2s;
+}
+
+.email-auth-form input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.email-auth-form input::placeholder {
+    color: #9ca3af;
+}
+
+/* Auth error message */
+.auth-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.auth-error.hidden {
+    display: none;
+}
+
+/* Auth buttons */
+.auth-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.auth-btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-btn.primary {
+    background: #667eea;
+    color: white;
+}
+
+.auth-btn.primary:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.auth-btn.secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.auth-btn.secondary:hover {
+    background: #f9fafb;
+    transform: translateY(-2px);
+}
+
+.auth-btn:active {
+    transform: translateY(0);
+}
+
+.auth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Forgot password link */
+.forgot-password-link {
+    display: block;
+    text-align: center;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
+}
+
+/* Email verification message */
+.verification-message {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.verification-message.hidden {
+    display: none;
+}
+
+.verification-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.verification-message h3 {
+    margin: 0 0 0.5rem 0;
+    color: #166534;
+}
+
+.verification-message p {
+    color: #15803d;
+    margin: 0.5rem 0;
+}
+
+.verification-note {
+    font-size: 0.875rem;
+    color: #16a34a;
+    margin: 1rem 0 !important;
+}
+
+#verificationEmail {
+    color: #15803d;
+    font-weight: 600;
+}
+
+#resendVerificationBtn,
+#backToSignInBtn {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+/* Loading state */
+.auth-btn.loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.auth-btn.loading::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .auth-buttons {
+        flex-direction: column;
+    }
+    
+    .auth-btn {
+        width: 100%;
+    }
+}
