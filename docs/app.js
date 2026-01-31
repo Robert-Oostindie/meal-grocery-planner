@@ -115,6 +115,43 @@ async function loadUserState(uid) {
         loadState();
     }
 }
+function getCurrentAppState() {
+    return {
+        schemaVersion: state.schemaVersion,
+        data: state.data,
+        ui: state.ui
+    };
+}
+
+/**
+ * Restore app state from Firestore data
+ */
+function restoreAppState(appState) {
+    console.log("🔄 Restoring app state from Firestore...");
+    
+    // Apply schema migrations if needed
+    const migrated = migrateState(appState);
+    
+    // Merge data into current state
+    if (migrated.data) {
+        state.data = {
+            ...state.data,
+            ...migrated.data
+        };
+    }
+    
+    // Merge UI state
+    if (migrated.ui) {
+        state.ui = {
+            ...state.ui,
+            ...migrated.ui
+        };
+    }
+    
+    console.log("✅ State restored successfully");
+    console.log("📊 Loaded meals:", state.data.userMeals.length);
+    console.log("📊 Selected for planner:", state.ui.plannerMeals.length);
+}
 // ==============================
 // STORAGE KEYS & CONSTANTS
 // ==============================
