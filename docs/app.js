@@ -5,7 +5,11 @@ import { auth, db, googleProvider } from "./firebase.js";
 import { 
   signInWithPopup,
   signOut,
-  onAuthStateChanged 
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,      // ← NEW
+  signInWithEmailAndPassword,          // ← NEW
+  sendEmailVerification,               // ← NEW
+  sendPasswordResetEmail               // ← NEW
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   doc,
@@ -23,6 +27,17 @@ const googleSignInBtn = document.getElementById('googleSignInBtn');
 const signOutBtn = document.getElementById('signOutBtn');
 const userPhoto = document.getElementById('userPhoto');
 const userName = document.getElementById('userName');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const signInEmailBtn = document.getElementById('signInEmailBtn');
+const signUpEmailBtn = document.getElementById('signUpEmailBtn');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+const authError = document.getElementById('authError');
+const verificationMessage = document.getElementById('verificationMessage');
+const verificationEmail = document.getElementById('verificationEmail');
+const resendVerificationBtn = document.getElementById('resendVerificationBtn');
+const backToSignInBtn = document.getElementById('backToSignInBtn');
+const emailAuthForm = document.getElementById('emailAuthForm');
 
 // ==============================
 // GOOGLE SIGN-IN
@@ -41,7 +56,314 @@ googleSignInBtn.addEventListener('click', async () => {
         // Reset button text
     }
 });
+import { 
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// ==============================
+// EMAIL AUTH DOM ELEMENTS
+// Add these after your existing DOM elements
+// ==============================
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const signInEmailBtn = document.getElementById('signInEmailBtn');
+const signUpEmailBtn = document.getElementById('signUpEmailBtn');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+const authError = document.getElementById('authError');
+const verificationMessage = document.getElementById('verificationMessage');
+const verificationEmail = document.getElementById('verificationEmail');
+const resendVerificationBtn = document.getElementById('resendVerificationBtn');
+const backToSignInBtn = document.getElementById('backToSignInBtn');
+const emailAuthForm = document.getElementById('emailAuthForm');
+
+// ==============================
+// HELPER: Show Error Message
+// ==============================
+function showAuthError(message) {
+    authError.textContent = message;
+    authError.classList.remove('hidden');
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        authError.classList.add('hidden');
+    }, 5000);
+}
+
+function clearAuthError() {
+    authError.classList.add('hidden');
+}
+
+// ==============================
+// HELPER: Show Verification Message
+// ==============================
+function showVerificationMessage(email) {
+    emailAuthForm.classList.add('hidden');
+    verificationMessage.classList.remove('hidden');
+    verificationEmail.textContent = email;
+}
+
+function hideVerificationMessage() {
+    emailAuthForm.classList.remove('hidden');
+    verificationMessage.classList.add('hidden');
+}
+
+// ==============================
+// EMAIL SIGN-UP
+// ==============================
+signUpEmailBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    
+    // Validation
+    if (!email || !password) {
+        showAuthError('Please enter both email and password');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showAuthError('Password must be at least 6 characters');
+        return;
+    }
+    
+    try {
+        signUpEmailBtn.classList.add('loading');
+        signUpEmailBtn.disabled = true;
+        clearAuthError();
+        
+        console.log('📝 Creating account for:', email);
+        
+        // Create user account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        console.log('✅ Account created:', user.uid);
+        
+        // Send verification email
+        await sendEmailVerification(user);
+        console.log('📧 Verification email sent');
+        
+        // Show verification message
+        showVerificationMessage(email);
+        
+        // Sign out until they verify
+        await signOut(auth);
+        
+    } catch (error) {
+        console.error('❌ Sign-up error:', error);
+        
+        // Handle specific errors
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                showAuthError('This email is already registered. Please sign in instead.');
+                break;
+            case 'auth/invalid-email':
+                showAuthError('Invalid email address');
+                break;
+            case 'auth/weak-password':
+                showAuthError('Password is too weak. Use at least 6 characters.');
+                break;
+            default:
+                showAuthError('Sign-up failed. Please try again.');
+        }
+    } finally {
+        signUpEmailBtn.classList.remove('loading');
+        signUpEmailBtn.disabled = false;
+    }
+});
+
+// ==============================
+// EMAIL SIGN-IN
+// ==============================
+signInEmailBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    
+    // Validation
+    if (!email || !password) {
+        showAuthError('Please enter both email and password');
+        return;
+    }
+    
+    try {
+        signInEmailBtn.classList.add('loading');
+        signInEmailBtn.disabled = true;
+        clearAuthError();
+        
+        console.log('🔑 Signing in:', email);
+        
+        // Sign in
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        console.log('✅ Signed in:', user.uid);
+        
+        // Check if email is verified
+        if (!user.emailVerified) {
+            console.log('⚠️ Email not verified');
+            showAuthError('Please verify your email before signing in. Check your inbox.');
+            await signOut(auth);
+            return;
+        }
+        
+        console.log('✅ Email verified, loading app...');
+        
+        // onAuthStateChanged will handle the rest
+        
+    } catch (error) {
+        console.error('❌ Sign-in error:', error);
+        
+        // Handle specific errors
+        switch (error.code) {
+            case 'auth/user-not-found':
+                showAuthError('No account found with this email. Please sign up first.');
+                break;
+            case 'auth/wrong-password':
+                showAuthError('Incorrect password. Please try again.');
+                break;
+            case 'auth/invalid-email':
+                showAuthError('Invalid email address');
+                break;
+            case 'auth/too-many-requests':
+                showAuthError('Too many failed attempts. Please try again later.');
+                break;
+            default:
+                showAuthError('Sign-in failed. Please try again.');
+        }
+    } finally {
+        signInEmailBtn.classList.remove('loading');
+        signInEmailBtn.disabled = false;
+    }
+});
+
+// ==============================
+// FORGOT PASSWORD
+// ==============================
+forgotPasswordLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const email = authEmail.value.trim();
+    
+    if (!email) {
+        showAuthError('Please enter your email address first');
+        return;
+    }
+    
+    try {
+        await sendPasswordResetEmail(auth, email);
+        showAuthError('Password reset email sent! Check your inbox.');
+        authError.style.background = '#f0fdf4';
+        authError.style.borderColor = '#86efac';
+        authError.style.color = '#166534';
+        
+        console.log('📧 Password reset email sent to:', email);
+    } catch (error) {
+        console.error('❌ Password reset error:', error);
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+                showAuthError('No account found with this email');
+                break;
+            case 'auth/invalid-email':
+                showAuthError('Invalid email address');
+                break;
+            default:
+                showAuthError('Failed to send reset email. Please try again.');
+        }
+    }
+});
+
+// ==============================
+// RESEND VERIFICATION EMAIL
+// ==============================
+resendVerificationBtn.addEventListener('click', async () => {
+    const email = verificationEmail.textContent;
+    
+    try {
+        resendVerificationBtn.classList.add('loading');
+        resendVerificationBtn.disabled = true;
+        
+        // Need to sign in temporarily to resend
+        const password = authPassword.value;
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        await signOut(auth);
+        
+        alert('Verification email sent again! Check your inbox.');
+        
+        console.log('📧 Verification email resent');
+    } catch (error) {
+        console.error('❌ Resend error:', error);
+        alert('Failed to resend email. Please try again.');
+    } finally {
+        resendVerificationBtn.classList.remove('loading');
+        resendVerificationBtn.disabled = false;
+    }
+});
+
+// ==============================
+// BACK TO SIGN IN
+// ==============================
+backToSignInBtn.addEventListener('click', () => {
+    hideVerificationMessage();
+    authPassword.value = '';
+    clearAuthError();
+});
+
+// ==============================
+// UPDATE AUTH STATE LISTENER
+// Replace your existing onAuthStateChanged with this version
+// ==============================
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        console.log('✅ User signed in:', user.uid);
+        console.log('👤 User email:', user.email);
+        console.log('📧 Display name:', user.displayName);
+        console.log('✉️ Email verified:', user.emailVerified);
+        
+        // If email user is not verified, sign them out
+        if (user.email && !user.emailVerified) {
+            console.log('⚠️ Email not verified, blocking access');
+            await signOut(auth);
+            showAuthError('Please verify your email before signing in');
+            return;
+        }
+        
+        // Update UI with user info
+        userName.textContent = user.displayName || user.email || 'User';
+        userPhoto.src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName.textContent);
+        
+        // Save user info to state
+        state.user.id = user.uid;
+        state.user.email = user.email;
+        state.user.name = user.displayName;
+        state.user.createdAt = new Date().toISOString();
+        state.user.lastLogin = new Date().toISOString();
+        
+        // Load user's data from Firestore
+        await loadUserState(user.uid);
+        
+        // Show app, hide auth screen
+        authScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+        
+        // Render the app
+        renderApp();
+        
+        console.log('✅ App ready!');
+    } else {
+        console.log('❌ No user signed in');
+        
+        // Show auth screen, hide app
+        authScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+    }
+});
 // ==============================
 // SIGN OUT
 // ==============================
@@ -57,33 +379,49 @@ signOutBtn.addEventListener('click', async () => {
 });
 
 // ==============================
-// AUTH STATE LISTENER
+// AUTH STATE LISTENER (UPDATED WITH EMAIL VERIFICATION)
 // ==============================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         console.log('✅ User signed in:', user.uid);
         console.log('👤 User email:', user.email);
+        console.log('📧 Display name:', user.displayName);
+        console.log('✉️ Email verified:', user.emailVerified);
         
-        // Update UI
+        // ✅ NEW: If email user is not verified, sign them out
+        if (user.email && !user.emailVerified) {
+            console.log('⚠️ Email not verified, blocking access');
+            await signOut(auth);
+            showAuthError('Please verify your email before signing in');
+            return;
+        }
+        
+        // Update UI with user info
         userName.textContent = user.displayName || user.email || 'User';
         userPhoto.src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName.textContent);
         
-        // Save to state
+        // Save user info to state
         state.user.id = user.uid;
         state.user.email = user.email;
         state.user.name = user.displayName;
+        state.user.createdAt = new Date().toISOString();
+        state.user.lastLogin = new Date().toISOString();
         
-        // Load data
+        // Load user's data from Firestore
         await loadUserState(user.uid);
         
-        // Show app
+        // Show app, hide auth screen
         authScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
         
+        // Render the app
         renderApp();
+        
         console.log('✅ App ready!');
     } else {
         console.log('❌ No user signed in');
+        
+        // Show auth screen, hide app
         authScreen.classList.remove('hidden');
         mainApp.classList.add('hidden');
     }
