@@ -515,4 +515,153 @@ textarea {
     background-color: #ff3008;
     color: white;
 }
+/* ================================
+   AUTHENTICATION SCREEN STYLES
+   ADD TO THE END OF YOUR style.css
+================================= */
 
+/* Auth screen container */
+.auth-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.auth-container {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.auth-container h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    color: #111827;
+}
+
+.auth-description {
+    color: #6b7280;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+}
+
+/* Google Sign-In Button */
+.google-sign-in-btn {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    transition: all 0.2s;
+}
+
+.google-sign-in-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.google-sign-in-btn:active {
+    transform: translateY(0);
+}
+
+.auth-note {
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+/* Top navigation bar with user info */
+.top-nav {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-photo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #e5e7eb;
+}
+
+.user-info span {
+    font-weight: 500;
+    color: #374151;
+}
+
+.sign-out-btn {
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sign-out-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Hide/show utility classes */
+.hidden {
+    display: none !important;
+}
+
+/* Loading state for sign-in button */
+.google-sign-in-btn.loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .auth-container {
+        padding: 2rem 1.5rem;
+    }
+    
+    .auth-container h1 {
+        font-size: 1.5rem;
+    }
+    
+    .top-nav {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .user-photo {
+        width: 32px;
+        height: 32px;
+    }
+}
