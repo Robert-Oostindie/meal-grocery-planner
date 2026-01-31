@@ -137,11 +137,6 @@ function migrateState(loadedState) {
 
 
 // ==============================
-// STORAGE & APP STATE
-// ==============================
-const LS_KEY = "mealPlanner_rebuild_v1";
-
-// ==============================
 // GLOBAL STORES (Built-in)
 // ==============================
 const GLOBAL_CATEGORIES = [
