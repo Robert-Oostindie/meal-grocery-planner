@@ -1,8 +1,12 @@
 // ==============================
 // FIREBASE IMPORTS - ALL v10.7.1
 // ==============================
-import { auth, db } from "./firebase.js";
-import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { auth, db, googleProvider } from "./firebase.js";
+import { 
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   doc,
   getDoc,
@@ -10,89 +14,89 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-async function loadUserState(uid) {
+// ==============================
+// DOM ELEMENTS
+// ==============================
+const authScreen = document.getElementById('authScreen');
+const mainApp = document.getElementById('mainApp');
+const googleSignInBtn = document.getElementById('googleSignInBtn');
+const signOutBtn = document.getElementById('signOutBtn');
+const userPhoto = document.getElementById('userPhoto');
+const userName = document.getElementById('userName');
+
+// ==============================
+// GOOGLE SIGN-IN
+// ==============================
+googleSignInBtn.addEventListener('click', async () => {
     try {
-        console.log("📥 Loading user state from Firestore...");
-        const ref = doc(db, "users", uid);
-        const snap = await getDoc(ref);
+        googleSignInBtn.classList.add('loading');
+        googleSignInBtn.textContent = 'Signing in...';
+        
+        const result = await signInWithPopup(auth, googleProvider);
+        console.log('✅ Google sign-in successful:', result.user.uid);
+    } catch (error) {
+        console.error('❌ Google sign-in error:', error);
+        alert('Sign-in failed. Please try again.');
+        googleSignInBtn.classList.remove('loading');
+        // Reset button text
+    }
+});
 
-        if (snap.exists()) {
-            const data = snap.data();
-            console.log("✅ Found existing user data in Firestore");
-            
-            if (data.appState) {
-                restoreAppState(data.appState);
-            }
-        } else {
-            console.log("📝 No existing data - creating new user document");
-            await setDoc(ref, {
-                appState: getCurrentAppState(),
-                createdAt: serverTimestamp(),
-                lastActive: serverTimestamp()
-            });
-        }
-    } catch (err) {
-        console.error("❌ Error loading from Firestore:", err);
-        console.log("⚠️ Falling back to localStorage");
-        loadState();
+// ==============================
+// SIGN OUT
+// ==============================
+signOutBtn.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        console.log('✅ Signed out');
+        authScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+    } catch (error) {
+        console.error('❌ Sign-out error:', error);
     }
-}
-let saveTimeout = null;
+});
 
-function scheduleSave(uid) {
-    if (!uid) {
-        console.warn("⚠️ Cannot save - no user ID");
-        return;
+// ==============================
+// AUTH STATE LISTENER
+// ==============================
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        console.log('✅ User signed in:', user.uid);
+        console.log('👤 User email:', user.email);
+        
+        // Update UI
+        userName.textContent = user.displayName || user.email || 'User';
+        userPhoto.src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName.textContent);
+        
+        // Save to state
+        state.user.id = user.uid;
+        state.user.email = user.email;
+        state.user.name = user.displayName;
+        
+        // Load data
+        await loadUserState(user.uid);
+        
+        // Show app
+        authScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+        
+        renderApp();
+        console.log('✅ App ready!');
+    } else {
+        console.log('❌ No user signed in');
+        authScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
     }
-    
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {
-        try {
-            console.log("💾 Saving to Firestore...");
-            const ref = doc(db, "users", uid);
-            await setDoc(ref, {
-                appState: getCurrentAppState(),
-                lastActive: serverTimestamp()
-            }, { merge: true });
-            console.log("✅ Saved to Firestore successfully");
-            state.dirty = false;
-        } catch (err) {
-            console.error("❌ Firestore save failed:", err);
-        }
-    }, 1000);
-}
-/**
- * Get current app state for saving to Firestore
- */
-function getCurrentAppState() {
-    return {
-        schemaVersion: state.schemaVersion,
-        data: state.data,
-        ui: state.ui
-    };
-}
+});
 
-/**
- * Restore app state from Firestore data
- */
-function restoreAppState(appState) {
-    console.log("🔄 Restoring app state from Firestore...");
-    
-    const migrated = migrateState(appState);
-    
-    if (migrated.data) {
-        state.data = { ...state.data, ...migrated.data };
-    }
-    
-    if (migrated.ui) {
-        state.ui = { ...state.ui, ...migrated.ui };
-    }
-    
-    console.log("✅ State restored successfully");
-    console.log("📊 Loaded meals:", state.data.userMeals.length);
-    console.log("📊 Selected for planner:", state.ui.plannerMeals.length);
-}
+// ==============================
+// STORAGE KEYS & CONSTANTS
+// ==============================
+const LS_KEY = "mealPlanner_rebuild_v1";
 const CURRENT_SCHEMA_VERSION = 2;
+
+// ... REST OF YOUR EXISTING CODE CONTINUES HERE
+// (Keep everything from GLOBAL_CATEGORIES onwards)
 
 function migrateState(loadedState) {
     const v = loadedState.schemaVersion || 1;
@@ -809,13 +813,11 @@ document.addEventListener("mousedown", (e) => {
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("🚀 Meal Planner app starting...");
     
-    // Load ingredient index first
+    // Load ingredient index
     await loadIngredientIndex();
+    console.log("✅ Ingredient index loaded");
     
-    // DON'T call loadState() or renderApp() here!
-    // The Firebase auth handler will do it after successful sign-in
-    
-    console.log("✅ Ingredient index loaded, waiting for Firebase auth...");
+    // Auth state listener will handle showing auth screen or app
 });
 
 
