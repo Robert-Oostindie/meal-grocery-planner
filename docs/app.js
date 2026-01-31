@@ -88,7 +88,33 @@ onAuthStateChanged(auth, async (user) => {
         mainApp.classList.add('hidden');
     }
 });
+async function loadUserState(uid) {
+    try {
+        console.log("📥 Loading user state from Firestore...");
+        const ref = doc(db, "users", uid);
+        const snap = await getDoc(ref);
 
+        if (snap.exists()) {
+            const data = snap.data();
+            console.log("✅ Found existing user data in Firestore");
+            
+            if (data.appState) {
+                restoreAppState(data.appState);
+            }
+        } else {
+            console.log("📝 No existing data - creating new user document");
+            await setDoc(ref, {
+                appState: getCurrentAppState(),
+                createdAt: serverTimestamp(),
+                lastActive: serverTimestamp()
+            });
+        }
+    } catch (err) {
+        console.error("❌ Error loading from Firestore:", err);
+        console.log("⚠️ Falling back to localStorage");
+        loadState();
+    }
+}
 // ==============================
 // STORAGE KEYS & CONSTANTS
 // ==============================
@@ -565,33 +591,6 @@ let state = {
 
     dirty: false
 };
-// ==============================
-// FIREBASE AUTHENTICATION
-// ==============================
-signInAnonymously(auth)
-    .then(async (cred) => {
-        console.log("✅ Firebase authentication successful");
-        console.log("👤 User ID:", cred.user.uid);
-        
-        state.user.id = cred.user.uid;
-        state.user.createdAt = new Date().toISOString();
-        state.user.lastLogin = new Date().toISOString();
-        
-        // Load user's saved data from Firestore
-        await loadUserState(cred.user.uid);
-        
-        // Render the app with loaded data
-        renderApp();
-        
-        console.log("✅ App ready!");
-    })
-    .catch(err => {
-        console.error("❌ Firebase authentication failed:", err);
-        console.log("⚠️ Falling back to localStorage only");
-        
-        loadState();
-        renderApp();
-    });
 
 // ==============================
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
