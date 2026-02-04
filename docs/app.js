@@ -1178,22 +1178,22 @@ function findIngredientInIndex(rawName) {
 
 
 // ==============================
-// EXPORT FOR MODULE USE
+// GLOBAL SCOPE (for inline handlers & console access)
 // ==============================
 
-export {
-    loadIngredientIndex,
-    determineAisleForIngredient,
-    searchIngredientIndex,
-    extractSmartIngredientName,
-    normalizeIngredientName,
-    getSemanticIngredientName,
-    findIngredientInIndex,
-    getPerformanceStats,
-    resetPerformanceStats,
-    clearCache
-};
+// Make ingredient matcher functions globally accessible
+window.loadIngredientIndex = loadIngredientIndex;
+window.determineAisleForIngredient = determineAisleForIngredient;
+window.searchIngredientIndex = searchIngredientIndex;
+window.extractSmartIngredientName = extractSmartIngredientName;
+window.normalizeIngredientName = normalizeIngredientName;
+window.getSemanticIngredientName = getSemanticIngredientName;
+window.findIngredientInIndex = findIngredientInIndex;
+window.getPerformanceStats = getPerformanceStats;
+window.resetPerformanceStats = resetPerformanceStats;
+window.clearCache = clearCache;
 
+console.log("✅ Ingredient matcher functions exposed to global scope");
 function closeAutocompleteMenu() {
     if (activeAutocompleteMenu) {
         activeAutocompleteMenu.remove();
