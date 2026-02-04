@@ -2822,7 +2822,8 @@ window.handleIngredientNameInput = handleIngredientNameInput;
 window.handleIngredientInputKey = handleIngredientInputKey;
 window.state = state;
 window.makeId = makeId;
-window.persistState = peristState;
+window.persistState = persistState;
+window.renderApp = renderApp;
 
 console.log("✅ All functions exposed to global scope");
 // ============================================================
