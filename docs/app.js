@@ -751,10 +751,12 @@ function initializeKeywordRules() {
         // Glassware (not drinks!)
         [/\b(wine|beer|cocktail)\s+glass(es)?\b/i, 'Household', 1],
         
-        // Tomato products
+       // Tomato products (comprehensive detection)
+        [/\bcanned.*tomato/i, 'Canned Goods', 1],
+        [/\btomato.*canned/i, 'Canned Goods', 1],
         [/\btomato paste\b/i, 'Canned Goods', 1],
         [/\btomato sauce\b/i, 'Canned Goods', 1],
-        [/\b(diced|crushed|stewed)\s+tomato.*canned?\b/i, 'Canned Goods', 1],
+        [/\b(diced|crushed|stewed|whole)\s+tomato/i, 'Canned Goods', 1],
         
         // Artichoke
         [/\bartichoke hearts?\b/i, 'Canned Goods', 1],
@@ -769,9 +771,10 @@ function initializeKeywordRules() {
         [/\bpasta\b/i, 'Dry Goods', 2],
         [/\b(ramen|noodles?)\b/i, 'Dry Goods', 2],
         
-        // Fresh herbs → Produce
+        // Fresh herbs → Produce (all variations)
         [/\bfresh\s+(basil|cilantro|parsley|mint|dill|thyme|rosemary|oregano|sage)\b/i, 'Produce', 2],
-        [/\b(basil|cilantro|parsley|mint|dill)\s+bunch\b/i, 'Produce', 2],
+        [/\b(regular|fresh|thai|italian|sweet)?\s*(basil|cilantro|parsley|mint|dill)\s*(bunch)?\b/i, 'Produce', 2],
+        [/\b(thai|italian|sweet)\s+(basil|cilantro|mint)\b/i, 'Produce', 2],
         
         // Cheese
         [/\b(sharp|mild|medium|aged|extra sharp)\s+(cheddar|cheese)\b/i, 'Dairy', 2],
