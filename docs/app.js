@@ -2821,6 +2821,7 @@ window.showGroupSuggestions = showGroupSuggestions;
 window.handleIngredientNameInput = handleIngredientNameInput;
 window.handleIngredientInputKey = handleIngredientInputKey;
 window.state = state;
+window.makeId = makeId;
 
 console.log("✅ All functions exposed to global scope");
 // ============================================================
