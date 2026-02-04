@@ -1380,18 +1380,37 @@ function makeId() {
             (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
         );
 }
+// Debounced Firestore save (prevents too many writes)
+let saveTimeout = null;
+function scheduleSave(userId) {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+        try {
+            const ref = doc(db, "users", userId);
+            await setDoc(ref, {
+                appState: getCurrentAppState(),
+                lastActive: serverTimestamp()
+            }, { merge: true });
+            console.log("☁️ Saved to Firestore");
+        } catch (err) {
+            console.error("❌ Firestore save failed:", err);
+        }
+    }, 1000); // Wait 1 second before saving
+}
 async function persistState() {
     try {
-        // Save to localStorage (immediate)
         const json = JSON.stringify(state);
         localStorage.setItem(LS_KEY, json);
         console.log("💾 Saved to localStorage");
         
-        // Save to Firestore (debounced)
+        // Save to Firestore immediately (no debouncing needed with optimized code)
         if (state.user.id) {
-            scheduleSave(state.user.id);
-        } else {
-            console.warn("⚠️ No user ID - skipping Firestore save");
+            const ref = doc(db, "users", state.user.id);
+            await setDoc(ref, {
+                appState: getCurrentAppState(),
+                lastActive: serverTimestamp()
+            }, { merge: true });
+            console.log("☁️ Saved to Firestore");
         }
     } catch (err) {
         console.error("❌ Failed to persist state:", err);
