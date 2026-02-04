@@ -1,10 +1,11 @@
 // ============================================================
-// TEST KIT INTEGRATION FOR EXISTING APP
+// ENHANCED TEST KIT INTEGRATION - 15 RECIPES + 3 STORES
 // Add this script to your HTML page after the main app.js
 // ============================================================
 
-// Test recipes data (compact version with 10 diverse recipes)
+// Enhanced test recipes data with 15 diverse recipes across 3 stores
 const TEST_RECIPES_DATA = [
+    // Original 10 recipes
     {
         name: "Classic Chicken Alfredo",
         category: "Medium Prep", 
@@ -149,13 +150,117 @@ const TEST_RECIPES_DATA = [
             { name: "Eggs", qty: 2, unit: "large", store: "Walmart", group: "", isDefault: false },
             { name: "Baking Soda", qty: 1, unit: "tsp", store: "Aldi", group: "", isDefault: false }
         ]
+    },
+    // NEW COMPLEX RECIPES
+    {
+        name: "Seafood Paella",
+        category: "High Prep / Longer Cook Times",
+        ingredients: [
+            { name: "Arborio Rice", qty: 2, unit: "cups", store: "Target", group: "rice", isDefault: true },
+            { name: "Bomba Rice", qty: 2, unit: "cups", store: "Target", group: "rice", isDefault: false },
+            { name: "Shrimp", qty: 1, unit: "lb", store: "Walmart", group: "seafood", isDefault: true },
+            { name: "Scallops", qty: 0.5, unit: "lb", store: "Walmart", group: "seafood", isDefault: false },
+            { name: "Mussels", qty: 1, unit: "lb", store: "Walmart", group: "shellfish", isDefault: true },
+            { name: "Clams", qty: 1, unit: "lb", store: "Walmart", group: "shellfish", isDefault: false },
+            { name: "Chicken Stock", qty: 4, unit: "cups", store: "Target", group: "broth", isDefault: true },
+            { name: "Seafood Stock", qty: 4, unit: "cups", store: "Target", group: "broth", isDefault: false },
+            { name: "Saffron", qty: 1, unit: "pinch", store: "Target", group: "", isDefault: false },
+            { name: "Bell Peppers", qty: 2, unit: "medium", store: "Aldi", group: "", isDefault: false },
+            { name: "Peas", qty: 1, unit: "cup", store: "Aldi", group: "", isDefault: false },
+            { name: "Garlic", qty: 6, unit: "cloves", store: "Aldi", group: "", isDefault: false },
+            { name: "Tomatoes", qty: 2, unit: "large", store: "Aldi", group: "", isDefault: false },
+            { name: "Olive Oil", qty: 4, unit: "tbsp", store: "Target", group: "", isDefault: false }
+        ]
+    },
+    {
+        name: "Thai Green Curry",
+        category: "Medium Prep",
+        ingredients: [
+            { name: "Chicken Thighs", qty: 1.5, unit: "lbs", store: "Walmart", group: "protein", isDefault: true },
+            { name: "Tofu", qty: 14, unit: "oz", store: "Target", group: "protein", isDefault: false },
+            { name: "Green Curry Paste", qty: 3, unit: "tbsp", store: "Target", group: "curry", isDefault: true },
+            { name: "Red Curry Paste", qty: 3, unit: "tbsp", store: "Target", group: "curry", isDefault: false },
+            { name: "Coconut Milk", qty: 2, unit: "cans", store: "Target", group: "milk", isDefault: true },
+            { name: "Coconut Cream", qty: 1, unit: "can", store: "Target", group: "milk", isDefault: false },
+            { name: "Thai Basil", qty: 1, unit: "bunch", store: "Target", group: "herbs", isDefault: true },
+            { name: "Regular Basil", qty: 1, unit: "bunch", store: "Aldi", group: "herbs", isDefault: false },
+            { name: "Japanese Eggplant", qty: 2, unit: "medium", store: "Aldi", group: "vegetables", isDefault: true },
+            { name: "Baby Eggplant", qty: 4, unit: "small", store: "Target", group: "vegetables", isDefault: false },
+            { name: "Fish Sauce", qty: 2, unit: "tbsp", store: "Target", group: "", isDefault: false },
+            { name: "Palm Sugar", qty: 1, unit: "tbsp", store: "Target", group: "", isDefault: false },
+            { name: "Lime Juice", qty: 2, unit: "tbsp", store: "Aldi", group: "", isDefault: false },
+            { name: "Jasmine Rice", qty: 2, unit: "cups", store: "Aldi", group: "", isDefault: false }
+        ]
+    },
+    {
+        name: "Beef Bourguignon",
+        category: "High Prep / Longer Cook Times",
+        ingredients: [
+            { name: "Beef Chuck Roast", qty: 3, unit: "lbs", store: "Walmart", group: "beef", isDefault: true },
+            { name: "Beef Short Ribs", qty: 3, unit: "lbs", store: "Walmart", group: "beef", isDefault: false },
+            { name: "Red Wine", qty: 1, unit: "bottle", store: "Target", group: "wine", isDefault: true },
+            { name: "Port Wine", qty: 1, unit: "bottle", store: "Target", group: "wine", isDefault: false },
+            { name: "Thick Cut Bacon", qty: 6, unit: "strips", store: "Walmart", group: "pork", isDefault: true },
+            { name: "Pancetta", qty: 4, unit: "oz", store: "Target", group: "pork", isDefault: false },
+            { name: "Pearl Onions", qty: 1, unit: "bag", store: "Target", group: "onions", isDefault: true },
+            { name: "Shallots", qty: 6, unit: "medium", store: "Target", group: "onions", isDefault: false },
+            { name: "Cremini Mushrooms", qty: 1, unit: "lb", store: "Aldi", group: "mushrooms", isDefault: true },
+            { name: "Shiitake Mushrooms", qty: 8, unit: "oz", store: "Target", group: "mushrooms", isDefault: false },
+            { name: "Beef Stock", qty: 3, unit: "cups", store: "Target", group: "", isDefault: false },
+            { name: "Tomato Paste", qty: 2, unit: "tbsp", store: "Aldi", group: "", isDefault: false },
+            { name: "Fresh Thyme", qty: 4, unit: "sprigs", store: "Target", group: "", isDefault: false },
+            { name: "Bay Leaves", qty: 2, unit: "leaves", store: "Target", group: "", isDefault: false },
+            { name: "All Purpose Flour", qty: 3, unit: "tbsp", store: "Aldi", group: "", isDefault: false }
+        ]
+    },
+    {
+        name: "Homemade Ramen",
+        category: "High Prep / Longer Cook Times", 
+        ingredients: [
+            { name: "Pork Shoulder", qty: 2, unit: "lbs", store: "Walmart", group: "protein", isDefault: true },
+            { name: "Chicken Thighs", qty: 1.5, unit: "lbs", store: "Walmart", group: "protein", isDefault: false },
+            { name: "Fresh Ramen Noodles", qty: 4, unit: "portions", store: "Target", group: "noodles", isDefault: true },
+            { name: "Dried Ramen Noodles", qty: 4, unit: "portions", store: "Target", group: "noodles", isDefault: false },
+            { name: "White Miso Paste", qty: 3, unit: "tbsp", store: "Target", group: "miso", isDefault: true },
+            { name: "Red Miso Paste", qty: 3, unit: "tbsp", store: "Target", group: "miso", isDefault: false },
+            { name: "Soft Boiled Eggs", qty: 4, unit: "large", store: "Walmart", group: "eggs", isDefault: true },
+            { name: "Marinated Eggs", qty: 4, unit: "large", store: "Target", group: "eggs", isDefault: false },
+            { name: "Nori Sheets", qty: 4, unit: "sheets", store: "Target", group: "", isDefault: false },
+            { name: "Green Onions", qty: 4, unit: "stalks", store: "Aldi", group: "", isDefault: false },
+            { name: "Bean Sprouts", qty: 2, unit: "cups", store: "Target", group: "", isDefault: false },
+            { name: "Corn", qty: 1, unit: "cup", store: "Aldi", group: "", isDefault: false },
+            { name: "Sesame Oil", qty: 1, unit: "tbsp", store: "Target", group: "", isDefault: false },
+            { name: "Garlic", qty: 6, unit: "cloves", store: "Aldi", group: "", isDefault: false },
+            { name: "Ginger", qty: 2, unit: "inch", store: "Aldi", group: "", isDefault: false }
+        ]
+    },
+    {
+        name: "Chocolate Lava Cake",
+        category: "High Prep / Longer Cook Times",
+        ingredients: [
+            { name: "Dark Chocolate", qty: 8, unit: "oz", store: "Target", group: "chocolate", isDefault: true },
+            { name: "Semi Sweet Chocolate", qty: 8, unit: "oz", store: "Target", group: "chocolate", isDefault: false },
+            { name: "European Butter", qty: 6, unit: "tbsp", store: "Target", group: "butter", isDefault: true },
+            { name: "Regular Butter", qty: 6, unit: "tbsp", store: "Walmart", group: "butter", isDefault: false },
+            { name: "Large Eggs", qty: 2, unit: "whole", store: "Walmart", group: "eggs", isDefault: true },
+            { name: "Extra Large Eggs", qty: 2, unit: "whole", store: "Target", group: "eggs", isDefault: false },
+            { name: "Egg Yolks", qty: 2, unit: "yolks", store: "Walmart", group: "", isDefault: false },
+            { name: "Granulated Sugar", qty: 0.25, unit: "cup", store: "Aldi", group: "sugar", isDefault: true },
+            { name: "Superfine Sugar", qty: 0.25, unit: "cup", store: "Target", group: "sugar", isDefault: false },
+            { name: "All Purpose Flour", qty: 2, unit: "tbsp", store: "Aldi", group: "flour", isDefault: true },
+            { name: "Cake Flour", qty: 2, unit: "tbsp", store: "Target", group: "flour", isDefault: false },
+            { name: "Vanilla Extract", qty: 1, unit: "tsp", store: "Aldi", group: "", isDefault: false },
+            { name: "Heavy Cream", qty: 0.5, unit: "cup", store: "Walmart", group: "", isDefault: false },
+            { name: "Powdered Sugar", qty: 2, unit: "tbsp", store: "Aldi", group: "", isDefault: false },
+            { name: "Fresh Berries", qty: 1, unit: "cup", store: "Aldi", group: "", isDefault: false }
+        ]
     }
 ];
 
-// Main test function that runs everything
+// Main test function - Quick 5 recipes
 window.runQuickTests = async function() {
-    console.log("🚀 Running Quick Test Suite");
-    console.log("===========================");
+    console.log("🚀 Running Quick Test Suite (5 recipes)");
+    console.log("=".repeat(45));
     
     if (!window.state || !window.state.user || !window.state.user.id) {
         console.error("❌ Please sign in first!");
@@ -259,6 +364,134 @@ window.runQuickTests = async function() {
     }
 };
 
+// Comprehensive test function with all 15 recipes
+window.runFullTestSuite = async function() {
+    console.log("🚀 Running FULL Test Suite (All 15 Recipes)");
+    console.log("=".repeat(50));
+    
+    if (!window.state || !window.state.user || !window.state.user.id) {
+        console.error("❌ Please sign in first!");
+        alert("Please sign in to your account before running tests.");
+        return;
+    }
+    
+    console.log(`✅ User authenticated: ${window.state.user.email || window.state.user.id}`);
+    
+    try {
+        // Clear existing data
+        console.log("🗑️ Clearing existing data...");
+        window.state.data.userMeals = [];
+        window.state.ui.plannerMeals = [];
+        window.state.ui.plannerExtras = [];
+        window.state.ui.plannerSubstituteSelections = {};
+        
+        // Add ALL 15 test recipes
+        console.log("📝 Adding all 15 test recipes...");
+        for (let i = 0; i < TEST_RECIPES_DATA.length; i++) {
+            const recipe = TEST_RECIPES_DATA[i];
+            await addTestRecipe(recipe);
+            console.log(`  ✅ Added: ${recipe.name}`);
+        }
+        
+        // Add them all to the meal plan
+        console.log("🍽️ Creating comprehensive meal plan...");
+        const allMealIds = window.state.data.userMeals.map(meal => meal.id);
+        window.state.ui.plannerMeals = [...allMealIds];
+        
+        // Set varied multipliers for testing
+        const multipliers = [1, 1, 2, 1, 3, 1, 2, 1, 1, 2, 1, 3, 2, 1, 1]; // 15 values
+        allMealIds.forEach((mealId, index) => {
+            if (multipliers[index] > 1) {
+                if (!window.state.ui.plannerMealMultipliers) {
+                    window.state.ui.plannerMealMultipliers = {};
+                }
+                window.state.ui.plannerMealMultipliers[mealId] = multipliers[index];
+            }
+        });
+        
+        // Test extensive substitutes
+        console.log("🔄 Testing advanced substitutes...");
+        let substituteTested = 0;
+        window.state.data.userMeals.forEach(meal => {
+            const groups = {};
+            meal.ingredients.forEach(ing => {
+                if (ing.group && !groups[ing.group]) {
+                    groups[ing.group] = ing;
+                }
+            });
+            
+            // Select non-default for each group
+            Object.keys(groups).forEach(groupName => {
+                const nonDefault = meal.ingredients.find(ing => 
+                    ing.group === groupName && !ing.isDefault
+                );
+                if (nonDefault) {
+                    if (!window.state.ui.plannerSubstituteSelections[meal.id]) {
+                        window.state.ui.plannerSubstituteSelections[meal.id] = {};
+                    }
+                    window.state.ui.plannerSubstituteSelections[meal.id][groupName] = nonDefault.id;
+                    substituteTested++;
+                    console.log(`  🔄 ${meal.name}: Selected ${nonDefault.name} for ${groupName}`);
+                }
+            });
+        });
+        
+        // Add extensive extra items
+        console.log("➕ Adding premium extra items...");
+        const extras = [
+            { name: "Paper Towels", qty: 3, store: "Walmart" },
+            { name: "Laundry Detergent", qty: 1, store: "Target" },
+            { name: "Premium Coffee", qty: 1, store: "Target" },
+            { name: "Organic Ice Cream", qty: 2, store: "Target" },
+            { name: "Aluminum Foil", qty: 1, store: "Aldi" },
+            { name: "Wine Glasses", qty: 4, store: "Target" }
+        ];
+        
+        if (!window.state.ui.plannerExtras) window.state.ui.plannerExtras = [];
+        extras.forEach(item => {
+            window.state.ui.plannerExtras.push({
+                id: window.makeId(),
+                name: item.name,
+                qty: item.qty,
+                unit: "CT",
+                store: item.store
+            });
+        });
+        console.log(`  ✅ Added ${extras.length} premium extra items`);
+        
+        // Save and render
+        await window.persistState();
+        window.renderApp();
+        
+        // Build comprehensive grocery list
+        console.log("🛒 Building comprehensive grocery list...");
+        if (window.switchTab) window.switchTab('groceryTab');
+        if (window.renderGroceryList) window.renderGroceryList();
+        
+        // Print comprehensive summary
+        console.log("\n📊 COMPREHENSIVE TEST SUMMARY");
+        console.log("=".repeat(35));
+        console.log(`✅ Recipes Added: ${TEST_RECIPES_DATA.length}`);
+        console.log(`🏪 Stores Used: 3 (Walmart, Aldi, Target)`);
+        console.log(`🔄 Substitutes Tested: ${substituteTested}`);
+        console.log(`➕ Extra Items: ${extras.length}`);
+        console.log(`📱 Firebase User: ${window.state.user.email || window.state.user.id}`);
+        console.log(`🍽️ New Complex Recipes:`);
+        console.log(`   • Seafood Paella (14 ingredients)`);
+        console.log(`   • Thai Green Curry (14 ingredients)`);
+        console.log(`   • Beef Bourguignon (15 ingredients)`);
+        console.log(`   • Homemade Ramen (15 ingredients)`);
+        console.log(`   • Chocolate Lava Cake (15 ingredients)`);
+        console.log(`✅ Full test suite completed successfully! 🎉`);
+        
+        alert(`✅ Full test suite completed! Added ${TEST_RECIPES_DATA.length} recipes across 3 stores. Check the grocery list!`);
+        
+    } catch (error) {
+        console.error("❌ Full test failed:", error);
+        alert(`❌ Full test failed: ${error.message}`);
+    }
+};
+
 // Helper function to add a single recipe
 async function addTestRecipe(recipeData) {
     const ingredients = recipeData.ingredients.map(ing => ({
@@ -284,14 +517,14 @@ async function addTestRecipe(recipeData) {
     await window.persistState();
 }
 
-// Function to add all 10 recipes
+// Function to add all 15 recipes
 window.addAllTestRecipes = async function() {
     if (!window.state || !window.state.user || !window.state.user.id) {
         alert("Please sign in first!");
         return;
     }
     
-    console.log("📝 Adding all 10 test recipes...");
+    console.log("📝 Adding all 15 test recipes...");
     
     try {
         for (let i = 0; i < TEST_RECIPES_DATA.length; i++) {
@@ -325,7 +558,7 @@ window.createTestMealPlan = async function() {
         window.state.ui.plannerMeals = [...allMealIds];
         
         // Set random multipliers
-        const multipliers = [1, 1, 2, 1, 3, 1, 2, 1, 1, 2];
+        const multipliers = [1, 1, 2, 1, 3, 1, 2, 1, 1, 2, 1, 3, 2, 1, 1];
         allMealIds.forEach((mealId, index) => {
             if (multipliers[index] > 1) {
                 if (!window.state.ui.plannerMealMultipliers) {
@@ -368,7 +601,7 @@ window.clearTestData = async function() {
     }
 };
 
-// Auto-add test button to the app if we're in the main page
+// Auto-add enhanced test buttons to the app
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         const recipesTab = document.querySelector('#recipesTab');
@@ -384,23 +617,28 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             testControls.innerHTML = `
-                <h4 style="margin: 0 0 10px 0; color: #007bff;">🧪 Test Kit</h4>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button onclick="runQuickTests()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
-                        🚀 Run Quick Tests
+                <h4 style="margin: 0 0 10px 0; color: #007bff;">🧪 Enhanced Test Kit (15 Recipes • 3 Stores)</h4>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                    <button onclick="runQuickTests()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        🚀 Quick Tests (5 recipes)
                     </button>
-                    <button onclick="addAllTestRecipes()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    <button onclick="runFullTestSuite()" style="background: #6f42c1; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        🔥 Full Suite (15 recipes)
+                    </button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button onclick="addAllTestRecipes()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
                         📝 Add All Recipes
                     </button>
-                    <button onclick="createTestMealPlan()" style="background: #fd7e14; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    <button onclick="createTestMealPlan()" style="background: #fd7e14; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
                         🍽️ Create Meal Plan
                     </button>
-                    <button onclick="clearTestData()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    <button onclick="clearTestData()" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
                         🗑️ Clear Data
                     </button>
                 </div>
-                <p style="margin: 10px 0 0 0; font-size: 14px; color: #6c757d;">
-                    Quick tests: 5 recipes + meal plan + grocery list. Or use individual buttons.
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d; line-height: 1.3;">
+                    <strong>Quick:</strong> 5 recipes • <strong>Full:</strong> 15 recipes with complex dishes (Seafood Paella, Thai Curry, Beef Bourguignon, Ramen, Lava Cake)
                 </p>
             `;
             
@@ -413,9 +651,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000); // Wait for app to load
 });
 
-console.log("🧪 Test Kit Integration Loaded!");
+console.log("🧪 Enhanced Test Kit Integration Loaded!");
+console.log("📊 Available: 15 test recipes across 3 stores (Walmart, Aldi, Target)");
+console.log("🍽️ New complex recipes: Seafood Paella, Thai Green Curry, Beef Bourguignon, Homemade Ramen, Chocolate Lava Cake");
 console.log("Available functions:");
 console.log("  runQuickTests() - Run 5 recipes + meal plan + grocery list");
-console.log("  addAllTestRecipes() - Add all 10 test recipes");
+console.log("  runFullTestSuite() - Run all 15 recipes + complete workflow");
+console.log("  addAllTestRecipes() - Add all 15 test recipes");
 console.log("  createTestMealPlan() - Create meal plan from existing recipes");
 console.log("  clearTestData() - Clear all test data");
