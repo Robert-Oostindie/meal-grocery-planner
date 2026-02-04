@@ -39,6 +39,7 @@ const resendVerificationBtn = document.getElementById('resendVerificationBtn');
 const backToSignInBtn = document.getElementById('backToSignInBtn');
 const emailAuthForm = document.getElementById('emailAuthForm');
 
+
 // ==============================
 // GOOGLE SIGN-IN
 // ==============================
@@ -588,6 +589,9 @@ const normalizeCache = new Map();      // rawName → normalized
 let tokenToEntries = new Map();        // token → [entry, entry, ...]
 let exactMatchMap = new Map();         // normalized → entry
 let keywordRules = null;               // Fast keyword-based routing
+// Autocomplete state tracking (REQUIRED for UI)
+let activeAutocompleteMenu = null;
+let activeAutocompleteIndex = -1;
 
 // Performance tracking (optional - can be disabled in production)
 const ENABLE_PERF_TRACKING = false;
@@ -701,94 +705,153 @@ function extractSmartIngredientName(rawName) {
 function initializeKeywordRules() {
     // These rules are checked BEFORE index lookup
     // Format: [regex, category, priority]
-    // Higher priority = checked first
+    // Lower priority number = checked first
     
     keywordRules = [
-        // === PRIORITY 1: Exact phrases (highest specificity) ===
+        // ====================================
+        // PRIORITY 1: EXACT PHRASES (Highest)
+        // ====================================
+        
+        // Baking supplies
         [/\bbaking soda\b/i, 'Baking', 1],
         [/\bbaking powder\b/i, 'Baking', 1],
+        [/\bvanilla extract\b/i, 'Baking', 1],
+        [/\bcocoa powder\b/i, 'Baking', 1],
+        
+        // Sugar (all types) → Baking
+        [/\b(powdered|granulated|superfine|brown|white|confectioner'?s?)\s*sugar\b/i, 'Baking', 1],
+        [/\bsugar\b/i, 'Baking', 1],
+        
+        // Salt → Spices
+        [/\b(sea salt|kosher salt|table salt|salt)\b/i, 'Spices', 1],
+        
+        // Chocolate → Snacks (not Drinks!)
+        [/\b(semi sweet|dark|milk|white)\s*chocolate\b/i, 'Snacks', 1],
+        [/\bchocolate\s*(chip|bar|chunk)s?\b/i, 'Snacks', 1],
+        
+        // Ground meats
+        [/\bground\s+(beef|turkey|chicken|pork|lamb)\b/i, 'Meat', 1],
+        
+        // Bell peppers
         [/\bbell pepper/i, 'Produce', 1],
-        [/\bground beef\b/i, 'Meat', 1],
-        [/\bground turkey\b/i, 'Meat', 1],
-        [/\bground chicken\b/i, 'Meat', 1],
-        [/\bground pork\b/i, 'Meat', 1],
-        [/\bcherry tomato/i, 'Produce', 1],
-        [/\bblack pepper\b/i, 'Spices', 1],
-        [/\bgarlic powder\b/i, 'Spices', 1],
-        [/\bonion powder\b/i, 'Spices', 1],
+        
+        // Pepper spices (not produce)
+        [/\b(black|white|red)\s+pepper\b/i, 'Spices', 1],
+        
+        // Garlic/onion powder
+        [/\b(garlic|onion)\s+powder\b/i, 'Spices', 1],
+        
+        // Household items
         [/\bpaper towel/i, 'Household', 1],
         [/\baluminum foil\b/i, 'Household', 1],
         [/\bplastic wrap\b/i, 'Household', 1],
         [/\bparchment paper\b/i, 'Household', 1],
+        [/\blaundry\s+detergent\b/i, 'Household', 1],
         
-        // === PRIORITY 2: Strong indicators ===
-        [/\b(fettuccine|penne|spaghetti|linguine|rigatoni|macaroni|pasta)\b/i, 'Dry Goods', 2],
-        [/\b(cheddar|mozzarella|parmesan|gouda|swiss|brie|feta) cheese\b/i, 'Dairy', 2],
-        [/\b(chicken|turkey|beef|pork) breast\b/i, 'Meat', 2],
-        [/\b(chicken|turkey|beef|pork) thigh/i, 'Meat', 2],
-        [/\b(jasmine|basmati|arborio|brown|white) rice\b/i, 'Dry Goods', 2],
-        [/\bheavy cream\b/i, 'Dairy', 2],
-        [/\bsour cream\b/i, 'Dairy', 2],
+        // Glassware (not drinks!)
+        [/\b(wine|beer|cocktail)\s+glass(es)?\b/i, 'Household', 1],
+        
+        // Tomato products
+        [/\btomato paste\b/i, 'Canned Goods', 1],
+        [/\btomato sauce\b/i, 'Canned Goods', 1],
+        [/\b(diced|crushed|stewed)\s+tomato.*canned?\b/i, 'Canned Goods', 1],
+        
+        // Artichoke
+        [/\bartichoke hearts?\b/i, 'Canned Goods', 1],
+        
+        
+        // ====================================
+        // PRIORITY 2: STRONG INDICATORS
+        // ====================================
+        
+        // Pasta
+        [/\b(fettuccine|penne|spaghetti|linguine|rigatoni|macaroni|ziti|rotini)\b/i, 'Dry Goods', 2],
+        [/\bpasta\b/i, 'Dry Goods', 2],
+        [/\b(ramen|noodles?)\b/i, 'Dry Goods', 2],
+        
+        // Fresh herbs → Produce
+        [/\bfresh\s+(basil|cilantro|parsley|mint|dill|thyme|rosemary|oregano|sage)\b/i, 'Produce', 2],
+        [/\b(basil|cilantro|parsley|mint|dill)\s+bunch\b/i, 'Produce', 2],
+        
+        // Cheese
+        [/\b(sharp|mild|medium|aged|extra sharp)\s+(cheddar|cheese)\b/i, 'Dairy', 2],
+        [/\b(cheddar|mozzarella|parmesan|gouda|swiss|brie|feta|provolone|burrata)\s*cheese\b/i, 'Dairy', 2],
+        [/\bcheese\b/i, 'Dairy', 2],
+        
+        // Eggs
+        [/\begg\s*(white|yolk)s?\b/i, 'Dairy', 2],
+        [/\beggs?\b/i, 'Dairy', 2],
+        
+        // Meat cuts
+        [/\b(chicken|turkey|beef|pork)\s+(breast|thigh|leg|wing|rib)\b/i, 'Meat', 2],
+        
+        // Rice
+        [/\b(jasmine|basmati|arborio|bomba|brown|white|wild)\s+rice\b/i, 'Dry Goods', 2],
+        
+        // Cream products
+        [/\b(heavy|whipping|sour|light)\s+cream\b/i, 'Dairy', 2],
         [/\bcream cheese\b/i, 'Dairy', 2],
+        [/\bhalf and half\b/i, 'Dairy', 2],
         
-        // === PRIORITY 3: Category indicators ===
-        // Pasta variations
-        [/\bnoodles?\b/i, 'Dry Goods', 3],
-        [/\bramen\b/i, 'Dry Goods', 3],
+        // Stock/broth
+        [/\b(chicken|beef|vegetable|seafood)\s+(stock|broth)\b/i, 'Canned Goods', 2],
         
-        // Spices (before produce to prevent herb confusion)
+        
+        // ====================================
+        // PRIORITY 3: CATEGORY INDICATORS
+        // ====================================
+        
+        // Spices (dried herbs)
         [/\b(cumin|paprika|turmeric|cinnamon|nutmeg|cardamom|coriander)\b/i, 'Spices', 3],
-        [/\b(oregano|thyme|rosemary|sage|bay leaf|bay leaves)\b/i, 'Spices', 3],
+        [/\b(oregano|thyme|rosemary|sage)\b(?!\s+bunch)/i, 'Spices', 3],
+        [/\b(bay leaf|bay leaves)\b/i, 'Spices', 3],
         [/\bchili powder\b/i, 'Spices', 3],
-        [/\bcurry powder\b/i, 'Spices', 3],
-        [/\btaco seasoning\b/i, 'Spices', 3],
+        [/\b(curry|taco)\s+(powder|seasoning)\b/i, 'Spices', 3],
         [/\bsaffron\b/i, 'Spices', 3],
         
-        // Fresh produce markers
-        [/\bfresh (basil|cilantro|parsley|mint|dill|thyme|rosemary|oregano)\b/i, 'Produce', 3],
+        // Produce
         [/\b(lettuce|spinach|kale|arugula|chard)\b/i, 'Produce', 3],
-        [/\b(tomato|tomatoes|carrot|carrots|onion|onions|garlic|ginger)\b/i, 'Produce', 3],
+        [/\b(tomato|tomatoes|carrot|carrots|onion|onions)\b/i, 'Produce', 3],
         [/\b(broccoli|cauliflower|asparagus|zucchini|eggplant)\b/i, 'Produce', 3],
         [/\b(mushroom|mushrooms|shiitake|cremini|portobello)\b/i, 'Produce', 3],
         [/\b(banana|bananas|apple|apples|orange|oranges|lemon|lemons|lime|limes)\b/i, 'Produce', 3],
         [/\b(berries|strawberry|blueberry|raspberry|blackberry)\b/i, 'Produce', 3],
         [/\b(shallot|shallots|scallion|leek|green onion)\b/i, 'Produce', 3],
+        [/\b(garlic|ginger)\b(?!\s+powder)/i, 'Produce', 3],
         
-        // Canned goods (check before produce!)
+        // Canned goods
         [/\bcanned\b/i, 'Canned Goods', 3],
-        [/\b(diced|crushed|whole).*(tomato|tomatoes).*\bcan\b/i, 'Canned Goods', 3],
-        [/\btomato paste\b/i, 'Canned Goods', 3],
+        [/\bcan\b.*\b(beans|tomato|soup|vegetable)\b/i, 'Canned Goods', 3],
         
-        // Beverages
-        [/\b(wine|beer|coffee|tea|juice)\b/i, 'Drinks', 3],
+        // Beverages (but not glassware!)
+        [/\b(wine|beer|coffee|tea)\b(?!\s+glass)/i, 'Drinks', 3],
         [/\b(red wine|white wine|port wine|champagne)\b/i, 'Drinks', 3],
-        
-        // Household
-        [/\blaundry\b/i, 'Household', 3],
-        [/\bdetergent\b/i, 'Household', 3],
-        [/\bcleaner\b/i, 'Household', 3],
-        [/\b(trash|garbage) bag/i, 'Household', 3],
         
         // Condiments
         [/\b(ketchup|mustard|mayo|mayonnaise|bbq sauce|hot sauce)\b/i, 'Condiments', 3],
         [/\b(soy sauce|teriyaki|fish sauce|oyster sauce|hoisin)\b/i, 'Condiments', 3],
         [/\b(honey|maple syrup|agave|molasses)\b/i, 'Condiments', 3],
+        [/\b(vinegar|balsamic)\b/i, 'Condiments', 3],
+        [/\b(curry|miso)\s+paste\b/i, 'Condiments', 3],
         
         // Oils
         [/\bolive oil\b/i, 'Oils', 3],
-        [/\b(coconut|sesame|vegetable|canola|avocado) oil\b/i, 'Oils', 3],
+        [/\b(coconut|sesame|vegetable|canola|avocado)\s+oil\b/i, 'Oils', 3],
+        [/\bextra virgin\b/i, 'Oils', 3],
         
         // Seafood
-        [/\b(salmon|tuna|cod|shrimp|scallops|clams|mussels|lobster|crab)\b/i, 'Seafood', 3],
+        [/\b(salmon|tuna|cod|shrimp|scallops|clams|mussels|lobster|crab|fish sauce)\b/i, 'Seafood', 3],
         
-        // Snacks
-        [/\b(chocolate chip|chocolate bar|candy|cookies?|chips)\b/i, 'Snacks', 3],
+        // Tofu
+        [/\btofu\b/i, 'Dry Goods', 3],
+        
+        // Frozen
+        [/\bfrozen\b/i, 'Frozen', 3],
     ];
     
     // Sort by priority (lower number = higher priority)
     keywordRules.sort((a, b) => a[2] - b[2]);
 }
-
 function checkKeywordRules(text) {
     if (!keywordRules) {
         initializeKeywordRules();
@@ -888,7 +951,7 @@ function determineAisleForIngredient(rawName) {
     const smartName = extractSmartIngredientName(rawName);
     
     // 🚀 TIER 1: Keyword rules (fastest - regex check only)
-    const keywordMatch = checkKeywordRules(rawName);
+    const keywordMatch = checkKeywordRules(smartName);
     if (keywordMatch) {
         result = keywordMatch;
         aisleCache.set(rawName, result);
