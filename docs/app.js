@@ -2820,6 +2820,7 @@ window.handleGroupFinished = handleGroupFinished;
 window.showGroupSuggestions = showGroupSuggestions;
 window.handleIngredientNameInput = handleIngredientNameInput;
 window.handleIngredientInputKey = handleIngredientInputKey;
+window.state = state;
 
 console.log("✅ All functions exposed to global scope");
 // ============================================================
