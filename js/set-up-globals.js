@@ -1,7 +1,8 @@
-// Temporary globals setup
-// Remove once all onclick handlers are converted to event listeners
+// ==============================
+// SETUP ALL GLOBAL EXPORTS
+// Temporary until onclick handlers are converted to event listeners
+// ==============================
 
-import { setupAuthHandlers } from './auth/handlers.js';
 import { setupRecipeListGlobals } from './recipes/list.js';
 import { setupRecipeModalGlobals } from './recipes/modal.js';
 import { setupIngredientEditorGlobals } from './recipes/editor.js';
@@ -16,6 +17,8 @@ import { setupExportImportGlobals } from './utils/export-import.js';
 import { setupAutocompleteGlobals } from './ingredients/autocomplete.js';
 
 export function setupAllGlobals() {
+    console.log("🔧 Setting up global window exports...");
+    
     setupRecipeListGlobals();
     setupRecipeModalGlobals();
     setupIngredientEditorGlobals();
@@ -28,4 +31,6 @@ export function setupAllGlobals() {
     setupModalsGlobals();
     setupExportImportGlobals();
     setupAutocompleteGlobals();
+    
+    console.log("✅ All globals setup complete");
 }
