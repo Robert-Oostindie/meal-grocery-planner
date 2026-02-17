@@ -1,14 +1,26 @@
 {
   "hosting": {
-    "public": "docs",    ← Changed from "docs/app" back to "docs"
+    "public": "docs/app",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "rewrites": [
       {
-        "source": "/app/**",              ← NEW: Routes /app to the app
-        "destination": "/app/index.html"
-      },
-      {
-        "source": "**",                   ← Default: everything else to website
+        "source": "**",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=3600"
+          }
+        ]
       }
     ]
   }
