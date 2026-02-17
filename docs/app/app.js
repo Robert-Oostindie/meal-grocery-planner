@@ -542,12 +542,20 @@ const GLOBAL_STORES = [
         affiliateUrl: "https://www.walmart.com/search?q={ITEM}",
         storeHomeUrl: "https://www.walmart.com/"
     },
-    {
+   {
         id: "amazon",
         name: "Amazon",
         affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID",
         storeHomeUrl: "https://www.amazon.com/"
+    },
+    {
+        id: "woodmans",
+        name: "Woodman's",
+        affiliateUrl: "https://shopwoodmans.com/search?q={ITEM}",
+        storeHomeUrl: "https://shopwoodmans.com/"
     }
+    // add more later as needed
+];
     // add more later as needed
 ];
 
