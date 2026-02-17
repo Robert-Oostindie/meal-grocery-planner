@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meal Planner</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:," />
+</head>
+<script type="module" src="app.js?v=3"></script>
+<script src="test_integration.js"></script>
+
+<body>
+    <!-- AUTH SCREEN (shown before sign-in) -->
+    <div id="authScreen" class="auth-screen hidden">
+        <div class="auth-container">
+            <h1>🍽️ Meal & Grocery Planner</h1>
+            <p class="auth-description">Plan your meals and generate organized grocery lists</p>
+            
+            <!-- GOOGLE SIGN-IN -->
+            <button id="googleSignInBtn" class="google-sign-in-btn">
+                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            
+            <!-- DIVIDER -->
+            <div class="auth-divider">
+                <span>OR</span>
+            </div>
+            
+            <!-- EMAIL/PASSWORD FORM -->
+            <form id="emailAuthForm" class="email-auth-form">
+                <input 
+                    type="email" 
+                    id="authEmail" 
+                    placeholder="Email address"
+                    required
+                    autocomplete="email"
+                />
+                <input 
+                    type="password" 
+                    id="authPassword" 
+                    placeholder="Password (min 6 characters)"
+                    required
+                    minlength="6"
+                    autocomplete="current-password"
+                />
+                
+                <!-- Error message display -->
+                <div id="authError" class="auth-error hidden"></div>
+                
+                <!-- Action buttons -->
+                <div class="auth-buttons">
+                    <button type="button" id="signInEmailBtn" class="auth-btn primary">
+                        Sign In
+                    </button>
+                    <button type="button" id="signUpEmailBtn" class="auth-btn secondary">
+                        Sign Up
+                    </button>
+                </div>
+                
+                <!-- Forgot password link -->
+                <a href="#" id="forgotPasswordLink" class="forgot-password-link">
+                    Forgot password?
+                </a>
+            </form>
+            
+            <!-- Email verification message (hidden by default) -->
+            <div id="verificationMessage" class="verification-message hidden">
+                <div class="verification-icon">📧</div>
+                <h3>Verify Your Email</h3>
+                <p id="verificationText">
+                    We've sent a verification link to <strong id="verificationEmail"></strong>
+                </p>
+                <p class="verification-note">
+                    Please check your email and click the verification link to continue.
+                </p>
+                <button id="resendVerificationBtn" class="auth-btn secondary">
+                    Resend Email
+                </button>
+                <button id="backToSignInBtn" class="auth-btn secondary">
+                    Back to Sign In
+                </button>
+            </div>
+            
+            <p class="auth-note">Your data will sync across all your devices</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP (shown after sign-in) -->
+    <div id="mainApp" class="hidden">
+        <!-- TOP NAV BAR with User Info -->
+        <div class="top-nav">
+            <div class="user-info">
+                <img id="userPhoto" src="" alt="User" class="user-photo" />
+                <span id="userName">Loading...</span>
+            </div>
+            <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
+        </div>
+
+        <!-- TOP NAV TABS -->
+        <div class="top-tabs">
+            <button class="tab-btn active" data-tab="recipesTab">Recipes</button>
+            <button class="tab-btn" data-tab="plannerTab">Planner</button>
+            <button class="tab-btn" data-tab="groceryTab">Grocery List</button>
+            <button class="tab-btn" data-tab="categoriesTab">Categories</button>
+            <button class="tab-btn" data-tab="storesTab">Stores</button>
+            <button class="tab-btn" data-tab="otherTab">Other</button>
+        </div>
+
+        <!-- MAIN APP CONTAINER -->
+        <div class="app-container">
+
+            <!-- RECIPES TAB -->
+            <div id="recipesTab" class="tab-page active">
+                <h1>Recipes</h1>
+
+                <div class="section-note">
+                    Add or edit meals. Ingredients & substitutes added in next steps.
+                </div>
+
+                <button class="primary add-recipe-btn" onclick="openRecipeModalNew()">
+                    + Add Recipe
+                </button>
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                    <button class="primary" onclick="expandAllRecipeCategories()">Expand All</button>
+                    <button class="primary" onclick="collapseAllRecipeCategories()">Collapse All</button>
+                </div>
+
+                <div id="recipesList"></div>
+            </div>
+
+            <!-- PLANNER TAB -->
+            <div id="plannerTab" class="tab-page">
+                <h1>Planner</h1>
+                <p class="section-note">
+                    Select meals for this trip, then build your grocery list.
+                </p>
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                    <button class="primary" onclick="expandAllPlannerCategories()">Expand All Recipes</button>
+                    <button class="primary" onclick="collapseAllPlannerCategories()">Collapse All Recipes</button>
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                    <button class="primary" onclick="showAllIngredients()">Show All Ingredients</button>
+                    <button class="primary" onclick="collapseAllIngredients()">Collapse All Ingredients</button>
+                </div>
+
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                    <button class="primary" onclick="selectAllPlannerMeals()">Select All Meals</button>
+                    <button class="primary" onclick="unselectAllPlannerMeals()">Unselect All Meals</button>
+                </div>
+
+                <div id="plannerContainer"></div>
+
+                <div class="planner-extras">
+                    <h3>Other Items</h3>
+
+                    <div class="planner-extra-row">
+                        <input id="plannerExtraInput" type="text" placeholder="Ex: Laundry Soap">
+                        <input id="plannerExtraQty" type="number" value="1" min="1" style="width:70px;">
+                        <select id="plannerExtraStore"></select>
+                        <button class="primary" onclick="addPlannerExtra()">Add</button>
+                    </div>
+
+                    <div id="plannerExtrasList"></div>
+                </div>
+
+                <button class="primary build-grocery-btn" onclick="buildGroceryList()">
+                    Build Grocery List
+                </button>
+
+                <div class="planner-backup-controls" style="margin-top: 1.2rem; display:flex; gap:0.6rem;">
+                    <button class="primary" onclick="exportAppData()">Export Data</button>
+                    <button class="primary" onclick="document.getElementById('importFile').click()">Import Data</button>
+                    <input id="importFile"
+                           type="file"
+                           accept="application/json"
+                           style="display:none"
+                           onchange="importAppData(event)">
+                </div>
+            </div>
+
+            <!-- GROCERY TAB -->
+            <div id="groceryTab" class="tab-page">
+                <h1>Grocery List</h1>
+                <p class="section-note">
+                    Based on your selected meals and other items.
+                </p>
+                <div id="groceryContainer"></div>
+            </div>
+
+            <!-- CATEGORIES TAB -->
+            <div id="categoriesTab" class="tab-page">
+                <h1>Categories</h1>
+
+                <h3>Default Categories</h3>
+                <div id="globalCategoryList"></div>
+
+                <h3 style="margin-top:1rem;">My Categories</h3>
+                <div id="userCategoryList"></div>
+
+                <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                    <input id="newCategoryName" 
+                           type="text" 
+                           placeholder="Add a category..." 
+                           style="flex:1;">
+                    <button class="primary" onclick="addUserCategory()">Add</button>
+                </div>
+            </div>
+
+            <!-- STORES TAB -->
+            <div id="storesTab" class="tab-page">
+                <h1>Stores</h1>
+
+                <h3>Default Stores (Global)</h3>
+                <div id="globalStoresList"></div>
+
+                <h3 style="margin-top:1rem;">My Stores</h3>
+                <div id="userStoresList"></div>
+
+                <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                    <input id="newStoreName" 
+                           type="text" 
+                           placeholder="Add a store..." 
+                           style="flex:1;">
+                    <button class="primary" onclick="addUserStore()">Add</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- RECIPE MODAL (same as before) -->
+    <div id="recipeModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeRecipeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="recipeModalTitle">Add Recipe</h2>
+                <button class="modal-close" onclick="closeRecipeModal()">×</button>
+            </div>
+
+            <div class="modal-steps">
+                <span id="stepDot1" class="step-dot active"></span>
+                <span id="stepDot2" class="step-dot"></span>
+                <span id="stepDot3" class="step-dot"></span>
+            </div>
+
+            <div id="modalStep1" class="modal-step">
+                <label>Meal Name:</label>
+                <input id="modalRecipeName" type="text" placeholder="Ex: Chicken Alfredo">
+
+                <label>Category:</label>
+                <select id="modalRecipeCategory"></select>
+
+                <div class="modal-actions">
+                    <button onclick="closeRecipeModal()">Cancel</button>
+                    <button class="primary" onclick="goToStep(2)">Next →</button>
+                </div>
+            </div>
+
+            <div id="modalStep2" class="modal-step hidden">
+                <h3>Ingredients</h3>
+                <p class="small-note">
+                    Add all ingredients with store + unit + substitutes.
+                </p>
+
+                <div id="ingredientsContainer"></div>
+
+                <button class="primary" onclick="addIngredientRow()">+ Add Ingredient</button>
+
+                <div class="modal-actions">
+                    <button onclick="goToStep(1)">← Back</button>
+                    <button class="primary" onclick="goToStep(3)">Next →</button>
+                </div>
+            </div>
+
+            <div id="modalStep3" class="modal-step hidden">
+                <h3>Review Recipe</h3>
+
+                <div class="review-block">
+                    <strong>Name:</strong> <span id="reviewName"></span><br>
+                    <strong>Category:</strong> <span id="reviewCategory"></span>
+                </div>
+
+                <div class="review-block">
+                    <strong>Ingredients:</strong>
+                    <ul id="reviewIngredients"></ul>
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick="goToStep(2)">← Back</button>
+                    <button class="primary" onclick="saveRecipe()">Save Recipe</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUBSTITUTE MODAL -->
+    <div id="subModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeSubstituteModal()"></div>
+
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>Choose Substitute</h2>
+                <button class="modal-close" onclick="closeSubstituteModal()">×</button>
+            </div>
+
+            <div id="subModalBody" style="padding: 1rem 0;"></div>
+
+            <div class="modal-actions" style="margin-top:1rem;">
+                <button onclick="closeSubstituteModal()">Cancel</button>
+                <button class="primary" onclick="applySubstituteChoice()">Use Selected</button>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>
