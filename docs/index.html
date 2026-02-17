@@ -3,225 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meal & Grocery Planner - Plan Meals, Build Smart Grocery Lists</title>
-    <meta name="description" content="Free meal planning and grocery list app. Plan your meals, organize by store and aisle, sync across devices. No subscriptions, just simple meal planning.">
-    <link rel="stylesheet" href="website-style.css">
-    <link rel="icon" href="data:," />
+    <title>Recipe to Grocery List - Meal Planning Made Easy</title>
+    <meta name="description" content="Turn your favorite recipes into organized grocery lists. Plan meals, manage substitutes, and shop smarter.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 1rem 2.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #667eea;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* How It Works Section */
+        .how-it-works {
+            background: #f8f9fa;
+            padding: 4rem 2rem;
+        }
+
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .steps {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .step-content p {
+            color: #666;
+        }
+
+        /* Footer */
+        footer {
+            background: #2d3748;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        footer p {
+            opacity: 0.8;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .features h2,
+            .how-it-works h2 {
+                font-size: 2rem;
+            }
+
+            .step {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- NAVIGATION -->
-    <nav class="main-nav">
-        <div class="nav-container">
-            <div class="logo">
-                🍽️ <span>Meal Planner</span>
-            </div>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How It Works</a>
-                <a href="articles.html">Articles</a>
-                <a href="release-notes.html">Release Notes</a>
-                <a href="..app/index.html" class="cta-button">Launch App</a>
-            </div>
-        </div>
-    </nav>
-
-    <!-- HERO SECTION -->
+    <!-- Hero Section -->
     <section class="hero">
-        <div class="hero-content">
-            <h1>Plan Your Meals.<br>Shop Smarter.</h1>
-            <p class="hero-subtitle">
-                Free meal planning and grocery list app that organizes your shopping by store and aisle. 
-                No subscriptions. No complicated features. Just simple, effective meal planning.
-            </p>
-            <div class="hero-buttons">
-                <a href="..app/index.html" class="primary-button">Get Started Free</a>
-                <a href="#how-it-works" class="secondary-button">See How It Works</a>
-            </div>
-            <p class="hero-note">✓ No credit card required  ✓ Syncs across devices  ✓ Always free</p>
-        </div>
+        <h1>🍽️ Recipe to Grocery List</h1>
+        <p>Plan your meals and generate organized grocery lists in seconds. No more forgotten ingredients or wasted trips to the store.</p>
+        <a href="/app" class="cta-button">Launch App →</a>
     </section>
 
-    <!-- FEATURES SECTION -->
-    <section id="features" class="features">
-        <div class="container">
-            <h2>Everything You Need for Meal Planning</h2>
-            <p class="section-subtitle">Simple tools that make meal planning and grocery shopping easier</p>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">📋</div>
-                    <h3>Recipe Management</h3>
-                    <p>Store all your favorite recipes in one place. Add ingredients, substitute options, and organize by categories like "Quick Meals" or "Crock Pot".</p>
-                </div>
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Why You'll Love It</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>Recipe Management</h3>
+                <p>Store all your favorite recipes in one place. Add ingredients, quantities, and substitutes.</p>
+            </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">📅</div>
-                    <h3>Meal Planning</h3>
-                    <p>Select which meals you want to make this week. Check or uncheck ingredients you already have at home.</p>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Meal Planning</h3>
+                <p>Select recipes for the week and adjust servings. See exactly what you need to buy.</p>
+            </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">🛒</div>
-                    <h3>Smart Grocery Lists</h3>
-                    <p>Automatically generates organized grocery lists by store and aisle. See exactly where to find each item - Produce, Dairy, Meat, etc.</p>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛒</div>
+                <h3>Smart Grocery Lists</h3>
+                <p>Automatically organized by store and aisle. No more backtracking through the supermarket.</p>
+            </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">🏪</div>
-                    <h3>Multi-Store Shopping</h3>
-                    <p>Shop at multiple stores? Your list automatically splits items by store (Aldi, Walmart, Target, etc.) so you know exactly what to get where.</p>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>Ingredient Substitutes</h3>
+                <p>Set up substitute groups so you can easily swap ingredients based on what's available.</p>
+            </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h3>Ingredient Substitutes</h3>
-                    <p>Set up substitute groups for flexible meal planning. Choose between chicken or tofu, pasta types, cheese varieties - switch with one tap.</p>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">☁️</div>
+                <h3>Sync Across Devices</h3>
+                <p>Access your recipes and meal plans from phone, tablet, or computer. Always in sync.</p>
+            </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">☁️</div>
-                    <h3>Sync Across Devices</h3>
-                    <p>Sign in with Google and your recipes, meal plans, and lists sync automatically between your phone, tablet, and computer.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🚚</div>
-                    <h3>Delivery Integration</h3>
-                    <p>Quick links to Instacart and DoorDash for each store. Shop online when you don't want to go to the store.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>USDA Database</h3>
-                    <p>Powered by the USDA FoodData Central database with thousands of ingredients. Smart categorization puts items in the right aisle automatically.</p>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>Delivery Integration</h3>
+                <p>Send your grocery list to Instacart or DoorDash with one click. Shop from your couch.</p>
             </div>
         </div>
     </section>
 
-    <!-- HOW IT WORKS SECTION -->
-    <section id="how-it-works" class="how-it-works">
-        <div class="container">
-            <h2>How It Works</h2>
-            <p class="section-subtitle">Three simple steps from meal planning to grocery shopping</p>
-            
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Add Your Recipes</h3>
-                        <p>Create recipes with ingredients, quantities, and your preferred stores. Set up substitute groups for flexible options. Organize by categories that make sense to you.</p>
-                        <ul>
-                            <li>Add ingredients with autocomplete from USDA database</li>
-                            <li>Set quantities and units</li>
-                            <li>Choose which store to buy each item</li>
-                            <li>Create substitute groups (e.g., "Protein: Chicken or Tofu")</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Plan Your Meals</h3>
-                        <p>Select which meals you want to make this week. Uncheck ingredients you already have. Add other items you need like paper towels or laundry soap.</p>
-                        <ul>
-                            <li>Check meals you're making this week</li>
-                            <li>Multiply recipes (make 2x or 3x portions)</li>
-                            <li>Uncheck ingredients already in your pantry</li>
-                            <li>Swap substitutes with one tap</li>
-                            <li>Add non-food items to your list</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Shop Your List</h3>
-                        <p>Your grocery list is automatically organized by store and aisle. Know exactly what to get at each store and where to find it.</p>
-                        <ul>
-                            <li>Lists split by store (Aldi, Walmart, etc.)</li>
-                            <li>Items organized by aisle (Produce, Dairy, Meat)</li>
-                            <li>See quantities and units for each item</li>
-                            <li>Quick links to Instacart/DoorDash for delivery</li>
-                        </ul>
-                    </div>
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Add Your Recipes</h3>
+                    <p>Create recipes with ingredients, quantities, and your preferred stores. Set up substitute groups for flexibility.</p>
                 </div>
             </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Plan Your Meals</h3>
+                    <p>Choose which recipes you want to make this week. Adjust serving sizes and select substitutes as needed.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Generate Your List</h3>
+                    <p>Click "Build Grocery List" and get an organized shopping list grouped by store and aisle.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Shop Smart</h3>
+                    <p>Use the list in-store or send it to delivery services. Check off items as you go.</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem;">
+            <a href="/app" class="cta-button">Get Started Free →</a>
         </div>
     </section>
 
-    <!-- USE CASES SECTION -->
-    <section class="use-cases">
-        <div class="container">
-            <h2>Perfect For...</h2>
-            
-            <div class="use-cases-grid">
-                <div class="use-case">
-                    <h3>👨‍👩‍👧‍👦 Busy Families</h3>
-                    <p>Plan dinners for the week in minutes. Never forget an ingredient again. Your partner can add items to the list from their phone.</p>
-                </div>
-
-                <div class="use-case">
-                    <h3>💰 Budget Shoppers</h3>
-                    <p>Shop multiple stores to save money. Your list automatically tells you what to get at Aldi vs. Walmart. No more wandering aisles.</p>
-                </div>
-
-                <div class="use-case">
-                    <h3>🥗 Meal Preppers</h3>
-                    <p>Multiply recipes to make 3x portions for the week. Ingredient substitutes let you easily swap proteins or grains based on what's on sale.</p>
-                </div>
-
-                <div class="use-case">
-                    <h3>🍳 Home Cooks</h3>
-                    <p>Keep all your recipes organized in one place. Access them from any device. Never lose that recipe you wrote on a scrap of paper.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA SECTION -->
-    <section class="cta-section">
-        <div class="container">
-            <h2>Start Planning Better Meals Today</h2>
-            <p>Free forever. No credit card. No complicated setup.</p>
-            <a href="..app/index.html" class="primary-button large">Launch App Now</a>
-        </div>
-    </section>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Meal Planner</h4>
-                    <p>Simple, free meal planning and grocery list app.</p>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="articles.html">Meal Planning Articles</a></li>
-                        <li><a href="release-notes.html">Release Notes</a></li>
-                        <li><a href="..app/index.html">Launch App</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <ul>
-                        <li><a href="#how-it-works">How It Works</a></li>
-                        <li><a href="#features">Features</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2026 Meal & Grocery Planner. All rights reserved.</p>
-                <p>Powered by USDA FoodData Central | Built with ❤️ for home cooks</p>
-            </div>
-        </div>
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Recipe to Grocery List. Built for busy families who love home cooking.</p>
     </footer>
 </body>
 </html>
