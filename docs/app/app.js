@@ -2806,7 +2806,15 @@ function renderStoresTab() {
     
     // Render global stores
     globalDiv.innerHTML = GLOBAL_STORES
-        .map(store => `<div class="store-row">${store.name}</div>`)
+        .map(store => `
+            <div class="store-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span>${store.name}</span>
+                ${store.storeHomeUrl
+                    ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer">
+                           <button class="primary">Shop</button>
+                       </a>`
+                    : ""}
+            </div>`)
         .join("");
 
 
