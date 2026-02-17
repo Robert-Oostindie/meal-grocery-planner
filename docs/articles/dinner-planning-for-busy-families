@@ -16,11 +16,11 @@
                 🍽️ <span>Meal Planner</span>
             </div>
             <div class="nav-links">
-                <a href="../index.html">Home</a>
-                <a href="../index.html#features">Features</a>
+                <a href="..//app/index.html"">Home</a>
+                <a href="..//app/index.html"#features">Features</a>
                 <a href="../articles.html">Articles</a>
                 <a href="../release-notes.html">Release Notes</a>
-                <a href="../../index.html" class="cta-button">Launch App</a>
+                <a href="../..//app/index.html"" class="cta-button">Launch App</a>
             </div>
         </div>
     </nav>
@@ -238,7 +238,7 @@
                 </p>
 
                 <p>
-                    Ready to get started? <a href="../../index.html">Try our free meal planning app</a> - 
+                    Ready to get started? <a href="../..//app/index.html"">Try our free meal planning app</a> - 
                     it handles the grocery list organization automatically so you can focus on what to cook, 
                     not how to shop.
                 </p>
@@ -267,15 +267,15 @@
                     <ul>
                         <li><a href="../articles.html">Meal Planning Articles</a></li>
                         <li><a href="../release-notes.html">Release Notes</a></li>
-                        <li><a href="../../index.html">Launch App</a></li>
+                        <li><a href="../..//app/index.html"">Launch App</a></li>
                     </ul>
                 </div>
                 
                 <div class="footer-section">
                     <h4>Support</h4>
                     <ul>
-                        <li><a href="../index.html#how-it-works">How It Works</a></li>
-                        <li><a href="../index.html#features">Features</a></li>
+                        <li><a href="..//app/index.html"#how-it-works">How It Works</a></li>
+                        <li><a href="..//app/index.html"#features">Features</a></li>
                     </ul>
                 </div>
             </div>
