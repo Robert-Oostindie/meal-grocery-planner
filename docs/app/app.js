@@ -550,10 +550,8 @@ const DELIVERY_SERVICES = [
     {
         id: "instacart",
         name: "Instacart",
-        // store-level search (used for header buttons)
-        storeUrl: "https://www.instacart.com/store/search?q={STORE}",
-        // item-level search (used for user-store items)
-        itemUrl: "https://www.instacart.com/store/search?q={ITEM}",
+        storeUrl: "https://www.instacart.com/store/{STORE}/storefront",
+        itemUrl: "https://www.instacart.com/store/{STORE}/storefront",
         buttonClass: "delivery-btn instacart-btn"
     },
     {
