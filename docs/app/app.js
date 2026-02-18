@@ -3107,7 +3107,7 @@ function renderGroceryList() {
                 const storeSpecificKey = service.id + "Url"; // e.g. "instacartUrl"
                 const url = (storeInfo && storeInfo[storeSpecificKey])
                     ? storeInfo[storeSpecificKey]
-                    : service.storeUrl.replace("{STORE}", encodeURIComponent(storeName));
+                    : service.storeUrl.replace("{STORE}", encodeURIComponent(storeName.toLowerCase()));
 
                 const btn = document.createElement("button");
                 btn.className = service.buttonClass || "secondary";
