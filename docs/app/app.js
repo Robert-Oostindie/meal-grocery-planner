@@ -552,7 +552,8 @@ const GLOBAL_STORES = [
         id: "woodmans",
         name: "Woodman's",
         affiliateUrl: "https://shopwoodmans.com/search?q={ITEM}",
-        storeHomeUrl: "https://shopwoodmans.com/"
+        storeHomeUrl: "https://shopwoodmans.com/",
+        instacartUrl: "https://www.instacart.com/store/woodmans-food-markets/storefront?actid=b16bcab2-6ce3-41fd-b878-787da78d5f31"
     }
     // add more later as needed
 ];
@@ -3121,10 +3122,11 @@ function renderGroceryList() {
 
             // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
             DELIVERY_SERVICES.forEach(service => {
-                const url = service.storeUrl.replace(
-                    "{STORE}",
-                    encodeURIComponent(storeName)
-                );
+                // Check for store-specific override URL first
+                const storeSpecificKey = service.id + "Url"; // e.g. "instacartUrl"
+                const url = (storeInfo && storeInfo[storeSpecificKey])
+                    ? storeInfo[storeSpecificKey]
+                    : service.storeUrl.replace("{STORE}", encodeURIComponent(storeName));
 
                 const btn = document.createElement("button");
                 btn.className = service.buttonClass || "secondary";
