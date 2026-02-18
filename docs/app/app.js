@@ -557,8 +557,7 @@ const GLOBAL_STORES = [
     }
     // add more later as needed
 ];
-    // add more later as needed
-];
+
 
 // ==============================
 // DELIVERY SERVICES (Instacart, DoorDash, etc.)
