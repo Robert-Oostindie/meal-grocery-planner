@@ -530,24 +530,9 @@ const GLOBAL_RECIPES = [];
 
 
 const GLOBAL_STORES = [
-    {
-        id: "aldi",
-        name: "Aldi",
-        affiliateUrl: "https://www.aldi.us/search?q={ITEM}",
-        storeHomeUrl: "https://www.aldi.us/"
-    },
-    {
-        id: "walmart",
-        name: "Walmart",
-        affiliateUrl: "https://www.walmart.com/search?q={ITEM}",
-        storeHomeUrl: "https://www.walmart.com/"
-    },
-   {
-        id: "amazon",
-        name: "Amazon",
-        affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID",
-        storeHomeUrl: "https://www.amazon.com/"
-    },
+    { id: "aldi", name: "Aldi", affiliateUrl: "https://www.aldi.us/search?q={ITEM}", storeHomeUrl: "https://www.aldi.us/" },
+    { id: "walmart", name: "Walmart", affiliateUrl: "https://www.walmart.com/search?q={ITEM}", storeHomeUrl: "https://www.walmart.com/" },
+    { id: "amazon", name: "Amazon", affiliateUrl: "https://www.amazon.com/s?k={ITEM}&tag=YOURAFFID", storeHomeUrl: "https://www.amazon.com/" },
     {
         id: "woodmans",
         name: "Woodman's",
@@ -555,7 +540,6 @@ const GLOBAL_STORES = [
         storeHomeUrl: "https://shopwoodmans.com/",
         instacartUrl: "https://www.instacart.com/store/woodmans-food-markets/storefront?actid=b16bcab2-6ce3-41fd-b878-787da78d5f31"
     }
-    // add more later as needed
 ];
 
 
