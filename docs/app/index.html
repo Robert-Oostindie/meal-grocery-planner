@@ -6,8 +6,8 @@
     <title>Meal Planner</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" href="data:," />
+    <script type="module" src="app.js?v=7"></script>
 </head>
-<script type="module" src="app.js?v=5"></script>
 
 <body>
     <!-- AUTH SCREEN (shown before sign-in) -->
@@ -110,6 +110,7 @@
             <button class="tab-btn" data-tab="groceryTab">Grocery List</button>
             <button class="tab-btn" data-tab="categoriesTab">Categories</button>
             <button class="tab-btn" data-tab="storesTab">Stores</button>
+            <button class="tab-btn" data-tab="globalRecipesTab">Global Recipes</button>
             <button class="tab-btn" data-tab="otherTab">Other</button>
         </div>
 
@@ -237,6 +238,25 @@
                 </div>
             </div>
 
+            <!-- GLOBAL RECIPES TAB -->
+            <div id="globalRecipesTab" class="tab-page">
+                <h1>Global Recipes</h1>
+                <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
+                    Recipes shared by the community. Import any recipe to your personal library.
+                </p>
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
+                    <input type="text" placeholder="Search recipes..."
+                        oninput="setGlobalRecipesSearch(this.value)" style="flex:1; min-width:150px;">
+                    <select onchange="setGlobalRecipesSort(this.value)" style="padding:0.4rem;">
+                        <option value="popular">Most Popular</option>
+                        <option value="newest">Newest</option>
+                        <option value="az">A–Z</option>
+                    </select>
+                    <button onclick="refreshGlobalRecipes()">🔄 Refresh</button>
+                </div>
+                <div id="globalRecipesContainer"></div>
+            </div>
+
         </div>
     </div>
 
@@ -323,6 +343,6 @@
             </div>
         </div>
     </div>
-    
+
 </body>
 </html>
