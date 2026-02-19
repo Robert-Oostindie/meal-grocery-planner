@@ -12,6 +12,7 @@ import {
   sendPasswordResetEmail,
   deleteUser,
   reauthenticateWithPopup,
+  reauthenticateWithRedirect,
   reauthenticateWithCredential,
   EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -534,7 +535,25 @@ async function deleteAccount() {
         const provider = user.providerData?.[0]?.providerId;
         try {
             if (provider === "google.com") {
-                await reauthenticateWithPopup(user, googleProvider);
+                try {
+                    await reauthenticateWithPopup(user, googleProvider);
+                } catch (popupErr) {
+                    if (popupErr.code === "auth/popup-blocked") {
+                        // Browser blocked popup (common after async confirm/prompt).
+                        // Store the deletion intent and redirect for re-auth.
+                        // On return, onAuthStateChanged will pick up the fresh session
+                        // and the user can click Delete Account again.
+                        sessionStorage.setItem("pendingDeleteAccount", "true");
+                        alert("A Google sign-in window will open to verify your identity. After signing in, click Delete Account again to complete the deletion.");
+                        await reauthenticateWithRedirect(user, googleProvider);
+                        return;
+                    }
+                    if (popupErr.code === "auth/popup-closed-by-user") {
+                        alert("Deletion cancelled.");
+                        return;
+                    }
+                    throw popupErr;
+                }
             } else {
                 const password = prompt("Please re-enter your password to confirm:");
                 if (!password) {
