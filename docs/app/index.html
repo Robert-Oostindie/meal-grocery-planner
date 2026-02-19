@@ -27,7 +27,7 @@
             color: #1d4ed8;
         }
     </style>
-    <script type="module" src="app.js?v=7"></script>
+    <script type="module" src="app.js?v=14"></script>
 </head>
 
 <body>
@@ -350,16 +350,6 @@
                 <h3 style="margin-bottom:0.75rem;">Default Store</h3>
                 <select id="settingsDefaultStore" onchange="saveDefaultStore(this.value)" style="width:100%; padding:0.5rem;">
                 </select>
-            </div>
-
-            <!-- Danger Zone -->
-            <div style="border-top:1px solid #fca5a5; padding-top:1rem;">
-                <h3 style="color:#dc2626; margin-bottom:0.5rem;">Danger Zone</h3>
-                <p style="font-size:0.85rem; color:#6b7280; margin-bottom:0.75rem;">
-                    Deletes your login and releases your public name.
-                    Your anonymous usage data is kept to help improve the app.
-                </p>
-                <button class="danger" onclick="deleteAccount()">Delete My Account</button>
             </div>
         </div>
     </div>
