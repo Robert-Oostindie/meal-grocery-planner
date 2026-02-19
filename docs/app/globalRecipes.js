@@ -366,17 +366,70 @@ export async function renderGlobalRecipesTab() {
             </div>
             <div id="globalIngredients_${recipe.id}"
                  style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid #e5e7eb;">
-                <ul style="margin:0; padding-left:1.2rem; font-size:0.9rem; color:#374151; line-height:1.8;">
-                    ${(recipe.ingredients || []).map(ing => {
-                        const qty = ing.qty && ing.qty > 1 ? ` &mdash; ${ing.qty} ${ing.unit}` : "";
-                        return `<li>${ing.name}${qty}</li>`;
-                    }).join("")}
-                </ul>
+                ${buildIngredientListHTML(recipe.ingredients || [])}
             </div>
         `;
 
         container.appendChild(card);
     });
+}
+
+// ── Build grouped ingredient list HTML ────────────────────
+// Groups substitutes together under a shared label,
+// showing the default first and alternatives indented below.
+function buildIngredientListHTML(ingredients) {
+    // Separate into ungrouped and grouped
+    const ungrouped = [];
+    const groups = {}; // groupName → [ingredients]
+
+    ingredients.forEach(ing => {
+        if (ing.group) {
+            if (!groups[ing.group]) groups[ing.group] = [];
+            groups[ing.group].push(ing);
+        } else {
+            ungrouped.push(ing);
+        }
+    });
+
+    let html = `<ul style="margin:0; padding-left:1.2rem; font-size:0.9rem; color:#374151; line-height:1.8; list-style:none;">`;
+
+    // Render ungrouped ingredients normally
+    ungrouped.forEach(ing => {
+        const qty = ing.qty && ing.qty > 1 ? ` &mdash; ${ing.qty} ${ing.unit}` : "";
+        html += `<li style="padding:0.1rem 0;">&#8226; ${ing.name}${qty}</li>`;
+    });
+
+    // Render each substitute group
+    Object.entries(groups).forEach(([groupName, members]) => {
+        // Default first, then the rest
+        const defaultIng = members.find(i => i.isDefault) || members[0];
+        const alternatives = members.filter(i => i.id !== defaultIng.id);
+
+        const defaultQty = defaultIng.qty && defaultIng.qty > 1
+            ? ` &mdash; ${defaultIng.qty} ${defaultIng.unit}` : "";
+
+        // Default item with group label
+        html += `
+            <li style="padding:0.1rem 0;">
+                &#8226; ${defaultIng.name}${defaultQty}
+                <span style="font-size:0.75rem; background:#f3f4f6; color:#6b7280; border-radius:3px; padding:0.1rem 0.4rem; margin-left:0.4rem; vertical-align:middle;">
+                    ${groupName}
+                </span>
+            </li>`;
+
+        // Alternatives indented with "or" label
+        alternatives.forEach(alt => {
+            const altQty = alt.qty && alt.qty > 1 ? ` &mdash; ${alt.qty} ${alt.unit}` : "";
+            html += `
+                <li style="padding:0.05rem 0; padding-left:1.4rem; color:#6b7280;">
+                    <span style="font-size:0.75rem; color:#9ca3af; margin-right:0.3rem; font-style:italic;">or</span>
+                    ${alt.name}${altQty}
+                </li>`;
+        });
+    });
+
+    html += `</ul>`;
+    return html;
 }
 
 // ── UI helpers exposed to window via app.js ───────────────
