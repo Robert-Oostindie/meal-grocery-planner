@@ -99,6 +99,27 @@ export async function publishToGlobal(mealId) {
     const meal = _state.data.userMeals.find(m => m.id === mealId);
     if (!meal) return;
 
+    // Block sharing an imported recipe unless ingredients were modified.
+    // If the meal came from a global recipe, compare ingredient names
+    // against the source. Identical = no value added to the community.
+    if (meal.globalRecipeId) {
+        const source = _cache.find(r => r.id === meal.globalRecipeId);
+        if (source) {
+            const sourceNames = new Set((source.ingredients || []).map(i => i.name.toLowerCase().trim()));
+            const mealNames = new Set((meal.ingredients || []).map(i => i.name.toLowerCase().trim()));
+            const identical =
+                sourceNames.size === mealNames.size &&
+                [...mealNames].every(n => sourceNames.has(n));
+            if (identical) {
+                alert(
+                    `"${meal.name}" was imported from Global Recipes and hasn't been modified.\n\n` +
+                    `Add, remove, or change at least one ingredient before sharing your own version.`
+                );
+                return;
+            }
+        }
+    }
+
     // Prevent same user publishing the same name twice
     const col = collection(db, "globalRecipes");
     const dupQ = query(
@@ -148,7 +169,8 @@ export async function publishToGlobal(mealId) {
         const userRef = doc(db, "globalRecipes", docRef.id, "users", _state.user.id);
         await setDoc(userRef, {
             importedAt: serverTimestamp(),
-            localMealId: mealId
+            localMealId: mealId,
+            active: true
         });
 
         // Tag local meal with its global counterpart ID
@@ -174,9 +196,7 @@ export async function importGlobalRecipe(globalId) {
         return;
     }
 
-    // Check local state first — this is the source of truth.
-    // If no local meal has this globalRecipeId, the user doesn't have it,
-    // regardless of what a stale Firestore tracking doc might say.
+    // Local state is source of truth — if they already have it, stop here
     const alreadyInLocal = _state.data.userMeals.some(m => m.globalRecipeId === globalId);
     if (alreadyInLocal) {
         alert("You already have this recipe in your library!");
@@ -192,7 +212,6 @@ export async function importGlobalRecipe(globalId) {
     try {
         const defaultStore = _state.data.defaultStoreName || _getAllStores()[0]?.name || "";
 
-        // Deep copy with fresh local IDs + user's preferred store
         const localMeal = {
             id: _makeId(),
             name: recipe.name,
@@ -208,20 +227,28 @@ export async function importGlobalRecipe(globalId) {
         _state.data.userMeals.push(localMeal);
         await _persistState();
 
-        // Register user in subcollection (setDoc overwrites any stale doc)
+        // Check if this user has a tracking doc (possibly inactive from a prior removal)
         const userRef = doc(db, "globalRecipes", globalId, "users", _state.user.id);
+        const userSnap = await getDoc(userRef);
+        const wasActive = userSnap.exists() && userSnap.data()?.active === true;
+        const hadDoc = userSnap.exists();
+
+        // Write/update the tracking doc as active
         await setDoc(userRef, {
             importedAt: serverTimestamp(),
-            localMealId: localMeal.id
+            localMealId: localMeal.id,
+            active: true
         });
 
-        // Increment count on global doc
-        const globalRef = doc(db, "globalRecipes", globalId);
-        await updateDoc(globalRef, { userCount: increment(1) });
+        // Only increment if this user wasn't already counted
+        // (i.e. no prior doc, or doc existed but was inactive after removal)
+        if (!hadDoc) {
+            const globalRef = doc(db, "globalRecipes", globalId);
+            await updateDoc(globalRef, { userCount: increment(1) });
 
-        // Update local cache immediately (no full re-fetch needed)
-        const cacheIdx = _cache.findIndex(r => r.id === globalId);
-        if (cacheIdx !== -1) _cache[cacheIdx].userCount += 1;
+            const cacheIdx = _cache.findIndex(r => r.id === globalId);
+            if (cacheIdx !== -1) _cache[cacheIdx].userCount += 1;
+        }
 
         _renderRecipes();
         _renderPlanner();
@@ -253,9 +280,10 @@ export async function removeGlobalImport(globalId) {
         );
         await _persistState();
 
-        // Delete user tracking doc
+        // Soft-delete: mark tracking doc inactive rather than deleting it.
+        // This prevents the count inflating if the user re-adds later.
         const userRef = doc(db, "globalRecipes", globalId, "users", _state.user.id);
-        await deleteDoc(userRef);
+        await setDoc(userRef, { active: false }, { merge: true });
 
         // Decrement count, never below 0
         const globalRef = doc(db, "globalRecipes", globalId);
