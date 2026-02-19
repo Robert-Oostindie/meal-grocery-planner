@@ -158,7 +158,7 @@ export async function publishToGlobal(mealId) {
             ingredients: publicIngredients,
             userCount: 1,
             createdBy: _state.user.id,
-            createdByName: _state.user.name || _state.user.email || "Anonymous",
+            createdByName: _state.data.publicName || _state.user.name || _state.user.email || "Anonymous",
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
