@@ -115,14 +115,54 @@
 
     <!-- MAIN APP (shown after sign-in) -->
     <div id="mainApp" class="hidden">
-        <!-- TOP NAV BAR with User Info -->
+        <!-- TOP NAV BAR -->
         <div class="top-nav">
-            <div class="user-info">
+            <div class="user-info" id="avatarTrigger" onclick="toggleAccountMenu()" style="cursor:pointer; user-select:none;">
                 <img id="userPhoto" src="" alt="User" class="user-photo" />
                 <span id="userName">Loading...</span>
+                <span style="font-size:0.7rem; color:#9ca3af; margin-left:2px;">▾</span>
             </div>
-            <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
         </div>
+
+        <!-- ACCOUNT DROPDOWN MENU -->
+        <div id="accountMenu" class="hidden" style="
+            position:fixed; top:56px; left:0; z-index:1000;
+            background:white; border:1px solid #e5e7eb;
+            border-radius:0 0 10px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.12);
+            min-width:220px; padding:0.5rem 0;">
+
+            <!-- Profile summary -->
+            <div style="padding:0.75rem 1rem 0.5rem; border-bottom:1px solid #f3f4f6;">
+                <div style="font-weight:600; font-size:0.9rem;" id="menuPublicName">—</div>
+                <div style="font-size:0.75rem; color:#9ca3af;" id="menuEmail">—</div>
+            </div>
+
+            <!-- Menu items -->
+            <button onclick="openAccountSettings()" style="
+                width:100%; text-align:left; padding:0.65rem 1rem;
+                background:none; border:none; cursor:pointer; font-size:0.9rem;
+                display:flex; align-items:center; gap:0.6rem;">
+                ⚙️ Account Settings
+            </button>
+            <button onclick="signOutFromMenu()" style="
+                width:100%; text-align:left; padding:0.65rem 1rem;
+                background:none; border:none; cursor:pointer; font-size:0.9rem;
+                display:flex; align-items:center; gap:0.6rem;">
+                🚪 Sign Out
+            </button>
+            <div style="border-top:1px solid #f3f4f6; margin-top:0.25rem; padding-top:0.25rem;">
+                <button onclick="deleteAccount()" style="
+                    width:100%; text-align:left; padding:0.65rem 1rem;
+                    background:none; border:none; cursor:pointer; font-size:0.9rem;
+                    color:#dc2626; display:flex; align-items:center; gap:0.6rem;">
+                    🗑 Delete Account
+                </button>
+            </div>
+        </div>
+
+        <!-- CLICK OUTSIDE OVERLAY (closes menu) -->
+        <div id="accountMenuOverlay" class="hidden" onclick="closeAccountMenu()" style="
+            position:fixed; inset:0; z-index:999;"></div>
 
         <!-- TOP NAV TABS -->
         <div class="top-tabs">
@@ -132,7 +172,6 @@
             <button class="tab-btn" data-tab="categoriesTab">Categories</button>
             <button class="tab-btn" data-tab="storesTab">Stores</button>
             <button class="tab-btn" data-tab="globalRecipesTab">Global Recipes</button>
-            <button class="tab-btn" data-tab="otherTab">Other</button>
         </div>
 
         <!-- MAIN APP CONTAINER -->
@@ -278,6 +317,50 @@
                 <div id="globalRecipesContainer"></div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ACCOUNT SETTINGS MODAL -->
+    <div id="accountSettingsModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeAccountSettings()"></div>
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <h2>Account Settings</h2>
+                <button class="modal-close" onclick="closeAccountSettings()">×</button>
+            </div>
+
+            <!-- Profile -->
+            <div style="margin-bottom:1.5rem;">
+                <h3 style="margin-bottom:0.75rem;">Profile</h3>
+
+                <label style="font-size:0.85rem; color:#6b7280;">Public Name</label>
+                <div style="display:flex; gap:0.5rem; margin-top:0.25rem; margin-bottom:1rem;">
+                    <input id="settingsPublicName" type="text" maxlength="40" style="flex:1;">
+                    <button class="primary" onclick="savePublicName()">Save</button>
+                </div>
+                <div id="settingsNameError" class="auth-error hidden" style="margin-bottom:0.5rem;"></div>
+                <div id="settingsNameSuccess" style="display:none; font-size:0.85rem; color:#059669; margin-bottom:0.5rem;">✅ Public name updated!</div>
+
+                <label style="font-size:0.85rem; color:#6b7280;">Email</label>
+                <div style="font-size:0.9rem; padding:0.4rem 0; color:#374151;" id="settingsEmail">—</div>
+            </div>
+
+            <!-- Default Store -->
+            <div style="margin-bottom:1.5rem;">
+                <h3 style="margin-bottom:0.75rem;">Default Store</h3>
+                <select id="settingsDefaultStore" onchange="saveDefaultStore(this.value)" style="width:100%; padding:0.5rem;">
+                </select>
+            </div>
+
+            <!-- Danger Zone -->
+            <div style="border-top:1px solid #fca5a5; padding-top:1rem;">
+                <h3 style="color:#dc2626; margin-bottom:0.5rem;">Danger Zone</h3>
+                <p style="font-size:0.85rem; color:#6b7280; margin-bottom:0.75rem;">
+                    Deletes your login and releases your public name.
+                    Your anonymous usage data is kept to help improve the app.
+                </p>
+                <button class="danger" onclick="deleteAccount()">Delete My Account</button>
+            </div>
         </div>
     </div>
 
