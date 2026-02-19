@@ -3001,7 +3001,7 @@ function copyGroceryList() {
             if (name) {
                 const checkMark = checked ? "✓ " : "• ";
                 const aisleNote = aisle ? ` (${aisle})` : "";
-                lines.push(`${checkMark}${name}${aisleNote}`);
+                lines.push(`${checkMark}${name}`);
             }
         });
     });
