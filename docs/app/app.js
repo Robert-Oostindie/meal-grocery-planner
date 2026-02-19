@@ -427,13 +427,20 @@ async function loadUserState(uid) {
             if (data.appState) {
                 restoreAppState(data.appState);
             }
+
+            // Show onboarding if not yet completed (e.g. returning user before feature existed)
+            if (!state.data.onboardingComplete) {
+                showOnboarding();
+            }
         } else {
-            console.log("📝 No existing data - creating new user document");
+            console.log("📝 No existing data - new user, starting onboarding");
             await setDoc(ref, {
                 appState: getCurrentAppState(),
                 createdAt: serverTimestamp(),
                 lastActive: serverTimestamp()
             });
+            // Brand new user — show onboarding before app
+            showOnboarding();
         }
     } catch (err) {
         console.error("❌ Error loading from Firestore:", err);
@@ -1356,7 +1363,9 @@ let state = {
     data: {
         userMeals: [],
         userStores: [],
-        userCategories: []
+        userCategories: [],
+        publicName: "",
+        onboardingComplete: false
     },
 
     ui: {
@@ -1752,6 +1761,130 @@ function renderApp() {
         renderGroceryList();
     }
 }
+
+// ==============================
+// ONBOARDING
+// ==============================
+let onboardingStep = 1;
+
+function showOnboarding() {
+    const modal = document.getElementById("onboardingModal");
+    if (!modal) return;
+    onboardingStep = 1;
+    renderOnboardingStep();
+    modal.classList.remove("hidden");
+}
+
+function renderOnboardingStep() {
+    const step1 = document.getElementById("onboardStep1");
+    const step2 = document.getElementById("onboardStep2");
+    const dots = document.querySelectorAll(".onboard-dot");
+
+    step1.classList.toggle("hidden", onboardingStep !== 1);
+    step2.classList.toggle("hidden", onboardingStep !== 2);
+
+    dots.forEach((dot, i) => {
+        dot.classList.toggle("active", i + 1 === onboardingStep);
+    });
+}
+
+function onboardNextStep() {
+    // Validate step 1 — public name required
+    if (onboardingStep === 1) {
+        const nameInput = document.getElementById("onboardPublicName");
+        const name = nameInput.value.trim();
+        if (!name) {
+            document.getElementById("onboardNameError").textContent = "Please enter a public name.";
+            document.getElementById("onboardNameError").classList.remove("hidden");
+            return;
+        }
+        if (name.length < 2) {
+            document.getElementById("onboardNameError").textContent = "Name must be at least 2 characters.";
+            document.getElementById("onboardNameError").classList.remove("hidden");
+            return;
+        }
+        document.getElementById("onboardNameError").classList.add("hidden");
+        state.data.publicName = name;
+
+        // Populate the store dropdown in step 2
+        renderOnboardingStoreList();
+
+        onboardingStep = 2;
+        renderOnboardingStep();
+        return;
+    }
+}
+
+function renderOnboardingStoreList() {
+    const list = document.getElementById("onboardStoreList");
+    if (!list) return;
+
+    const currentDefault = state.data.defaultStoreName || "";
+    const allStores = getAllStores();
+
+    // Add any user-added stores during onboarding too
+    const onboardUserStores = state.data.userStores || [];
+
+    list.innerHTML = allStores.map(store => `
+        <div class="onboard-store-option ${currentDefault === store.name ? "selected" : ""}"
+             onclick="selectOnboardStore('${store.name}')"
+             id="onboardStore_${store.name.replace(/[^a-z0-9]/gi, '_')}">
+            ${store.name}
+            ${currentDefault === store.name ? `<span style="float:right;">⭐</span>` : ""}
+        </div>
+    `).join("");
+}
+
+function selectOnboardStore(storeName) {
+    state.data.defaultStoreName = storeName;
+    document.getElementById("onboardStoreError")?.classList.add("hidden");
+    renderOnboardingStoreList();
+}
+
+async function addOnboardStore() {
+    const input = document.getElementById("onboardNewStore");
+    const name = input.value.trim();
+    if (!name) return;
+
+    const allStores = getAllStores();
+    if (allStores.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+        alert("That store already exists.");
+        return;
+    }
+
+    if (!state.data.userStores) state.data.userStores = [];
+    state.data.userStores.push({ id: makeId(), name });
+
+    input.value = "";
+    // Auto-select the newly added store
+    selectOnboardStore(name);
+}
+
+async function completeOnboarding() {
+    // Require a store to be selected
+    if (!state.data.defaultStoreName) {
+        const err = document.getElementById("onboardStoreError");
+        if (err) {
+            err.textContent = "Please select a default store.";
+            err.classList.remove("hidden");
+        }
+        return;
+    }
+
+    state.data.onboardingComplete = true;
+    await persistState();
+
+    // Close modal
+    document.getElementById("onboardingModal").classList.add("hidden");
+
+    // Navigate to Global Recipes tab
+    switchTab("globalRecipesTab");
+}
+
+window.onboardNextStep = onboardNextStep;
+window.selectOnboardStore = selectOnboardStore;
+window.addOnboardStore = addOnboardStore;
+window.completeOnboarding = completeOnboarding;
 
 
 
