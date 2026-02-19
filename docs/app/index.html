@@ -187,7 +187,12 @@
 
             <!-- GROCERY TAB -->
             <div id="groceryTab" class="tab-page">
-                <h1>Grocery List</h1>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+                    <h1 style="margin:0;">Grocery List</h1>
+                    <button id="copyGroceryBtn" class="secondary" onclick="copyGroceryList()" style="white-space:nowrap;">
+                        📋 Copy List
+                    </button>
+                </div>
                 <p class="section-note">
                     Based on your selected meals and other items.
                 </p>
