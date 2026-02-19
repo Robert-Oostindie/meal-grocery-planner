@@ -698,6 +698,32 @@ async function loadUserState(uid) {
                 restoreAppState(data.appState);
             }
 
+            // ── Backfill publicNames index for existing users ──────
+            // Users who set a publicName before the publicNames collection
+            // existed never had their name claimed. Claim it now silently
+            // to enforce uniqueness going forward.
+            if (state.data.publicName) {
+                const nameKey = state.data.publicName.toLowerCase().trim();
+                const nameRef = doc(db, "publicNames", nameKey);
+                const nameSnap = await getDoc(nameRef);
+
+                if (!nameSnap.exists()) {
+                    // Name unclaimed — claim it for this user
+                    await setDoc(nameRef, {
+                        uid,
+                        displayName: state.data.publicName,
+                        createdAt: serverTimestamp()
+                    });
+                    console.log("✅ Backfilled publicName claim:", state.data.publicName);
+                } else if (nameSnap.data().uid !== uid) {
+                    // Name claimed by someone else — force onboarding to pick a new one
+                    console.warn("⚠️ Public name conflict detected, clearing name");
+                    state.data.publicName = "";
+                    state.data.onboardingComplete = false;
+                    await persistState();
+                }
+            }
+
             // Show onboarding if not yet completed (e.g. returning user before feature existed)
             if (!state.data.onboardingComplete) {
                 showOnboarding();
