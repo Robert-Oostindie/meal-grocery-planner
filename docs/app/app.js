@@ -543,7 +543,7 @@ async function deleteAccount() {
                         // Store the deletion intent and redirect for re-auth.
                         // On return, onAuthStateChanged will pick up the fresh session
                         // and the user can click Delete Account again.
-                        sessionStorage.setItem("pendingDeleteAccount", "true");
+                        localStorage.setItem("pendingDeleteAccount", "true");
                         alert("A Google sign-in window will open to verify your identity. After signing in, click Delete Account again to complete the deletion.");
                         await reauthenticateWithRedirect(user, googleProvider);
                         return;
@@ -648,8 +648,8 @@ onAuthStateChanged(auth, async (user) => {
         await loadUserState(user.uid);
 
         // ── Resume pending account deletion after redirect re-auth ──
-        if (sessionStorage.getItem("pendingDeleteAccount") === "true") {
-            sessionStorage.removeItem("pendingDeleteAccount");
+        if (localStorage.getItem("pendingDeleteAccount") === "true") {
+            localStorage.removeItem("pendingDeleteAccount");
             await completeDeletion(user);
             return;
         }
