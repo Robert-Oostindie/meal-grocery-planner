@@ -492,7 +492,7 @@ function migrateState(loadedState) {
         // old UI fields may or may not exist
         const oldUi = loadedState.ui || {};
 
-        loadedState.ui = {
+       loadedState.ui = {
             plannerMeals: oldUi.plannerMeals || [],
             plannerExtras: oldUi.plannerExtras || [],
             collapsedCategories: oldUi.collapsedCategories || [],
@@ -501,7 +501,8 @@ function migrateState(loadedState) {
             plannerIngredientComments: oldUi.plannerIngredientComments || {},
             plannerSubstituteSelections: oldUi.plannerSubstituteSelections || {},
             plannerMealMultipliers: oldUi.plannerMealMultipliers || {},
-            collapsedRecipeCategories: oldUi.collapsedRecipeCategories || []
+            collapsedRecipeCategories: oldUi.collapsedRecipeCategories || [],
+            groceryCheckedItems: oldUi.groceryCheckedItems || {}
         };
 
         loadedState.schemaVersion = 2;
@@ -1352,6 +1353,7 @@ let state = {
         collapsedMeals: {},
         plannerIngredientChecks: {},
         plannerIngredientComments: {},
+        groceryCheckedItems: {},   // { "itemKey": true/false } — persists checkoffs
         plannerSubstituteSelections: {},
         plannerMealMultipliers: {},
         collapsedRecipeCategories: []
@@ -2960,6 +2962,80 @@ async function buildGroceryList() {
 
     switchTab("groceryTab");
 }
+// ==============================
+// GROCERY ITEM CHECK-OFF
+// ==============================
+async function toggleGroceryItem(itemKey) {
+    if (!state.ui.groceryCheckedItems) state.ui.groceryCheckedItems = {};
+    state.ui.groceryCheckedItems[itemKey] = !state.ui.groceryCheckedItems[itemKey];
+    await persistState();
+    // Update just the checkbox row visually without full re-render
+    const el = document.querySelector(`[data-grocery-key="${CSS.escape(itemKey)}"]`);
+    if (el) {
+        const isChecked = state.ui.groceryCheckedItems[itemKey];
+        el.classList.toggle("grocery-item-checked", isChecked);
+        const cb = el.querySelector("input[type=checkbox]");
+        if (cb) cb.checked = isChecked;
+    }
+}
+window.toggleGroceryItem = toggleGroceryItem;
+
+// ==============================
+// COPY GROCERY LIST
+// ==============================
+function copyGroceryList() {
+    const container = document.getElementById("groceryContainer");
+    if (!container) return;
+
+    const lines = [];
+
+    // Walk through store cards
+    container.querySelectorAll(".grocery-store-card").forEach(card => {
+        const storeName = card.querySelector("h3")?.textContent?.trim();
+        if (storeName) lines.push(`\n🛒 ${storeName}`);
+
+        card.querySelectorAll(".grocery-item").forEach(item => {
+            const name = item.querySelector(".grocery-item-name")?.textContent?.trim();
+            const aisle = item.querySelector(".grocery-item-aisle")?.textContent?.trim();
+            const checked = item.classList.contains("grocery-item-checked");
+            if (name) {
+                const checkMark = checked ? "✓ " : "• ";
+                const aisleNote = aisle ? ` (${aisle})` : "";
+                lines.push(`${checkMark}${name}${aisleNote}`);
+            }
+        });
+    });
+
+    if (!lines.length) {
+        alert("Your grocery list is empty.");
+        return;
+    }
+
+    const text = lines.join("\n").trim();
+    navigator.clipboard.writeText(text).then(() => {
+        // Show brief toast feedback
+        const btn = document.getElementById("copyGroceryBtn");
+        if (btn) {
+            const original = btn.textContent;
+            btn.textContent = "✓ Copied!";
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.disabled = false;
+            }, 2000);
+        }
+    }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        alert("List copied to clipboard!");
+    });
+}
+window.copyGroceryList = copyGroceryList;
 
 function renderGroceryList() {
     const container = document.getElementById("groceryContainer");
@@ -3131,28 +3207,39 @@ function renderGroceryList() {
             // Render items sorted by aisle, but without aisle group headers
             Object.keys(aislesObj).sort().forEach(aisle => {
                 aislesObj[aisle].forEach(item => {
-                    const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
+                  const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
 
-                    const row = document.createElement("div");
-                    row.className = "grocery-item";
+                  // Build a stable key from store + item name for persistence
+                  const itemKey = `${storeName}::${item.name}::${aisle}`;
+                  const isChecked = !!(state.ui.groceryCheckedItems?.[itemKey]);
 
-                    // LEFT SIDE — item text
-                    const left = document.createElement("span");
-                    left.className = "grocery-item-name";
-                    left.textContent = `${item.name}${qtyPart}`;
+                  const row = document.createElement("div");
+                  row.className = "grocery-item" + (isChecked ? " grocery-item-checked" : "");
+                  row.dataset.groceryKey = itemKey;
 
-                    // RIGHT SIDE — aisle text (grey)
-                    const right = document.createElement("span");
-                    right.className = "grocery-item-aisle";
-                    right.textContent = aisle;
+                  // CHECKBOX
+                  const cb = document.createElement("input");
+                  cb.type = "checkbox";
+                  cb.checked = isChecked;
+                  cb.className = "grocery-checkbox";
+                  cb.onchange = () => toggleGroceryItem(itemKey);
 
-                    row.appendChild(left);
-                    row.appendChild(right);
+                  // LEFT SIDE — item text
+                  const left = document.createElement("span");
+                  left.className = "grocery-item-name";
+                  left.textContent = `${item.name}${qtyPart}`;
 
-                    card.appendChild(row);
+                  // RIGHT SIDE — aisle text (grey)
+                  const right = document.createElement("span");
+                  right.className = "grocery-item-aisle";
+                  right.textContent = aisle;
 
+                  row.appendChild(cb);
+                  row.appendChild(left);
+                  row.appendChild(right);
 
-                });
+                  card.appendChild(row);
+              });
             });
 
 
