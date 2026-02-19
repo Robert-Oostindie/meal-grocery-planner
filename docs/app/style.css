@@ -378,7 +378,24 @@ h1 {
     margin-left: 1rem;
     white-space: nowrap;
 }
+/* Grocery item checkbox */
+.grocery-checkbox {
+    margin-right: 0.5rem;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
 
+/* Checked grocery item — strike through and fade */
+.grocery-item-checked .grocery-item-name {
+    text-decoration: line-through;
+    color: #9ca3af;
+}
+
+.grocery-item-checked {
+    opacity: 0.6;
+}
 
 
 .grocery-item:last-child {
