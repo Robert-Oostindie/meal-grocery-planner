@@ -6,10 +6,14 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-  createUserWithEmailAndPassword,      // ← NEW
-  signInWithEmailAndPassword,          // ← NEW
-  sendEmailVerification,               // ← NEW
-  sendPasswordResetEmail               // ← NEW
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  deleteUser,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   doc,
@@ -19,6 +23,7 @@ import {
   collection,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -371,6 +376,98 @@ signOutBtn.addEventListener('click', async () => {
         console.error('❌ Sign-out error:', error);
     }
 });
+
+// ==============================
+// DELETE ACCOUNT
+// ==============================
+async function deleteAccount() {
+    // Step 1: First confirmation
+    const confirmed = confirm(
+        "⚠️ Delete your account?\n\n" +
+        "This will:\n" +
+        "• Remove your login and personal info\n" +
+        "• Release your public name\n\n" +
+        "Your recipe data will be kept anonymously to help improve the app.\n" +
+        "Recipes you shared to Global Recipes will remain.\n\n" +
+        "This cannot be undone."
+    );
+    if (!confirmed) return;
+
+    // Step 2: Type DELETE to confirm
+    const typed = prompt("Type DELETE to confirm:");
+    if (typed?.trim().toUpperCase() !== "DELETE") {
+        alert("Account deletion cancelled.");
+        return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+        // ── Re-authenticate first (Firebase requires this for deletion) ──
+        const provider = user.providerData?.[0]?.providerId;
+        try {
+            if (provider === "google.com") {
+                await reauthenticateWithPopup(user, googleProvider);
+            } else {
+                const password = prompt("Please re-enter your password to confirm:");
+                if (!password) {
+                    alert("Deletion cancelled.");
+                    return;
+                }
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
+            }
+        } catch (reAuthErr) {
+            if (reAuthErr.code === "auth/popup-closed-by-user") {
+                alert("Deletion cancelled.");
+                return;
+            }
+            throw reAuthErr;
+        }
+
+        // ── Soft-delete: wipe PII, keep behavioral data ───────
+        // The user doc stays in Firestore under the same uid.
+        // All usage data (recipes, stores, planner, onboarding) is preserved
+        // for product analytics. Only identifying information is removed.
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+            // Wipe PII
+            "appState.user.email":     null,
+            "appState.user.name":      null,
+            "appState.user.photoURL":  null,
+            "appState.data.publicName": null,
+
+            // Lifecycle markers for churn analysis
+            deletedAt:   serverTimestamp(),
+            isDeleted:   true,
+            authProvider: provider || "unknown",
+
+            // Keep everything else intact:
+            // appState.data.userMeals, defaultStoreName, onboardingComplete,
+            // createdAt, lastActive, appState.ui — all preserved
+        });
+
+        // ── Release the public name so others can claim it ────
+        if (state.data.publicName) {
+            const nameKey = state.data.publicName.toLowerCase().trim();
+            await deleteDoc(doc(db, "publicNames", nameKey));
+        }
+
+        // ── Delete Firebase Auth account ──────────────────────
+        await deleteUser(user);
+
+        alert("Your account has been deleted. Thanks for trying the app.");
+        authScreen.classList.remove("hidden");
+        mainApp.classList.add("hidden");
+
+    } catch (err) {
+        console.error("❌ Account deletion failed:", err);
+        alert("Something went wrong. Please try again or contact support.");
+    }
+}
+
+window.deleteAccount = deleteAccount;
 
 // ==============================
 // AUTH STATE LISTENER (UPDATED WITH EMAIL VERIFICATION)
@@ -1741,6 +1838,7 @@ function switchTab(tabId) {
     if (tabId === "storesTab") renderStoresTab();
     if (tabId === "categoriesTab") renderCategoriesTab();
     if (tabId === "globalRecipesTab") renderGlobalRecipesTab();
+    if (tabId === "otherTab") renderOtherTab();
 
 }
 
@@ -1963,6 +2061,19 @@ window.onboardNextStep = onboardNextStep;
 window.selectOnboardStore = selectOnboardStore;
 window.addOnboardStore = addOnboardStore;
 window.completeOnboarding = completeOnboarding;
+
+// ==============================
+// OTHER / ACCOUNT TAB
+// ==============================
+function renderOtherTab() {
+    const publicNameEl = document.getElementById("profilePublicName");
+    const emailEl = document.getElementById("profileEmail");
+    const storeEl = document.getElementById("profileDefaultStore");
+
+    if (publicNameEl) publicNameEl.textContent = state.data.publicName || "Not set";
+    if (emailEl) emailEl.textContent = state.user.email || "—";
+    if (storeEl) storeEl.textContent = state.data.defaultStoreName || "Not set";
+}
 
 
 
