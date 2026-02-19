@@ -15,7 +15,12 @@ import {
   doc,
   getDoc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  getDocs,
+  updateDoc,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -23,6 +28,7 @@ import {
     publishToGlobal,
     importGlobalRecipe,
     removeGlobalImport,
+    deleteFromGlobal,
     renderGlobalRecipesTab,
     toggleGlobalRecipeIngredients,
     setGlobalRecipesSearch,
@@ -1874,6 +1880,23 @@ async function completeOnboarding() {
     state.data.onboardingComplete = true;
     await persistState();
 
+    // Retroactively update any global recipes this user already published
+    // so their createdByName reflects the new public name
+    if (state.data.publicName && state.user.id) {
+        try {
+            const col = collection(db, "globalRecipes");
+            const q = query(col, where("createdBy", "==", state.user.id));
+            const snap = await getDocs(q);
+            const updates = snap.docs.map(d =>
+                updateDoc(d.ref, { createdByName: state.data.publicName })
+            );
+            await Promise.all(updates);
+            console.log(`✅ Updated ${updates.length} global recipe(s) with new public name`);
+        } catch (err) {
+            console.error("❌ Error updating global recipe names:", err);
+        }
+    }
+
     // Close modal
     document.getElementById("onboardingModal").classList.add("hidden");
 
@@ -1977,6 +2000,15 @@ async function deleteRecipe(id) {
         alert("You can't delete starter recipes, but you CAN edit them.");
         return;
     }
+
+    const meal = state.data.userMeals.find(m => m.id === id);
+    const isGlobal = !!meal?.globalRecipeId;
+
+    const confirmMsg = isGlobal
+        ? `Remove "${meal.name}" from your personal library?\n\nThis will NOT delete it from Global Recipes.`
+        : `Delete "${meal.name}"?`;
+
+    if (!confirm(confirmMsg)) return;
 
     state.data.userMeals = state.data.userMeals.filter(m => m.id !== id);
 
@@ -3511,6 +3543,7 @@ window.setDefaultStore = setDefaultStore;
 window.publishToGlobal = publishToGlobal;
 window.importGlobalRecipe = importGlobalRecipe;
 window.removeGlobalImport = removeGlobalImport;
+window.deleteFromGlobal = deleteFromGlobal;
 window.toggleGlobalRecipeIngredients = toggleGlobalRecipeIngredients;
 window.setGlobalRecipesSearch = setGlobalRecipesSearch;
 window.setGlobalRecipesSort = setGlobalRecipesSort;
