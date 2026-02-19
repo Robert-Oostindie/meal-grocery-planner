@@ -306,7 +306,51 @@ export async function removeGlobalImport(globalId) {
     }
 }
 
-// ── RENDER the Global Recipes tab ─────────────────────────
+// ── DELETE recipe from Global entirely (owner only) ───────
+export async function deleteFromGlobal(globalId) {
+    if (!_state?.user?.id) return;
+
+    const recipe = _cache.find(r => r.id === globalId);
+    if (!recipe) return;
+
+    // Only the creator can do this
+    if (recipe.createdBy !== _state.user.id) {
+        alert("Only the creator can delete a recipe from Global.");
+        return;
+    }
+
+    const confirmed = confirm(
+        `Permanently delete "${recipe.name}" from Global Recipes?\n\n` +
+        `Other users who already imported it will keep their copy, ` +
+        `but it will no longer appear in the Global list.`
+    );
+    if (!confirmed) return;
+
+    try {
+        const globalRef = doc(db, "globalRecipes", globalId);
+        await deleteDoc(globalRef);
+
+        // Remove from local cache
+        _cache = _cache.filter(r => r.id !== globalId);
+
+        // Also remove the globalRecipeId tag from the user's local copy
+        // (the local recipe itself stays — user keeps it)
+        _state.data.userMeals.forEach(m => {
+            if (m.globalRecipeId === globalId) {
+                delete m.globalRecipeId;
+            }
+        });
+        await _persistState();
+
+        _renderRecipes(); // refresh share button state
+        renderGlobalRecipesTab();
+
+        alert(`"${recipe.name}" has been removed from Global Recipes.`);
+    } catch (err) {
+        console.error("❌ deleteFromGlobal:", err);
+        alert("Something went wrong. Please try again.");
+    }
+}
 export async function renderGlobalRecipesTab() {
     const container = document.getElementById("globalRecipesContainer");
     if (!container) return;
@@ -369,6 +413,14 @@ export async function renderGlobalRecipesTab() {
                    + Add to My Recipes
                </button>`;
 
+        // Owner gets a separate delete-from-global button
+        const deleteGlobalBtn = isOwn
+            ? `<button onclick="deleteFromGlobal('${recipe.id}')"
+                style="font-size:0.8rem; color:#dc2626; background:none; border:1px solid #fca5a5; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer; margin-top:0.2rem;">
+                   🗑 Delete from Global
+               </button>`
+            : "";
+
         const byLine = isOwn
             ? `<span style="font-size:0.75rem; color:#9ca3af; font-style:italic;">Shared by you</span>`
             : `<span style="font-size:0.75rem; color:#9ca3af;">by ${recipe.createdByName || "Anonymous"}</span>`;
@@ -392,6 +444,7 @@ export async function renderGlobalRecipesTab() {
                         style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
                         View Ingredients
                     </button>
+                    ${deleteGlobalBtn}
                 </div>
             </div>
             <div id="globalIngredients_${recipe.id}"
