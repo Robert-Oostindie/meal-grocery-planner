@@ -483,7 +483,8 @@ function migrateState(loadedState) {
         loadedState.data = {
             userMeals: loadedState.userMeals || [],
             userStores: loadedState.userStores || [],
-            userCategories: loadedState.userCategories || []
+            userCategories: loadedState.userCategories || [],
+            defaultStoreName: loadedState.data?.defaultStoreName || ""   // ADD THIS
         };
         delete loadedState.userMeals;
         delete loadedState.userStores;
@@ -2808,12 +2809,11 @@ function renderStoresTab() {
                         : `<button onclick="setDefaultStore('${store.name}')">Set Default</button>`
                     }
                     ${store.storeHomeUrl
-                        ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer">
-                               <button class="primary">Shop</button>
-                           </a>`
+                        ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer"><button class="primary">Shop</button></a>`
                         : ""}
                 </div>
-            </div>`)
+            </div>
+        `)
         .join("");
 
     // Render user stores
@@ -2832,7 +2832,6 @@ function renderStoresTab() {
         `)
         .join("");
 }
-
 async function setDefaultStore(storeName) {
     state.data.defaultStoreName = storeName;
     await persistState();
@@ -3351,6 +3350,7 @@ window.addUserCategory = addUserCategory;
 window.removeUserCategory = removeUserCategory;
 window.addUserStore = addUserStore;
 window.removeUserStore = removeUserStore;
+window.setDefaultStore = setDefaultStore;
 
 window.togglePlannerMeal = togglePlannerMeal;
 window.togglePlannerIngredient = togglePlannerIngredient;
