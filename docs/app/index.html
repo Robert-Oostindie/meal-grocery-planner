@@ -6,6 +6,27 @@
     <title>Meal Planner</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" href="data:," />
+    <style>
+        .onboard-store-option {
+            padding: 0.65rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: border-color 0.15s, background 0.15s;
+            user-select: none;
+        }
+        .onboard-store-option:hover {
+            border-color: #6b7280;
+            background: #f9fafb;
+        }
+        .onboard-store-option.selected {
+            border-color: #2563eb;
+            background: #eff6ff;
+            font-weight: 600;
+            color: #1d4ed8;
+        }
+    </style>
     <script type="module" src="app.js?v=7"></script>
 </head>
 
@@ -341,6 +362,77 @@
                 <button onclick="closeSubstituteModal()">Cancel</button>
                 <button class="primary" onclick="applySubstituteChoice()">Use Selected</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ONBOARDING MODAL -->
+    <div id="onboardingModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content" style="max-width:480px;">
+
+            <div class="modal-header">
+                <h2>Welcome! Let's get you set up 👋</h2>
+            </div>
+
+            <!-- Step dots -->
+            <div class="modal-steps" style="margin-bottom:1.5rem;">
+                <span class="onboard-dot step-dot active"></span>
+                <span class="onboard-dot step-dot"></span>
+            </div>
+
+            <!-- STEP 1: Public Name -->
+            <div id="onboardStep1">
+                <h3 style="margin-bottom:0.4rem;">Choose your public name</h3>
+                <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
+                    This is the name other users will see when you share recipes to the community.
+                    It will not show your email address.
+                </p>
+                <input
+                    id="onboardPublicName"
+                    type="text"
+                    placeholder="e.g. ChefMike, The Andersons, Sarah K..."
+                    style="width:100%; box-sizing:border-box;"
+                    maxlength="40"
+                    oninput="document.getElementById('onboardNameError').classList.add('hidden')"
+                >
+                <div id="onboardNameError" class="auth-error hidden" style="margin-top:0.5rem;"></div>
+                <div class="modal-actions" style="margin-top:1.5rem;">
+                    <button class="primary" style="width:100%;" onclick="onboardNextStep()">
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Default Store -->
+            <div id="onboardStep2" class="hidden">
+                <h3 style="margin-bottom:0.4rem;">Choose your default store</h3>
+                <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
+                    New ingredients will default to this store. You can change it anytime in Settings.
+                </p>
+
+                <div id="onboardStoreList" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;"></div>
+
+                <!-- Add custom store -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                    <input
+                        id="onboardNewStore"
+                        type="text"
+                        placeholder="Add a different store..."
+                        style="flex:1;"
+                        maxlength="40"
+                    >
+                    <button onclick="addOnboardStore()">Add</button>
+                </div>
+
+                <div id="onboardStoreError" class="auth-error hidden" style="margin-bottom:0.75rem;"></div>
+
+                <div class="modal-actions" style="margin-top:1rem;">
+                    <button class="primary" style="width:100%;" onclick="completeOnboarding()">
+                        Let's go! →
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
