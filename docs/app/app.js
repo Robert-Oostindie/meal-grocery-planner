@@ -556,19 +556,15 @@ async function deleteAccount() {
                     throw popupErr;
                 }
             } else {
-                // Email/password user — show a proper in-app modal instead of prompt()
-                const password = await showReauthModal();
-                if (!password) return; // user cancelled
-                const credential = EmailAuthProvider.credential(user.email, password);
-                try {
-                    await reauthenticateWithCredential(user, credential);
-                } catch (credErr) {
-                    if (credErr.code === "auth/wrong-password" || credErr.code === "auth/invalid-credential") {
-                        alert("Incorrect password. Account deletion cancelled.");
-                        return;
-                    }
-                    throw credErr;
-                }
+                // Email/password user — sign them out and send to the normal
+                // sign-in screen. Clean, trustworthy, no sketchy dialogs.
+                // Deletion completes automatically after they sign back in.
+                localStorage.setItem("pendingDeleteAccount", "true");
+                await signOut(auth);
+                showAuthError("Please sign in again to confirm account deletion.");
+                authScreen.classList.remove("hidden");
+                mainApp.classList.add("hidden");
+                return;
             }
         } catch (reAuthErr) {
             if (reAuthErr.code === "auth/popup-closed-by-user") {
@@ -625,38 +621,6 @@ async function completeDeletion(user) {
 }
 
 window.deleteAccount = deleteAccount;
-
-// ── Reauth modal (used for email/password account deletion) ──
-let _reauthResolve = null;
-
-function showReauthModal() {
-    return new Promise(resolve => {
-        _reauthResolve = resolve;
-        document.getElementById("reauthPassword").value = "";
-        document.getElementById("reauthError").classList.add("hidden");
-        document.getElementById("reauthModal").classList.remove("hidden");
-        setTimeout(() => document.getElementById("reauthPassword").focus(), 50);
-    });
-}
-
-function reauthConfirm() {
-    const password = document.getElementById("reauthPassword").value;
-    if (!password) {
-        document.getElementById("reauthError").textContent = "Please enter your password.";
-        document.getElementById("reauthError").classList.remove("hidden");
-        return;
-    }
-    document.getElementById("reauthModal").classList.add("hidden");
-    if (_reauthResolve) { _reauthResolve(password); _reauthResolve = null; }
-}
-
-function reauthCancel() {
-    document.getElementById("reauthModal").classList.add("hidden");
-    if (_reauthResolve) { _reauthResolve(null); _reauthResolve = null; }
-}
-
-window.reauthConfirm = reauthConfirm;
-window.reauthCancel = reauthCancel;
 
 // ==============================
 // AUTH STATE LISTENER (UPDATED WITH EMAIL VERIFICATION)
