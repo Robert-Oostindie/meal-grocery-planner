@@ -174,10 +174,11 @@ export async function importGlobalRecipe(globalId) {
         return;
     }
 
-    // Block duplicate imports
-    const userRef = doc(db, "globalRecipes", globalId, "users", _state.user.id);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
+    // Check local state first — this is the source of truth.
+    // If no local meal has this globalRecipeId, the user doesn't have it,
+    // regardless of what a stale Firestore tracking doc might say.
+    const alreadyInLocal = _state.data.userMeals.some(m => m.globalRecipeId === globalId);
+    if (alreadyInLocal) {
         alert("You already have this recipe in your library!");
         return;
     }
@@ -207,7 +208,8 @@ export async function importGlobalRecipe(globalId) {
         _state.data.userMeals.push(localMeal);
         await _persistState();
 
-        // Register user in subcollection
+        // Register user in subcollection (setDoc overwrites any stale doc)
+        const userRef = doc(db, "globalRecipes", globalId, "users", _state.user.id);
         await setDoc(userRef, {
             importedAt: serverTimestamp(),
             localMealId: localMeal.id
