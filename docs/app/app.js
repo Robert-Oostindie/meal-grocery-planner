@@ -11,6 +11,7 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   deleteUser,
+  getRedirectResult,
   reauthenticateWithPopup,
   reauthenticateWithRedirect,
   reauthenticateWithCredential,
@@ -580,10 +581,10 @@ async function deleteAccount() {
 }
 
 // Shared deletion steps — called after re-auth succeeds
-// (either from deleteAccount directly or from redirect resume)
 async function completeDeletion(user) {
     try {
         const provider = user.providerData?.[0]?.providerId || "unknown";
+        console.log("🗑 Starting account deletion for provider:", provider);
 
         // ── Soft-delete: wipe PII, keep behavioral data ───────
         const userRef = doc(db, "users", user.uid);
@@ -593,23 +594,27 @@ async function completeDeletion(user) {
             isDeleted:    true,
             authProvider: provider,
         });
+        console.log("✅ Firestore doc soft-deleted");
 
         // ── Release the public name so others can claim it ────
         if (state.data.publicName) {
             const nameKey = state.data.publicName.toLowerCase().trim();
             await deleteDoc(doc(db, "publicNames", nameKey));
+            console.log("✅ Public name released");
         }
 
         // ── Delete Firebase Auth account ──────────────────────
+        console.log("🗑 Deleting Firebase Auth account...");
         await deleteUser(user);
+        console.log("✅ Auth account deleted");
 
         alert("Your account has been deleted. Thanks for trying the app.");
         authScreen.classList.remove("hidden");
         mainApp.classList.add("hidden");
 
     } catch (err) {
-        console.error("❌ completeDeletion failed:", err);
-        alert("Something went wrong finalizing deletion. Please try again or contact support.");
+        console.error("❌ completeDeletion failed:", err.code, err.message);
+        alert(`Something went wrong: ${err.message}\n\nPlease try again or contact support.`);
     }
 }
 
@@ -650,6 +655,15 @@ onAuthStateChanged(auth, async (user) => {
         // ── Resume pending account deletion after redirect re-auth ──
         if (localStorage.getItem("pendingDeleteAccount") === "true") {
             localStorage.removeItem("pendingDeleteAccount");
+
+            // Must call getRedirectResult() to fully process the redirect
+            // re-auth before deleteUser() will accept it as "recent login"
+            try {
+                await getRedirectResult(auth);
+            } catch (e) {
+                console.warn("getRedirectResult error (non-fatal):", e);
+            }
+
             await completeDeletion(user);
             return;
         }
