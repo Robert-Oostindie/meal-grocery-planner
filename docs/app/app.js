@@ -553,25 +553,22 @@ async function deleteAccount() {
         }
 
         // ── Soft-delete: wipe PII, keep behavioral data ───────
-        // The user doc stays in Firestore under the same uid.
-        // All usage data (recipes, stores, planner, onboarding) is preserved
-        // for product analytics. Only identifying information is removed.
+        // state.user (email, name, photoURL) lives in Firebase Auth only —
+        // it is NOT stored in Firestore. The only PII in the Firestore doc
+        // is publicName inside appState.data. Everything else is behavioral.
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
-            // Wipe PII
-            "appState.user.email":     null,
-            "appState.user.name":      null,
-            "appState.user.photoURL":  null,
+            // Wipe the one piece of PII stored in Firestore
             "appState.data.publicName": null,
 
             // Lifecycle markers for churn analysis
-            deletedAt:   serverTimestamp(),
-            isDeleted:   true,
+            deletedAt:    serverTimestamp(),
+            isDeleted:    true,
             authProvider: provider || "unknown",
 
-            // Keep everything else intact:
+            // All behavioral data preserved:
             // appState.data.userMeals, defaultStoreName, onboardingComplete,
-            // createdAt, lastActive, appState.ui — all preserved
+            // createdAt, lastActive, appState.ui — untouched
         });
 
         // ── Release the public name so others can claim it ────
