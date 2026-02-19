@@ -438,7 +438,26 @@
         </div>
     </div>
 
-    <!-- ONBOARDING MODAL -->
+    <!-- REAUTH PASSWORD MODAL -->
+    <div id="reauthModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h2>Confirm Your Identity</h2>
+            </div>
+            <p style="font-size:0.9rem; color:#6b7280; margin-bottom:1rem;">
+                For security, please enter your password to delete your account.
+            </p>
+            <input id="reauthPassword" type="password" placeholder="Your password"
+                style="width:100%; box-sizing:border-box; margin-bottom:0.5rem;"
+                onkeydown="if(event.key==='Enter') reauthConfirm()">
+            <div id="reauthError" class="auth-error hidden" style="margin-bottom:0.75rem;"></div>
+            <div class="modal-actions">
+                <button onclick="reauthCancel()">Cancel</button>
+                <button class="danger" onclick="reauthConfirm()">Delete My Account</button>
+            </div>
+        </div>
+    </div>
     <div id="onboardingModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-content" style="max-width:480px;">
