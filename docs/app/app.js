@@ -483,7 +483,8 @@ function migrateState(loadedState) {
         loadedState.data = {
             userMeals: loadedState.userMeals || [],
             userStores: loadedState.userStores || [],
-            userCategories: loadedState.userCategories || []
+            userCategories: loadedState.userCategories || [],
+            defaultStoreName: loadedState.data?.defaultStoreName || ""   // ADD THIS
         };
         delete loadedState.userMeals;
         delete loadedState.userStores;
@@ -2067,7 +2068,7 @@ function addIngredientRow() {
     syncIngredientsFromDOM();
 
     const allStores = getAllStores();
-    const defaultStore = allStores[0]?.name || "";
+    const defaultStore = state.data.defaultStoreName || allStores[0]?.name || "";
 
 
     ingredientRows.push({
@@ -2795,30 +2796,44 @@ function renderPlannerExtras() {
 function renderStoresTab() {
     const globalDiv = document.getElementById("globalStoresList");
     const userDiv = document.getElementById("userStoresList");
-    
+    const currentDefault = state.data.defaultStoreName || "";
+
     // Render global stores
     globalDiv.innerHTML = GLOBAL_STORES
         .map(store => `
             <div class="store-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <span>${store.name}</span>
-                ${store.storeHomeUrl
-                    ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer">
-                           <button class="primary">Shop</button>
-                       </a>`
-                    : ""}
-            </div>`)
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    ${currentDefault === store.name
+                        ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
+                        : `<button onclick="setDefaultStore('${store.name}')">Set Default</button>`
+                    }
+                    <button onclick="openShopForStore('${store.name}')">Shop</button>
+                </div>
+            </div>
+        `)
         .join("");
-
 
     // Render user stores
     userDiv.innerHTML = (state.data.userStores || [])
         .map((s, idx) => `
-            <div class="store-row" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <div class="store-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <span>${s.name}</span>
-                <button class="danger" onclick="removeUserStore(${idx})">Remove</button>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    ${currentDefault === s.name
+                        ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
+                        : `<button onclick="setDefaultStore('${s.name}')">Set Default</button>`
+                    }
+                    <button class="danger" onclick="removeUserStore(${idx})">Remove</button>
+                </div>
             </div>
         `)
         .join("");
+}
+async function setDefaultStore(storeName) {
+    state.data.defaultStoreName = storeName;
+    await persistState();
+    renderStoresTab();
 }
 async function addUserStore() {
     const input = document.getElementById("newStoreName");
