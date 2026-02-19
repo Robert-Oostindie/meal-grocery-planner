@@ -571,23 +571,27 @@ async function deleteAccount() {
             throw reAuthErr;
         }
 
+        await completeDeletion(user);
+
+    } catch (err) {
+        console.error("❌ Account deletion failed:", err);
+        alert("Something went wrong. Please try again or contact support.");
+    }
+}
+
+// Shared deletion steps — called after re-auth succeeds
+// (either from deleteAccount directly or from redirect resume)
+async function completeDeletion(user) {
+    try {
+        const provider = user.providerData?.[0]?.providerId || "unknown";
+
         // ── Soft-delete: wipe PII, keep behavioral data ───────
-        // state.user (email, name, photoURL) lives in Firebase Auth only —
-        // it is NOT stored in Firestore. The only PII in the Firestore doc
-        // is publicName inside appState.data. Everything else is behavioral.
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
-            // Wipe the one piece of PII stored in Firestore
             "appState.data.publicName": null,
-
-            // Lifecycle markers for churn analysis
             deletedAt:    serverTimestamp(),
             isDeleted:    true,
-            authProvider: provider || "unknown",
-
-            // All behavioral data preserved:
-            // appState.data.userMeals, defaultStoreName, onboardingComplete,
-            // createdAt, lastActive, appState.ui — untouched
+            authProvider: provider,
         });
 
         // ── Release the public name so others can claim it ────
@@ -604,8 +608,8 @@ async function deleteAccount() {
         mainApp.classList.add("hidden");
 
     } catch (err) {
-        console.error("❌ Account deletion failed:", err);
-        alert("Something went wrong. Please try again or contact support.");
+        console.error("❌ completeDeletion failed:", err);
+        alert("Something went wrong finalizing deletion. Please try again or contact support.");
     }
 }
 
@@ -642,6 +646,13 @@ onAuthStateChanged(auth, async (user) => {
         
         // Load user's data from Firestore
         await loadUserState(user.uid);
+
+        // ── Resume pending account deletion after redirect re-auth ──
+        if (sessionStorage.getItem("pendingDeleteAccount") === "true") {
+            sessionStorage.removeItem("pendingDeleteAccount");
+            await completeDeletion(user);
+            return;
+        }
         
         // Show app, hide auth screen
         authScreen.classList.add('hidden');
