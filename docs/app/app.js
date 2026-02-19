@@ -47,7 +47,7 @@ import {
 const authScreen = document.getElementById('authScreen');
 const mainApp = document.getElementById('mainApp');
 const googleSignInBtn = document.getElementById('googleSignInBtn');
-const signOutBtn = document.getElementById('signOutBtn');
+// (sign out handled via account dropdown menu)
 const userPhoto = document.getElementById('userPhoto');
 const userName = document.getElementById('userName');
 const authEmail = document.getElementById('authEmail');
@@ -364,18 +364,144 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 // ==============================
-// SIGN OUT
+// ACCOUNT DROPDOWN MENU
 // ==============================
-signOutBtn.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        console.log('✅ Signed out');
-        authScreen.classList.remove('hidden');
-        mainApp.classList.add('hidden');
-    } catch (error) {
-        console.error('❌ Sign-out error:', error);
+function toggleAccountMenu() {
+    const menu = document.getElementById("accountMenu");
+    const overlay = document.getElementById("accountMenuOverlay");
+    const isHidden = menu.classList.contains("hidden");
+
+    if (isHidden) {
+        // Populate name/email before showing
+        document.getElementById("menuPublicName").textContent =
+            state.data.publicName || state.user.name || "No public name set";
+        document.getElementById("menuEmail").textContent =
+            state.user.email || "";
+        menu.classList.remove("hidden");
+        overlay.classList.remove("hidden");
+    } else {
+        closeAccountMenu();
     }
-});
+}
+
+function closeAccountMenu() {
+    document.getElementById("accountMenu").classList.add("hidden");
+    document.getElementById("accountMenuOverlay").classList.add("hidden");
+}
+
+function signOutFromMenu() {
+    closeAccountMenu();
+    signOut(auth).then(() => {
+        authScreen.classList.remove("hidden");
+        mainApp.classList.add("hidden");
+    }).catch(err => console.error("❌ Sign-out error:", err));
+}
+
+// ==============================
+// ACCOUNT SETTINGS MODAL
+// ==============================
+function openAccountSettings() {
+    closeAccountMenu();
+
+    // Populate fields
+    document.getElementById("settingsPublicName").value = state.data.publicName || "";
+    document.getElementById("settingsEmail").textContent = state.user.email || "—";
+    document.getElementById("settingsNameError").classList.add("hidden");
+    document.getElementById("settingsNameSuccess").style.display = "none";
+
+    // Populate store dropdown
+    const storeSelect = document.getElementById("settingsDefaultStore");
+    const allStores = getAllStores();
+    storeSelect.innerHTML = allStores.map(s => `
+        <option value="${s.name}" ${state.data.defaultStoreName === s.name ? "selected" : ""}>
+            ${s.name}
+        </option>
+    `).join("");
+
+    document.getElementById("accountSettingsModal").classList.remove("hidden");
+}
+
+function closeAccountSettings() {
+    document.getElementById("accountSettingsModal").classList.add("hidden");
+}
+
+async function savePublicName() {
+    const input = document.getElementById("settingsPublicName");
+    const errorEl = document.getElementById("settingsNameError");
+    const successEl = document.getElementById("settingsNameSuccess");
+    const name = input.value.trim();
+
+    errorEl.classList.add("hidden");
+    successEl.style.display = "none";
+
+    if (!name || name.length < 2) {
+        errorEl.textContent = "Name must be at least 2 characters.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+    if (!/^[a-zA-Z0-9 _'-]+$/.test(name)) {
+        errorEl.textContent = "Only letters, numbers, spaces, and ' _ - are allowed.";
+        errorEl.classList.remove("hidden");
+        return;
+    }
+    if (name === state.data.publicName) {
+        successEl.textContent = "✅ That's already your public name!";
+        successEl.style.display = "block";
+        return;
+    }
+
+    // Check uniqueness
+    const nameKey = name.toLowerCase().trim();
+    const nameRef = doc(db, "publicNames", nameKey);
+    const nameSnap = await getDoc(nameRef);
+    if (nameSnap.exists() && nameSnap.data().uid !== state.user.id) {
+        errorEl.textContent = `"${name}" is already taken.`;
+        errorEl.classList.remove("hidden");
+        return;
+    }
+
+    try {
+        // Release old name
+        if (state.data.publicName) {
+            const oldKey = state.data.publicName.toLowerCase().trim();
+            await deleteDoc(doc(db, "publicNames", oldKey));
+        }
+
+        // Claim new name
+        await setDoc(nameRef, {
+            uid: state.user.id,
+            displayName: name,
+            createdAt: serverTimestamp()
+        });
+
+        state.data.publicName = name;
+        await persistState();
+
+        successEl.textContent = "✅ Public name updated!";
+        successEl.style.display = "block";
+
+        // Update the top nav display name
+        document.getElementById("userName").textContent = name;
+
+    } catch (err) {
+        console.error("❌ savePublicName:", err);
+        errorEl.textContent = "Something went wrong. Please try again.";
+        errorEl.classList.remove("hidden");
+    }
+}
+
+async function saveDefaultStore(storeName) {
+    state.data.defaultStoreName = storeName;
+    await persistState();
+}
+
+window.toggleAccountMenu = toggleAccountMenu;
+window.closeAccountMenu = closeAccountMenu;
+window.signOutFromMenu = signOutFromMenu;
+window.openAccountSettings = openAccountSettings;
+window.closeAccountSettings = closeAccountSettings;
+window.savePublicName = savePublicName;
+window.saveDefaultStore = saveDefaultStore;
 
 // ==============================
 // DELETE ACCOUNT
@@ -1838,7 +1964,6 @@ function switchTab(tabId) {
     if (tabId === "storesTab") renderStoresTab();
     if (tabId === "categoriesTab") renderCategoriesTab();
     if (tabId === "globalRecipesTab") renderGlobalRecipesTab();
-    if (tabId === "otherTab") renderOtherTab();
 
 }
 
@@ -2061,19 +2186,6 @@ window.onboardNextStep = onboardNextStep;
 window.selectOnboardStore = selectOnboardStore;
 window.addOnboardStore = addOnboardStore;
 window.completeOnboarding = completeOnboarding;
-
-// ==============================
-// OTHER / ACCOUNT TAB
-// ==============================
-function renderOtherTab() {
-    const publicNameEl = document.getElementById("profilePublicName");
-    const emailEl = document.getElementById("profileEmail");
-    const storeEl = document.getElementById("profileDefaultStore");
-
-    if (publicNameEl) publicNameEl.textContent = state.data.publicName || "Not set";
-    if (emailEl) emailEl.textContent = state.user.email || "—";
-    if (storeEl) storeEl.textContent = state.data.defaultStoreName || "Not set";
-}
 
 
 
