@@ -1794,30 +1794,68 @@ function renderOnboardingStep() {
     });
 }
 
-function onboardNextStep() {
-    // Validate step 1 — public name required
+async function onboardNextStep() {
+    // Validate step 1 — public name required + unique
     if (onboardingStep === 1) {
         const nameInput = document.getElementById("onboardPublicName");
+        const errorEl = document.getElementById("onboardNameError");
+        const nextBtn = document.getElementById("onboardNextBtn");
         const name = nameInput.value.trim();
+
+        // Basic validation
         if (!name) {
-            document.getElementById("onboardNameError").textContent = "Please enter a public name.";
-            document.getElementById("onboardNameError").classList.remove("hidden");
+            errorEl.textContent = "Please enter a public name.";
+            errorEl.classList.remove("hidden");
             return;
         }
         if (name.length < 2) {
-            document.getElementById("onboardNameError").textContent = "Name must be at least 2 characters.";
-            document.getElementById("onboardNameError").classList.remove("hidden");
+            errorEl.textContent = "Name must be at least 2 characters.";
+            errorEl.classList.remove("hidden");
             return;
         }
-        document.getElementById("onboardNameError").classList.add("hidden");
+        if (!/^[a-zA-Z0-9 _'-]+$/.test(name)) {
+            errorEl.textContent = "Only letters, numbers, spaces, and ' _ - are allowed.";
+            errorEl.classList.remove("hidden");
+            return;
+        }
+
+        // Check uniqueness against publicNames collection
+        errorEl.classList.add("hidden");
+        nextBtn.disabled = true;
+        nextBtn.textContent = "Checking...";
+
+        try {
+            const nameKey = name.toLowerCase().trim();
+            const nameRef = doc(db, "publicNames", nameKey);
+            const nameSnap = await getDoc(nameRef);
+
+            if (nameSnap.exists() && nameSnap.data().uid !== state.user.id) {
+                // Taken by someone else
+                errorEl.textContent = `"${name}" is already taken. Please choose a different name.`;
+                errorEl.classList.remove("hidden");
+                nextBtn.disabled = false;
+                nextBtn.textContent = "Next →";
+                return;
+            }
+        } catch (err) {
+            console.error("❌ Name check failed:", err);
+            errorEl.textContent = "Couldn't verify name availability. Please try again.";
+            errorEl.classList.remove("hidden");
+            nextBtn.disabled = false;
+            nextBtn.textContent = "Next →";
+            return;
+        }
+
+        nextBtn.disabled = false;
+        nextBtn.textContent = "Next →";
+
         state.data.publicName = name;
 
-        // Populate the store dropdown in step 2
+        // Populate the store list in step 2
         renderOnboardingStoreList();
 
         onboardingStep = 2;
         renderOnboardingStep();
-        return;
     }
 }
 
@@ -1877,30 +1915,45 @@ async function completeOnboarding() {
         return;
     }
 
-    state.data.onboardingComplete = true;
-    await persistState();
+    const finishBtn = document.getElementById("onboardFinishBtn");
+    if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = "Saving..."; }
 
-    // Retroactively update any global recipes this user already published
-    // so their createdByName reflects the new public name
-    if (state.data.publicName && state.user.id) {
-        try {
-            const col = collection(db, "globalRecipes");
-            const q = query(col, where("createdBy", "==", state.user.id));
-            const snap = await getDocs(q);
-            const updates = snap.docs.map(d =>
-                updateDoc(d.ref, { createdByName: state.data.publicName })
-            );
-            await Promise.all(updates);
-            console.log(`✅ Updated ${updates.length} global recipe(s) with new public name`);
-        } catch (err) {
-            console.error("❌ Error updating global recipe names:", err);
+    try {
+        const nameKey = state.data.publicName.toLowerCase().trim();
+        const nameRef = doc(db, "publicNames", nameKey);
+
+        // Final uniqueness check at save time (race condition guard)
+        const nameSnap = await getDoc(nameRef);
+        if (nameSnap.exists() && nameSnap.data().uid !== state.user.id) {
+            if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Let's go! →"; }
+            // Send back to step 1
+            onboardingStep = 1;
+            renderOnboardingStep();
+            const err = document.getElementById("onboardNameError");
+            err.textContent = `"${state.data.publicName}" was just taken. Please choose a different name.`;
+            err.classList.remove("hidden");
+            return;
         }
+
+        // Claim the name in publicNames index
+        await setDoc(nameRef, {
+            uid: state.user.id,
+            displayName: state.data.publicName,
+            createdAt: serverTimestamp()
+        });
+
+        state.data.onboardingComplete = true;
+        await persistState();
+
+    } catch (err) {
+        console.error("❌ completeOnboarding:", err);
+        alert("Something went wrong saving your profile. Please try again.");
+        if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Let's go! →"; }
+        return;
     }
 
-    // Close modal
+    // Close modal and go to Global Recipes
     document.getElementById("onboardingModal").classList.add("hidden");
-
-    // Navigate to Global Recipes tab
     switchTab("globalRecipesTab");
 }
 
