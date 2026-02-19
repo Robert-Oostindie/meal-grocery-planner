@@ -1869,14 +1869,16 @@ function renderOnboardingStoreList() {
     // Add any user-added stores during onboarding too
     const onboardUserStores = state.data.userStores || [];
 
-    list.innerHTML = allStores.map(store => `
+    list.innerHTML = allStores.map(store => {
+        const safeName = store.name.replace(/'/g, "\\'");
+        return `
         <div class="onboard-store-option ${currentDefault === store.name ? "selected" : ""}"
-             onclick="selectOnboardStore('${store.name}')"
+             onclick="selectOnboardStore('${safeName}')"
              id="onboardStore_${store.name.replace(/[^a-z0-9]/gi, '_')}">
             ${store.name}
             ${currentDefault === store.name ? `<span style="float:right;">⭐</span>` : ""}
-        </div>
-    `).join("");
+        </div>`;
+    }).join("");
 }
 
 function selectOnboardStore(storeName) {
@@ -3042,34 +3044,38 @@ function renderStoresTab() {
 
     // Render global stores
     globalDiv.innerHTML = GLOBAL_STORES
-        .map(store => `
+        .map(store => {
+            const safeName = store.name.replace(/'/g, "\\'");
+            return `
             <div class="store-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <span>${store.name}</span>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
                     ${currentDefault === store.name
                         ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
-                        : `<button onclick="setDefaultStore('${store.name}')">Set Default</button>`
+                        : `<button onclick="setDefaultStore('${safeName}')">Set Default</button>`
                     }
-                    <button onclick="openShopForStore('${store.name}')">Shop</button>
+                    <button onclick="openShopForStore('${safeName}')">Shop</button>
                 </div>
-            </div>
-        `)
+            </div>`;
+        })
         .join("");
 
     // Render user stores
     userDiv.innerHTML = (state.data.userStores || [])
-        .map((s, idx) => `
+        .map((s, idx) => {
+            const safeName = s.name.replace(/'/g, "\\'");
+            return `
             <div class="store-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <span>${s.name}</span>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
                     ${currentDefault === s.name
                         ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
-                        : `<button onclick="setDefaultStore('${s.name}')">Set Default</button>`
+                        : `<button onclick="setDefaultStore('${safeName}')">Set Default</button>`
                     }
                     <button class="danger" onclick="removeUserStore(${idx})">Remove</button>
                 </div>
-            </div>
-        `)
+            </div>`;
+        })
         .join("");
 }
 async function setDefaultStore(storeName) {
