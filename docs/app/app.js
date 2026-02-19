@@ -509,7 +509,6 @@ window.saveDefaultStore = saveDefaultStore;
 // DELETE ACCOUNT
 // ==============================
 async function deleteAccount() {
-    // Step 1: First confirmation
     const confirmed = confirm(
         "⚠️ Delete your account?\n\n" +
         "This will:\n" +
@@ -521,7 +520,6 @@ async function deleteAccount() {
     );
     if (!confirmed) return;
 
-    // Step 2: Type DELETE to confirm
     const typed = prompt("Type DELETE to confirm:");
     if (typed?.trim().toUpperCase() !== "DELETE") {
         alert("Account deletion cancelled.");
@@ -532,91 +530,80 @@ async function deleteAccount() {
     if (!user) return;
 
     try {
-        // ── Re-authenticate first (Firebase requires this for deletion) ──
         const provider = user.providerData?.[0]?.providerId;
-        try {
-            if (provider === "google.com") {
-                try {
-                    await reauthenticateWithPopup(user, googleProvider);
-                } catch (popupErr) {
-                    if (popupErr.code === "auth/popup-blocked") {
-                        // Browser blocked popup (common after async confirm/prompt).
-                        // Store the deletion intent and redirect for re-auth.
-                        // On return, onAuthStateChanged will pick up the fresh session
-                        // and the user can click Delete Account again.
-                        localStorage.setItem("pendingDeleteAccount", "true");
-                        alert("A Google sign-in window will open to verify your identity. After signing in, click Delete Account again to complete the deletion.");
-                        await reauthenticateWithRedirect(user, googleProvider);
-                        return;
-                    }
-                    if (popupErr.code === "auth/popup-closed-by-user") {
-                        alert("Deletion cancelled.");
-                        return;
-                    }
-                    throw popupErr;
-                }
-            } else {
-                // Email/password user — sign them out and send to the normal
-                // sign-in screen. Clean, trustworthy, no sketchy dialogs.
-                // Deletion completes automatically after they sign back in.
-                localStorage.setItem("pendingDeleteAccount", "true");
-                await signOut(auth);
-                showAuthError("Please sign in again to confirm account deletion.");
-                authScreen.classList.remove("hidden");
-                mainApp.classList.add("hidden");
-                return;
-            }
-        } catch (reAuthErr) {
-            if (reAuthErr.code === "auth/popup-closed-by-user") {
-                alert("Deletion cancelled.");
-                return;
-            }
-            throw reAuthErr;
-        }
 
-        await completeDeletion(user);
-
-    } catch (err) {
-        console.error("❌ Account deletion failed:", err);
-        alert("Something went wrong. Please try again or contact support.");
-    }
-}
-
-// Shared deletion steps — called after re-auth succeeds
-async function completeDeletion(user) {
-    try {
-        const provider = user.providerData?.[0]?.providerId || "unknown";
-        console.log("🗑 Starting account deletion for provider:", provider);
-
-        // ── Soft-delete: wipe PII, keep behavioral data ───────
+        // ── Step 1: Do all Firestore cleanup first (no re-auth needed) ──
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
             "appState.data.publicName": null,
             deletedAt:    serverTimestamp(),
             isDeleted:    true,
-            authProvider: provider,
+            authProvider: provider || "unknown",
         });
         console.log("✅ Firestore doc soft-deleted");
 
-        // ── Release the public name so others can claim it ────
         if (state.data.publicName) {
             const nameKey = state.data.publicName.toLowerCase().trim();
             await deleteDoc(doc(db, "publicNames", nameKey));
             console.log("✅ Public name released");
         }
 
-        // ── Delete Firebase Auth account ──────────────────────
-        console.log("🗑 Deleting Firebase Auth account...");
-        await deleteUser(user);
-        console.log("✅ Auth account deleted");
+        // ── Step 2: Delete Firebase Auth account ──────────────
+        // Try directly first — works if session is recent enough.
+        // If not, re-auth and retry. Firestore is already cleaned up
+        // so if they don't complete re-auth, data is still wiped.
+        try {
+            await deleteUser(user);
+            console.log("✅ Auth account deleted");
+        } catch (authErr) {
+            if (authErr.code !== "auth/requires-recent-login") throw authErr;
+
+            // Session too old — re-authenticate
+            console.log("🔄 Re-auth required for Auth deletion");
+            localStorage.setItem("pendingAuthDelete", "true");
+
+            if (provider === "google.com") {
+                try {
+                    await reauthenticateWithPopup(user, googleProvider);
+                    await deleteUser(user);
+                    console.log("✅ Auth account deleted after popup re-auth");
+                } catch (popupErr) {
+                    if (popupErr.code === "auth/popup-blocked") {
+                        // Redirect flow — sign them out, they re-sign in, we finish
+                        await signOut(auth);
+                        alert("Your data has been deleted. Please sign in one more time to fully remove your login credentials.");
+                        authScreen.classList.remove("hidden");
+                        mainApp.classList.add("hidden");
+                        return;
+                    }
+                    if (popupErr.code === "auth/popup-closed-by-user") {
+                        // They closed it — data already wiped, just sign out
+                        localStorage.removeItem("pendingAuthDelete");
+                        await signOut(auth);
+                        alert("Your account data has been deleted. Your login credentials will be removed next time you sign in.");
+                        authScreen.classList.remove("hidden");
+                        mainApp.classList.add("hidden");
+                        return;
+                    }
+                    throw popupErr;
+                }
+            } else {
+                // Email user — sign out, they sign back in, Auth deletion finishes
+                await signOut(auth);
+                alert("Your account data has been deleted. Please sign in one more time to fully remove your login credentials.");
+                authScreen.classList.remove("hidden");
+                mainApp.classList.add("hidden");
+                return;
+            }
+        }
 
         alert("Your account has been deleted. Thanks for trying the app.");
         authScreen.classList.remove("hidden");
         mainApp.classList.add("hidden");
 
     } catch (err) {
-        console.error("❌ completeDeletion failed:", err.code, err.message);
-        alert(`Something went wrong: ${err.message}\n\nPlease try again or contact support.`);
+        console.error("❌ Account deletion failed:", err.code, err.message);
+        alert("Something went wrong. Please try again or contact support.");
     }
 }
 
@@ -654,19 +641,35 @@ onAuthStateChanged(auth, async (user) => {
         // Load user's data from Firestore
         await loadUserState(user.uid);
 
-        // ── Resume pending account deletion after redirect re-auth ──
+        // ── Finish pending Auth deletion after redirect/sign-in ──
+        // Firestore is already cleaned up. Just delete the Auth account.
+        if (localStorage.getItem("pendingAuthDelete") === "true") {
+            localStorage.removeItem("pendingAuthDelete");
+            try {
+                await getRedirectResult(auth).catch(() => {});
+                await deleteUser(user);
+                alert("Your account has been fully deleted. Thanks for trying the app.");
+            } catch (e) {
+                console.error("❌ pendingAuthDelete deleteUser failed:", e);
+                alert("Your account data was deleted but we couldn't remove your login. Please contact support.");
+            }
+            authScreen.classList.remove("hidden");
+            mainApp.classList.add("hidden");
+            return;
+        }
+
+        // ── Resume pending full deletion (Google redirect flow) ──
         if (localStorage.getItem("pendingDeleteAccount") === "true") {
             localStorage.removeItem("pendingDeleteAccount");
-
-            // Must call getRedirectResult() to fully process the redirect
-            // re-auth before deleteUser() will accept it as "recent login"
             try {
-                await getRedirectResult(auth);
+                await getRedirectResult(auth).catch(() => {});
+                await deleteUser(user);
+                alert("Your account has been deleted. Thanks for trying the app.");
             } catch (e) {
-                console.warn("getRedirectResult error (non-fatal):", e);
+                console.error("❌ pendingDeleteAccount deleteUser failed:", e);
             }
-
-            await completeDeletion(user);
+            authScreen.classList.remove("hidden");
+            mainApp.classList.add("hidden");
             return;
         }
         
