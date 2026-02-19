@@ -18,6 +18,18 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import {
+    initGlobalRecipes,
+    publishToGlobal,
+    importGlobalRecipe,
+    removeGlobalImport,
+    renderGlobalRecipesTab,
+    toggleGlobalRecipeIngredients,
+    setGlobalRecipesSearch,
+    setGlobalRecipesSort,
+    refreshGlobalRecipes
+} from "./globalRecipes.js";
+
 // ==============================
 // DOM ELEMENTS
 // ==============================
@@ -1711,8 +1723,9 @@ function switchTab(tabId) {
     if (tabId === "groceryTab") {
         renderGroceryList();
     }
-    if (tabId === "storesTab") renderStoresTab();   // 👈 NEW
+    if (tabId === "storesTab") renderStoresTab();
     if (tabId === "categoriesTab") renderCategoriesTab();
+    if (tabId === "globalRecipesTab") renderGlobalRecipesTab();
 
 }
 
@@ -1720,6 +1733,16 @@ function switchTab(tabId) {
 
 function renderApp() {
     const activeTab = document.querySelector(".tab-page.active")?.id;
+
+    // Wire up globalRecipes module with app's shared dependencies
+    initGlobalRecipes({
+        state,
+        makeId,
+        persistState,
+        getAllStores,
+        renderRecipes,
+        renderPlanner
+    });
 
     renderRecipes();
     renderPlanner();
@@ -1800,6 +1823,7 @@ function renderRecipes() {
                                 </div>
                             </div>
                             <div style="display:flex; gap:0.4rem;">
+                                <button onclick="publishToGlobal('${meal.id}')" title="Share to Global Recipes" style="font-size:0.8rem;">🌐 Share</button>
                                 <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
                                 <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
                             </div>
@@ -2808,9 +2832,7 @@ function renderStoresTab() {
                         ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
                         : `<button onclick="setDefaultStore('${store.name}')">Set Default</button>`
                     }
-                    ${store.storeHomeUrl
-                        ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer"><button class="primary">Shop</button></a>`
-                        : ""}
+                    <button onclick="openShopForStore('${store.name}')">Shop</button>
                 </div>
             </div>
         `)
@@ -3351,6 +3373,15 @@ window.removeUserCategory = removeUserCategory;
 window.addUserStore = addUserStore;
 window.removeUserStore = removeUserStore;
 window.setDefaultStore = setDefaultStore;
+
+// Global Recipes (imported from globalRecipes.js)
+window.publishToGlobal = publishToGlobal;
+window.importGlobalRecipe = importGlobalRecipe;
+window.removeGlobalImport = removeGlobalImport;
+window.toggleGlobalRecipeIngredients = toggleGlobalRecipeIngredients;
+window.setGlobalRecipesSearch = setGlobalRecipesSearch;
+window.setGlobalRecipesSort = setGlobalRecipesSort;
+window.refreshGlobalRecipes = refreshGlobalRecipes;
 
 window.togglePlannerMeal = togglePlannerMeal;
 window.togglePlannerIngredient = togglePlannerIngredient;
