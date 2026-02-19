@@ -483,8 +483,7 @@ function migrateState(loadedState) {
         loadedState.data = {
             userMeals: loadedState.userMeals || [],
             userStores: loadedState.userStores || [],
-            userCategories: loadedState.userCategories || [],
-            defaultStoreName: loadedState.data?.defaultStoreName || ""   // ADD THIS
+            userCategories: loadedState.userCategories || []
         };
         delete loadedState.userMeals;
         delete loadedState.userStores;
@@ -2808,10 +2807,13 @@ function renderStoresTab() {
                         ? `<span style="font-size:0.8rem; color:#555;">⭐ Default</span>`
                         : `<button onclick="setDefaultStore('${store.name}')">Set Default</button>`
                     }
-                    <button onclick="openShopForStore('${store.name}')">Shop</button>
+                    ${store.storeHomeUrl
+                        ? `<a href="${store.storeHomeUrl}" target="_blank" rel="noopener noreferrer">
+                               <button class="primary">Shop</button>
+                           </a>`
+                        : ""}
                 </div>
-            </div>
-        `)
+            </div>`)
         .join("");
 
     // Render user stores
@@ -2830,6 +2832,7 @@ function renderStoresTab() {
         `)
         .join("");
 }
+
 async function setDefaultStore(storeName) {
     state.data.defaultStoreName = storeName;
     await persistState();
@@ -3414,4 +3417,3 @@ window.clearFirestore = async () => {
 // debugState()     - view current state
 // forceSave()      - immediately save to Firestore
 // clearFirestore() - reset Firestore data
-
