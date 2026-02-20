@@ -31,7 +31,8 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  where
+  where,
+  increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
@@ -565,6 +566,30 @@ async function confirmDeleteAccount() {
             const nameKey = state.data.publicName.toLowerCase().trim();
             await deleteDoc(doc(db, "publicNames", nameKey));
             console.log("✅ Public name released");
+        }
+
+        // ── Decrement global recipe counts for this user ───────
+        // Mark all their tracking docs inactive and decrement userCount
+        // so counts stay accurate when the uid is re-used by a new account
+        try {
+            const globalRecipesSnap = await getDocs(collection(db, "globalRecipes"));
+            for (const globalDoc of globalRecipesSnap.docs) {
+                const trackingRef = doc(db, "globalRecipes", globalDoc.id, "users", user.uid);
+                const trackingSnap = await getDoc(trackingRef);
+                if (trackingSnap.exists() && trackingSnap.data()?.active === true) {
+                    await setDoc(trackingRef, { active: false }, { merge: true });
+                    const current = globalDoc.data()?.userCount || 0;
+                    if (current > 0) {
+                        await updateDoc(doc(db, "globalRecipes", globalDoc.id), {
+                            userCount: increment(-1)
+                        });
+                    }
+                }
+            }
+            console.log("✅ Global recipe counts decremented");
+        } catch (e) {
+            console.warn("⚠️ Could not clean up global recipe counts:", e);
+            // Non-fatal — continue with deletion
         }
 
         // ── Step 2: Delete Firebase Auth account ──────────────
