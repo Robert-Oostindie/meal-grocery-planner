@@ -2,6 +2,10 @@
 // FIREBASE IMPORTS - ALL v10.7.1
 // ==============================
 import { auth, db, googleProvider } from "./firebase.js";
+
+// Always show the Google account chooser — prevents auto sign-in
+// with the last used account, which is confusing especially in incognito
+googleProvider.setCustomParameters({ prompt: "select_account" });
 import { 
   signInWithPopup,
   signOut,
