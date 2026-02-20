@@ -508,31 +508,46 @@ window.saveDefaultStore = saveDefaultStore;
 // ==============================
 // DELETE ACCOUNT
 // ==============================
-async function deleteAccount() {
-    const confirmed = confirm(
-        "⚠️ Delete your account?\n\n" +
-        "This will:\n" +
-        "• Remove your login and personal info\n" +
-        "• Release your public name\n\n" +
-        "Your recipe data will be kept anonymously to help improve the app.\n" +
-        "Recipes you shared to Global Recipes will remain.\n\n" +
-        "This cannot be undone."
-    );
-    if (!confirmed) return;
+function deleteAccount() {
+    closeAccountMenu();
+    document.getElementById("deleteConfirmInput").value = "";
+    document.getElementById("deleteInputError").classList.add("hidden");
+    document.getElementById("confirmDeleteBtn").disabled = true;
+    document.getElementById("confirmDeleteBtn").style.opacity = "0.4";
+    document.getElementById("confirmDeleteBtn").style.cursor = "not-allowed";
+    document.getElementById("deleteAccountModal").classList.remove("hidden");
+}
 
-    const typed = prompt("Type DELETE to confirm:");
-    if (typed?.trim().toUpperCase() !== "DELETE") {
-        alert("Account deletion cancelled.");
-        return;
-    }
+function closeDeleteAccountModal() {
+    document.getElementById("deleteAccountModal").classList.add("hidden");
+}
+
+function validateDeleteInput() {
+    const val = document.getElementById("deleteConfirmInput").value.trim().toUpperCase();
+    const btn = document.getElementById("confirmDeleteBtn");
+    const ready = val === "DELETE";
+    btn.disabled = !ready;
+    btn.style.opacity = ready ? "1" : "0.4";
+    btn.style.cursor = ready ? "pointer" : "not-allowed";
+}
+
+// All deletion work runs directly from this button click handler —
+// no intervening confirm()/prompt() dialogs so Firebase session stays fresh
+async function confirmDeleteAccount() {
+    const val = document.getElementById("deleteConfirmInput").value.trim().toUpperCase();
+    if (val !== "DELETE") return;
 
     const user = auth.currentUser;
     if (!user) return;
 
+    const btn = document.getElementById("confirmDeleteBtn");
+    btn.disabled = true;
+    btn.textContent = "Deleting...";
+
     try {
         const provider = user.providerData?.[0]?.providerId;
 
-        // ── Step 1: Do all Firestore cleanup first (no re-auth needed) ──
+        // ── Step 1: Firestore cleanup (no re-auth needed) ──────
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
             "appState.data.publicName": null,
@@ -549,65 +564,61 @@ async function deleteAccount() {
         }
 
         // ── Step 2: Delete Firebase Auth account ──────────────
-        // Try directly first — works if session is recent enough.
-        // If not, re-auth and retry. Firestore is already cleaned up
-        // so if they don't complete re-auth, data is still wiped.
+        // Running directly from a button click keeps the session fresh,
+        // so requires-recent-login should not occur in normal usage.
         try {
             await deleteUser(user);
             console.log("✅ Auth account deleted");
         } catch (authErr) {
             if (authErr.code !== "auth/requires-recent-login") throw authErr;
 
-            // Session too old — re-authenticate
-            console.log("🔄 Re-auth required for Auth deletion");
-            localStorage.setItem("pendingAuthDelete", "true");
-
+            // Rare edge case: session genuinely too old (hours of inactivity)
+            // Firestore is already wiped. Try Google popup re-auth.
+            console.log("🔄 Re-auth required (stale session)");
             if (provider === "google.com") {
+                localStorage.setItem("pendingAuthDelete", "true");
                 try {
                     await reauthenticateWithPopup(user, googleProvider);
                     await deleteUser(user);
-                    console.log("✅ Auth account deleted after popup re-auth");
+                    console.log("✅ Auth account deleted after re-auth");
                 } catch (popupErr) {
                     if (popupErr.code === "auth/popup-blocked") {
-                        // Redirect flow — sign them out, they re-sign in, we finish
-                        await signOut(auth);
-                        alert("Your data has been deleted. Please sign in one more time to fully remove your login credentials.");
-                        authScreen.classList.remove("hidden");
-                        mainApp.classList.add("hidden");
+                        localStorage.setItem("pendingAuthDelete", "true");
+                        await reauthenticateWithRedirect(user, googleProvider);
                         return;
                     }
-                    if (popupErr.code === "auth/popup-closed-by-user") {
-                        // They closed it — data already wiped, just sign out
-                        localStorage.removeItem("pendingAuthDelete");
-                        await signOut(auth);
-                        alert("Your account data has been deleted. Your login credentials will be removed next time you sign in.");
-                        authScreen.classList.remove("hidden");
-                        mainApp.classList.add("hidden");
-                        return;
-                    }
-                    throw popupErr;
+                    localStorage.removeItem("pendingAuthDelete");
+                    // Data is wiped — just sign them out cleanly
                 }
             } else {
-                // Email user — sign out, they sign back in, Auth deletion finishes
-                await signOut(auth);
-                alert("Your account data has been deleted. Please sign in one more time to fully remove your login credentials.");
-                authScreen.classList.remove("hidden");
-                mainApp.classList.add("hidden");
-                return;
+                localStorage.setItem("pendingAuthDelete", "true");
             }
+            // Sign out — if pendingAuthDelete is set, next sign-in finishes it
+            await signOut(auth);
+            document.getElementById("deleteAccountModal").classList.add("hidden");
+            authScreen.classList.remove("hidden");
+            mainApp.classList.add("hidden");
+            return;
         }
 
+        document.getElementById("deleteAccountModal").classList.add("hidden");
         alert("Your account has been deleted. Thanks for trying the app.");
         authScreen.classList.remove("hidden");
         mainApp.classList.add("hidden");
 
     } catch (err) {
         console.error("❌ Account deletion failed:", err.code, err.message);
-        alert("Something went wrong. Please try again or contact support.");
+        btn.disabled = false;
+        btn.textContent = "Delete My Account";
+        document.getElementById("deleteInputError").textContent = "Something went wrong. Please try again.";
+        document.getElementById("deleteInputError").classList.remove("hidden");
     }
 }
 
 window.deleteAccount = deleteAccount;
+window.closeDeleteAccountModal = closeDeleteAccountModal;
+window.validateDeleteInput = validateDeleteInput;
+window.confirmDeleteAccount = confirmDeleteAccount;
 
 // ==============================
 // AUTH STATE LISTENER (UPDATED WITH EMAIL VERIFICATION)
