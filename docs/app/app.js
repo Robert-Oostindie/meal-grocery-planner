@@ -683,6 +683,7 @@ onAuthStateChanged(auth, async (user) => {
         console.log('✅ App ready!');
     } else {
         console.log('❌ No user signed in');
+        resetState(); // clear in-memory data so it never bleeds into a new account
         
         // Show auth screen, hide app
         authScreen.classList.remove('hidden');
@@ -1697,7 +1698,7 @@ let state = {
         collapsedMeals: {},
         plannerIngredientChecks: {},
         plannerIngredientComments: {},
-        groceryCheckedItems: {},   // { "itemKey": true/false } — persists checkoffs
+        groceryCheckedItems: {},
         plannerSubstituteSelections: {},
         plannerMealMultipliers: {},
         collapsedRecipeCategories: []
@@ -1705,6 +1706,20 @@ let state = {
 
     dirty: false
 };
+
+// Wipe all user data from memory — called on sign-out so stale
+// data never bleeds into a new account created in the same session
+function resetState() {
+    state.user = { id: null, email: null, name: null, createdAt: null, lastLogin: null };
+    state.data = { userMeals: [], userStores: [], userCategories: [], publicName: "", onboardingComplete: false };
+    state.ui  = {
+        plannerMeals: [], plannerExtras: [], collapsedCategories: [],
+        collapsedMeals: {}, plannerIngredientChecks: {}, plannerIngredientComments: {},
+        groceryCheckedItems: {}, plannerSubstituteSelections: {},
+        plannerMealMultipliers: {}, collapsedRecipeCategories: []
+    };
+    state.dirty = false;
+}
 
 // ==============================
 // ID HELPER (SAFER THAN crypto.randomUUID DIRECT USE)
