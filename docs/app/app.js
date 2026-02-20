@@ -2259,6 +2259,18 @@ async function completeOnboarding() {
         return;
     }
 
+    // Guard: if publicName is missing, send back to step 1
+    if (!state.data.publicName || !state.data.publicName.trim()) {
+        onboardingStep = 1;
+        renderOnboardingStep();
+        const err = document.getElementById("onboardNameError");
+        if (err) {
+            err.textContent = "Please enter a public name.";
+            err.classList.remove("hidden");
+        }
+        return;
+    }
+
     const finishBtn = document.getElementById("onboardFinishBtn");
     if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = "Saving..."; }
 
@@ -2270,12 +2282,13 @@ async function completeOnboarding() {
         const nameSnap = await getDoc(nameRef);
         if (nameSnap.exists() && nameSnap.data().uid !== state.user.id) {
             if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Let's go! →"; }
-            // Send back to step 1
             onboardingStep = 1;
             renderOnboardingStep();
             const err = document.getElementById("onboardNameError");
-            err.textContent = `"${state.data.publicName}" was just taken. Please choose a different name.`;
-            err.classList.remove("hidden");
+            if (err) {
+                err.textContent = `"${state.data.publicName}" is already taken. Please choose a different name.`;
+                err.classList.remove("hidden");
+            }
             return;
         }
 
@@ -2291,7 +2304,12 @@ async function completeOnboarding() {
 
     } catch (err) {
         console.error("❌ completeOnboarding:", err);
-        alert("Something went wrong saving your profile. Please try again.");
+        // Show error inside modal, not alert() which can hide behind backdrop
+        const storeErr = document.getElementById("onboardStoreError");
+        if (storeErr) {
+            storeErr.textContent = "Something went wrong. Please try again.";
+            storeErr.classList.remove("hidden");
+        }
         if (finishBtn) { finishBtn.disabled = false; finishBtn.textContent = "Let's go! →"; }
         return;
     }
