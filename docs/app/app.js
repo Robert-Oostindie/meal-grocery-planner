@@ -697,6 +697,27 @@ async function loadUserState(uid) {
 
         if (snap.exists()) {
             const data = snap.data();
+
+            // ── Returning deleted account — start fresh ────────
+            // The doc is kept for analytics but the user is re-registering.
+            // Reset appState so they don't see old recipes/data.
+            if (data.isDeleted) {
+                console.log("♻️ Previously deleted account re-registering — starting fresh");
+                await setDoc(ref, {
+                    appState: getCurrentAppState(),
+                    createdAt: serverTimestamp(),
+                    lastActive: serverTimestamp(),
+                    // Preserve analytics fields from the deleted account
+                    previousDeletion: {
+                        deletedAt: data.deletedAt || null,
+                        authProvider: data.authProvider || null,
+                        appState: data.appState || null  // keep old data for analytics
+                    }
+                });
+                showOnboarding();
+                return;
+            }
+
             console.log("✅ Found existing user data in Firestore");
             
             if (data.appState) {
