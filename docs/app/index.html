@@ -438,8 +438,38 @@
         </div>
     </div>
 
-    <div id="onboardingModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
+    <!-- DELETE ACCOUNT CONFIRMATION MODAL -->
+    <div id="deleteAccountModal" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeDeleteAccountModal()"></div>
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header">
+                <h2>Delete Account</h2>
+                <button class="modal-close" onclick="closeDeleteAccountModal()">×</button>
+            </div>
+            <p style="font-size:0.9rem; color:#374151; margin-bottom:0.5rem;">
+                This will permanently remove your login and release your public name.
+                Your anonymous recipe data will be kept to help improve the app.
+            </p>
+            <p style="font-size:0.9rem; color:#374151; margin-bottom:1rem;">
+                Recipes you've shared to Global Recipes will remain.
+            </p>
+            <label style="font-size:0.85rem; color:#6b7280;">Type <strong>DELETE</strong> to confirm</label>
+            <input id="deleteConfirmInput" type="text" placeholder="DELETE"
+                style="width:100%; box-sizing:border-box; margin-top:0.25rem; margin-bottom:0.5rem; border-color:#fca5a5;"
+                oninput="validateDeleteInput()"
+                onkeydown="if(event.key==='Enter') confirmDeleteAccount()">
+            <div id="deleteInputError" class="auth-error hidden" style="margin-bottom:0.5rem;"></div>
+            <div class="modal-actions" style="margin-top:1rem;">
+                <button onclick="closeDeleteAccountModal()">Cancel</button>
+                <button id="confirmDeleteBtn" class="danger" onclick="confirmDeleteAccount()" disabled
+                    style="opacity:0.4; cursor:not-allowed;">
+                    Delete My Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="onboardingModal" class="modal hidden">        <div class="modal-backdrop"></div>
         <div class="modal-content" style="max-width:480px;">
 
             <div class="modal-header">
