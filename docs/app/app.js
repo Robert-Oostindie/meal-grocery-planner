@@ -549,6 +549,10 @@ async function confirmDeleteAccount() {
     btn.disabled = true;
     btn.textContent = "Deleting...";
 
+    // Reset in-memory state immediately so if another account signs in
+    // during the async deletion steps, it gets a clean slate
+    resetState();
+
     try {
         const provider = user.providerData?.[0]?.providerId;
 
@@ -625,15 +629,23 @@ async function confirmDeleteAccount() {
             // Sign out — if pendingAuthDelete is set, next sign-in finishes it
             await signOut(auth);
             document.getElementById("deleteAccountModal").classList.add("hidden");
-            authScreen.classList.remove("hidden");
-            mainApp.classList.add("hidden");
+            if (!auth.currentUser) {
+                authScreen.classList.remove("hidden");
+                mainApp.classList.add("hidden");
+            }
             return;
         }
 
         document.getElementById("deleteAccountModal").classList.add("hidden");
-        alert("Your account has been deleted. Thanks for trying the app.");
-        authScreen.classList.remove("hidden");
-        mainApp.classList.add("hidden");
+
+        // Only redirect to login if no one else has signed in during the async
+        // cleanup — if a new account signed in while deletion was running,
+        // leave them alone and let onAuthStateChanged handle the UI
+        if (!auth.currentUser) {
+            alert("Your account has been deleted. Thanks for trying the app.");
+            authScreen.classList.remove("hidden");
+            mainApp.classList.add("hidden");
+        }
 
     } catch (err) {
         console.error("❌ Account deletion failed:", err.code, err.message);
