@@ -605,14 +605,14 @@ async function confirmDeleteAccount() {
             // Firestore is already wiped. Try Google popup re-auth.
             console.log("🔄 Re-auth required (stale session)");
             if (provider === "google.com") {
-                localStorage.setItem("pendingAuthDelete", "true");
+                localStorage.setItem("pendingAuthDelete", user.uid);
                 try {
                     await reauthenticateWithPopup(user, googleProvider);
                     await deleteUser(user);
                     console.log("✅ Auth account deleted after re-auth");
                 } catch (popupErr) {
                     if (popupErr.code === "auth/popup-blocked") {
-                        localStorage.setItem("pendingAuthDelete", "true");
+                        localStorage.setItem("pendingAuthDelete", user.uid);
                         await reauthenticateWithRedirect(user, googleProvider);
                         return;
                     }
@@ -620,7 +620,7 @@ async function confirmDeleteAccount() {
                     // Data is wiped — just sign them out cleanly
                 }
             } else {
-                localStorage.setItem("pendingAuthDelete", "true");
+                localStorage.setItem("pendingAuthDelete", user.uid);
             }
             // Sign out — if pendingAuthDelete is set, next sign-in finishes it
             await signOut(auth);
@@ -682,8 +682,8 @@ onAuthStateChanged(auth, async (user) => {
         await loadUserState(user.uid);
 
         // ── Finish pending Auth deletion after redirect/sign-in ──
-        // Firestore is already cleaned up. Just delete the Auth account.
-        if (localStorage.getItem("pendingAuthDelete") === "true") {
+        // Check that the flag is for THIS specific uid, not a different account
+        if (localStorage.getItem("pendingAuthDelete") === user.uid) {
             localStorage.removeItem("pendingAuthDelete");
             try {
                 await getRedirectResult(auth).catch(() => {});
@@ -699,7 +699,7 @@ onAuthStateChanged(auth, async (user) => {
         }
 
         // ── Resume pending full deletion (Google redirect flow) ──
-        if (localStorage.getItem("pendingDeleteAccount") === "true") {
+        if (localStorage.getItem("pendingDeleteAccount") === user.uid) {
             localStorage.removeItem("pendingDeleteAccount");
             try {
                 await getRedirectResult(auth).catch(() => {});
