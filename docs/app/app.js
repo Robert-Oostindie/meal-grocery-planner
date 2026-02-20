@@ -63,6 +63,10 @@ const signInEmailBtn = document.getElementById('signInEmailBtn');
 const signUpEmailBtn = document.getElementById('signUpEmailBtn');
 const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 const authError = document.getElementById('authError');
+
+// Prevents onAuthStateChanged(null) from hiding the app when
+// the null event is caused by account deletion rather than a real sign-out
+let _suppressNextSignOut = false;
 const verificationMessage = document.getElementById('verificationMessage');
 const verificationEmail = document.getElementById('verificationEmail');
 const resendVerificationBtn = document.getElementById('resendVerificationBtn');
@@ -600,6 +604,7 @@ async function confirmDeleteAccount() {
         // Running directly from a button click keeps the session fresh,
         // so requires-recent-login should not occur in normal usage.
         try {
+            _suppressNextSignOut = true; // don't let the null event kick out any current user
             await deleteUser(user);
             console.log("✅ Auth account deleted");
         } catch (authErr) {
@@ -735,6 +740,15 @@ onAuthStateChanged(auth, async (user) => {
         console.log('✅ App ready!');
     } else {
         console.log('❌ No user signed in');
+
+        // If this null event was caused by deleteUser(), not a real sign-out,
+        // skip the redirect — a new user may already be signing in
+        if (_suppressNextSignOut) {
+            _suppressNextSignOut = false;
+            console.log('ℹ️ Sign-out suppressed (caused by account deletion)');
+            return;
+        }
+
         resetState(); // clear in-memory data so it never bleeds into a new account
         
         // Show auth screen, hide app
