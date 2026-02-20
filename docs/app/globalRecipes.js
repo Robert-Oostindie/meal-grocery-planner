@@ -206,9 +206,6 @@ export async function importGlobalRecipe(globalId) {
     const recipe = _cache.find(r => r.id === globalId);
     if (!recipe) return;
 
-    const confirmed = confirm(`Add "${recipe.name}" to your recipes?`);
-    if (!confirmed) return;
-
     try {
         const defaultStore = _state.data.defaultStoreName || _getAllStores()[0]?.name || "";
 
