@@ -240,9 +240,9 @@ export async function importGlobalRecipe(globalId) {
             active: true
         });
 
-        // Only increment if this user wasn't already counted
-        // (i.e. no prior doc, or doc existed but was inactive after removal)
-        if (!hadDoc) {
+        // Increment if user wasn't already counted as active
+        // (!hadDoc = brand new, !wasActive = previously removed and re-adding)
+        if (!wasActive) {
             const globalRef = doc(db, "globalRecipes", globalId);
             await updateDoc(globalRef, { userCount: increment(1) });
 
@@ -253,8 +253,6 @@ export async function importGlobalRecipe(globalId) {
         _renderRecipes();
         _renderPlanner();
         renderGlobalRecipesTab();
-
-        alert(`✅ "${recipe.name}" added to your recipes!`);
     } catch (err) {
         console.error("❌ importGlobalRecipe:", err);
         alert("Something went wrong importing. Please try again.");
@@ -264,14 +262,6 @@ export async function importGlobalRecipe(globalId) {
 // ── REMOVE user's import, decrement count ─────────────────
 export async function removeGlobalImport(globalId) {
     if (!_state?.user?.id) return;
-
-    const recipe = _cache.find(r => r.id === globalId);
-    const name = recipe?.name || "this recipe";
-
-    const confirmed = confirm(
-        `Remove "${name}" from your library?\n\nThis will reduce its popularity count.`
-    );
-    if (!confirmed) return;
 
     try {
         // Remove local copy
