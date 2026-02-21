@@ -5,9 +5,28 @@ const https = require("https");
 // Reference the secret we stored — never hardcoded
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 
+const ALLOWED_ORIGINS = [
+    "https://recipetogrocerylist.com",
+    "https://www.recipetogrocerylist.com",
+    "https://meal-grocery-planner.web.app"
+];
+
 exports.parseRecipeFromPhoto = onRequest(
-    { secrets: ["ANTHROPIC_API_KEY"], cors: true },
+    { secrets: ["ANTHROPIC_API_KEY"] },
     async (req, res) => {
+
+        // Manual CORS — allows both production domains
+        const origin = req.headers.origin;
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            res.set("Access-Control-Allow-Origin", origin);
+        }
+        res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+        res.set("Access-Control-Allow-Headers", "Content-Type");
+
+        // Handle preflight OPTIONS request
+        if (req.method === "OPTIONS") {
+            return res.status(204).send("");
+        }
 
         // Only allow POST requests
         if (req.method !== "POST") {
