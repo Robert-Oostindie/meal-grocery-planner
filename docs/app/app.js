@@ -2548,10 +2548,11 @@ async function openRecipeModalEdit(mealId) {
 
 // ==============================
 // OPEN RECIPE MODAL FROM PHOTO
-// Receives parsed recipe data and pre-populates the modal
+// Receives parsed recipe data, auto-saves immediately so the
+// recipe is never lost if the user closes the modal, then
+// opens in edit mode so any changes update the same record.
 // ==============================
-function openRecipeModalFromPhoto(recipeData) {
-    editingMealId = null;
+async function openRecipeModalFromPhoto(recipeData) {
     currentStep = 1;
 
     document.getElementById("recipeModalTitle").textContent = "Review Imported Recipe";
@@ -2571,6 +2572,23 @@ function openRecipeModalFromPhoto(recipeData) {
         group: "",
         isDefault: false
     }));
+
+    // ── Auto-save immediately ──────────────────────────────
+    // Recipe is saved the moment the modal opens. If the user
+    // closes without clicking Save, they still keep the recipe.
+    const newMeal = {
+        id: makeId(),
+        name: recipeData.name || "Imported Recipe",
+        category: recipeData.category || "Medium Prep",
+        ingredients: ingredientRows.map(ing => ({ ...ing }))
+    };
+    state.data.userMeals.push(newMeal);
+    await persistState();
+    renderApp();
+
+    // Point editingMealId at the new recipe so "Save Recipe"
+    // updates it rather than creating a duplicate.
+    editingMealId = newMeal.id;
 
     renderIngredientsEditor();
     updateReview();
