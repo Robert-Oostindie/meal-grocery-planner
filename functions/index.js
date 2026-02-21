@@ -48,7 +48,8 @@ Return ONLY a valid JSON object with this exact structure, nothing else:
   "ingredients": [
     {"name": "ingredient name", "qty": 1, "unit": "CT"},
     {"name": "another ingredient", "qty": 2, "unit": "cup"}
-  ]
+  ],
+  "instructions": "1. First step.\n2. Second step.\n3. Third step."
 }
 
 Rules:
@@ -57,12 +58,12 @@ Rules:
 - "ingredients": Array of all ingredients you can see
 - "qty": A number (use 1 if not specified)
 - "unit": Use standard units like "CT", "cup", "tbsp", "tsp", "oz", "lb", "g", "ml", "clove", "slice", "can", "pkg"
-- Do not include instructions, just ingredients
+- "instructions": A single string with numbered steps separated by \n. If no instructions are visible, use an empty string "".
 - Return ONLY the JSON, no explanation, no markdown code blocks`;
 
         const requestBody = JSON.stringify({
-            model: "claude-opus-4-6",
-            max_tokens: 1024,
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 600,
             messages: [
                 {
                     role: "user",
