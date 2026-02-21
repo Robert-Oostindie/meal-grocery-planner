@@ -372,6 +372,7 @@
                 <span id="stepDot1" class="step-dot active"></span>
                 <span id="stepDot2" class="step-dot"></span>
                 <span id="stepDot3" class="step-dot"></span>
+                <span id="stepDot4" class="step-dot"></span>
             </div>
 
             <div id="modalStep1" class="modal-step">
@@ -404,6 +405,23 @@
             </div>
 
             <div id="modalStep3" class="modal-step hidden">
+                <h3>Cooking Instructions</h3>
+                <p class="small-note">
+                    Optional. Add step-by-step instructions for this recipe.
+                </p>
+                <textarea
+                    id="modalInstructions"
+                    rows="9"
+                    placeholder="1. Preheat oven to 375°F.&#10;2. Mix dry ingredients in a bowl.&#10;3. ..."
+                    style="width:100%; box-sizing:border-box; resize:vertical; font-family:inherit;"
+                ></textarea>
+                <div class="modal-actions">
+                    <button onclick="goToStep(2)">← Back</button>
+                    <button class="primary" onclick="goToStep(4)">Next →</button>
+                </div>
+            </div>
+
+            <div id="modalStep4" class="modal-step hidden">
                 <h3>Review Recipe</h3>
 
                 <div class="review-block">
@@ -416,8 +434,13 @@
                     <ul id="reviewIngredients"></ul>
                 </div>
 
+                <div id="reviewInstructionsBlock" class="review-block" style="display:none;">
+                    <strong>Instructions:</strong>
+                    <p id="reviewInstructions" style="white-space:pre-line; margin:0.4rem 0 0; font-size:0.9rem;"></p>
+                </div>
+
                 <div class="modal-actions">
-                    <button onclick="goToStep(2)">← Back</button>
+                    <button onclick="goToStep(3)">← Back</button>
                     <button class="primary" onclick="saveRecipe()">Save Recipe</button>
                 </div>
             </div>
