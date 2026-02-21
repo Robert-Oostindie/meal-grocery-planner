@@ -63,7 +63,7 @@ Rules:
 
         const requestBody = JSON.stringify({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 1200,
+            max_tokens: 1500,
             messages: [
                 {
                     role: "user",
@@ -145,6 +145,11 @@ Rules:
             qty: Number(ing.qty) || 1,
             unit: ing.unit || "CT"
         }));
+
+        // Ensure instructions is always a string (model may omit it)
+        recipe.instructions = typeof recipe.instructions === "string"
+            ? recipe.instructions
+            : "";
 
         return res.status(200).json({ recipe });
     }
