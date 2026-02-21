@@ -2586,57 +2586,67 @@ async function openRecipeModalEdit(mealId) {
 // opens in edit mode so any changes update the same record.
 // ==============================
 async function openRecipeModalFromPhoto(recipeData) {
-    currentStep = 1;
+    try {
+        // ── Step 1: Auto-save immediately ─────────────────────
+        // Build ingredient rows first so we can save them.
+        const allStores = getAllStores();
+        const defaultStore = state.data.defaultStoreName || allStores[0]?.name || "";
 
-    document.getElementById("recipeModalTitle").textContent = "Review Imported Recipe";
-    document.getElementById("modalRecipeName").value = recipeData.name || "";
+        ingredientRows = (recipeData.ingredients || []).map(ing => ({
+            id: makeId(),
+            name: ing.name || "",
+            qty: Number(ing.qty) || 1,
+            unit: ing.unit || "CT",
+            store: defaultStore,
+            group: "",
+            isDefault: false
+        }));
 
-    populateCategoryDropdown(recipeData.category || "");
+        const newMeal = {
+            id: makeId(),
+            name: recipeData.name || "Imported Recipe",
+            category: recipeData.category || "Medium Prep",
+            ingredients: ingredientRows.map(ing => ({ ...ing })),
+            instructions: recipeData.instructions || ""
+        };
 
-    const allStores = getAllStores();
-    const defaultStore = state.data.defaultStoreName || allStores[0]?.name || "";
+        // Save to state + Firestore before opening modal.
+        // If the user closes the modal, the recipe is already saved.
+        state.data.userMeals.push(newMeal);
+        await persistState();
 
-    ingredientRows = (recipeData.ingredients || []).map(ing => ({
-        id: makeId(),
-        name: ing.name || "",
-        qty: Number(ing.qty) || 1,
-        unit: ing.unit || "CT",
-        store: defaultStore,
-        group: "",
-        isDefault: false
-    }));
+        // Only update the recipe list — don't call renderApp() here
+        // as renderPlanner() can throw on some datasets and would
+        // silently abort this function before the modal opens.
+        renderRecipes();
 
-    // ── Auto-save immediately ──────────────────────────────
-    // Recipe is saved the moment the modal opens. If the user
-    // closes without clicking Save, they still keep the recipe.
-    // NOTE: populate textarea AFTER the save so a missing element
-    // can never abort this function before the save completes.
-    const newMeal = {
-        id: makeId(),
-        name: recipeData.name || "Imported Recipe",
-        category: recipeData.category || "Medium Prep",
-        ingredients: ingredientRows.map(ing => ({ ...ing })),
-        instructions: recipeData.instructions || ""
-    };
-    state.data.userMeals.push(newMeal);
-    await persistState();
-    renderApp();
+        // ── Step 2: Open modal ─────────────────────────────────
+        editingMealId = newMeal.id;
 
-    // Point editingMealId at the new recipe so "Save Recipe"
-    // updates it rather than creating a duplicate.
-    editingMealId = newMeal.id;
+        document.getElementById("recipeModalTitle").textContent = "Review Imported Recipe";
+        document.getElementById("modalRecipeName").value = recipeData.name || "";
+        populateCategoryDropdown(recipeData.category || "");
 
-    // Populate instructions textarea now that save is guaranteed
-    const instrEl = document.getElementById("modalInstructions");
-    if (instrEl) instrEl.value = recipeData.instructions || "";
+        const instrEl = document.getElementById("modalInstructions");
+        if (instrEl) instrEl.value = recipeData.instructions || "";
 
-    renderIngredientsEditor();
-    updateReview();
-    showModal(true);
+        renderIngredientsEditor();
+        updateReview();
 
-    // Drop user into Step 2 so they can review/edit ingredients
-    currentStep = 2;
-    updateStepUI();
+        // Scroll modal content to top before showing (important on mobile)
+        const modalContent = document.querySelector("#recipeModal .modal-content");
+        if (modalContent) modalContent.scrollTop = 0;
+
+        showModal(true);
+
+        // Set step AFTER showModal so updateStepUI works on visible elements
+        currentStep = 2;
+        updateStepUI();
+
+    } catch (err) {
+        console.error("❌ openRecipeModalFromPhoto failed:", err);
+        alert("Recipe was saved but there was a display error. Find it in your Recipes list and tap Edit to review.");
+    }
 }
 
 
