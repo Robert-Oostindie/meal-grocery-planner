@@ -282,6 +282,19 @@ h1 {
     border: none;
     cursor: pointer;
 }
+
+/* Photo Import button on Recipes tab */
+.photo-import-btn {
+    display: inline-block;
+    margin-bottom: 1rem;
+    background: #059669;
+    color: white;
+    padding: 0.65rem 1rem;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
 .planner-category {
     margin-bottom: 1rem;
     border-bottom: 1px solid #eee;
