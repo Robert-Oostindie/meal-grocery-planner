@@ -43,6 +43,7 @@ import {
     deleteFromGlobal,
     renderGlobalRecipesTab,
     toggleGlobalRecipeIngredients,
+    toggleGlobalRecipeInstructions,
     setGlobalRecipesSearch,
     setGlobalRecipesSort,
     refreshGlobalRecipes
@@ -4122,6 +4123,7 @@ window.importGlobalRecipe = importGlobalRecipe;
 window.removeGlobalImport = removeGlobalImport;
 window.deleteFromGlobal = deleteFromGlobal;
 window.toggleGlobalRecipeIngredients = toggleGlobalRecipeIngredients;
+window.toggleGlobalRecipeInstructions = toggleGlobalRecipeInstructions;
 window.setGlobalRecipesSearch = setGlobalRecipesSearch;
 window.setGlobalRecipesSort = setGlobalRecipesSort;
 window.refreshGlobalRecipes = refreshGlobalRecipes;
