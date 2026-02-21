@@ -2447,6 +2447,8 @@ function renderRecipes() {
                     card.className = "card";
                     card.style.marginLeft = "1rem";
 
+                    const hasInstructions = !!(meal.instructions && meal.instructions.trim());
+                    const instrId = `recipeInstr_${meal.id}`;
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
@@ -2461,6 +2463,16 @@ function renderRecipes() {
                                 <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
                             </div>
                         </div>
+                        ${hasInstructions ? `
+                        <div style="margin-top:0.5rem;">
+                            <button onclick="toggleRecipeInstructions('${instrId}')"
+                                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                📋 Instructions
+                            </button>
+                            <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
+                                ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                            </div>
+                        </div>` : ""}
                     `;
                     catDiv.appendChild(card);
                 });
@@ -2505,6 +2517,7 @@ function openRecipeModalNew() {
 
     document.getElementById("recipeModalTitle").textContent = "Add Recipe";
     document.getElementById("modalRecipeName").value = "";
+    document.getElementById("modalInstructions").value = "";
 
     populateCategoryDropdown("");
 
@@ -2535,6 +2548,7 @@ async function openRecipeModalEdit(mealId) {
 
     document.getElementById("recipeModalTitle").textContent = "Edit Recipe";
     document.getElementById("modalRecipeName").value = meal.name || "";
+    document.getElementById("modalInstructions").value = meal.instructions || "";
 
     populateCategoryDropdown(meal.category || "");
 
@@ -2573,6 +2587,9 @@ async function openRecipeModalFromPhoto(recipeData) {
         isDefault: false
     }));
 
+    // Populate instructions textarea if present
+    document.getElementById("modalInstructions").value = recipeData.instructions || "";
+
     // ── Auto-save immediately ──────────────────────────────
     // Recipe is saved the moment the modal opens. If the user
     // closes without clicking Save, they still keep the recipe.
@@ -2580,7 +2597,8 @@ async function openRecipeModalFromPhoto(recipeData) {
         id: makeId(),
         name: recipeData.name || "Imported Recipe",
         category: recipeData.category || "Medium Prep",
-        ingredients: ingredientRows.map(ing => ({ ...ing }))
+        ingredients: ingredientRows.map(ing => ({ ...ing })),
+        instructions: recipeData.instructions || ""
     };
     state.data.userMeals.push(newMeal);
     await persistState();
@@ -2672,14 +2690,16 @@ function updateStepUI() {
     const step1 = document.getElementById("modalStep1");
     const step2 = document.getElementById("modalStep2");
     const step3 = document.getElementById("modalStep3");
+    const step4 = document.getElementById("modalStep4");
 
-    [step1, step2, step3].forEach(s => s.classList.add("hidden"));
+    [step1, step2, step3, step4].forEach(s => { if (s) s.classList.add("hidden"); });
     if (currentStep === 1 && step1) step1.classList.remove("hidden");
     if (currentStep === 2 && step2) step2.classList.remove("hidden");
     if (currentStep === 3 && step3) step3.classList.remove("hidden");
+    if (currentStep === 4 && step4) step4.classList.remove("hidden");
 
     // update dots
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
         const dot = document.getElementById(`stepDot${i}`);
         if (!dot) continue;
         dot.classList.toggle("active", i === currentStep);
@@ -3994,6 +4014,7 @@ function renderGroceryList() {
 function updateReview() {
     const name = document.getElementById("modalRecipeName").value.trim();
     const category = document.getElementById("modalRecipeCategory").value.trim();
+    const instructions = document.getElementById("modalInstructions").value.trim();
 
     document.getElementById("reviewName").textContent = name || "(none)";
     document.getElementById("reviewCategory").textContent = category || "(none)";
@@ -4008,6 +4029,18 @@ function updateReview() {
         li.textContent = `${ing.name}${qtyPart}${groupPart} – ${ing.store}`;
         list.appendChild(li);
     });
+
+    // Show instructions block in review only if there are instructions
+    const instrBlock = document.getElementById("reviewInstructionsBlock");
+    const instrEl = document.getElementById("reviewInstructions");
+    if (instrBlock && instrEl) {
+        if (instructions) {
+            instrEl.textContent = instructions;
+            instrBlock.style.display = "block";
+        } else {
+            instrBlock.style.display = "none";
+        }
+    }
 }
 // ==============================
 // SAVE RECIPE (FROM STEP 3)
@@ -4018,11 +4051,14 @@ async function saveRecipe() {
     const name = document.getElementById("modalRecipeName").value.trim();
     const category = document.getElementById("modalRecipeCategory").value.trim();
 
+    const instructions = document.getElementById("modalInstructions").value.trim();
+
     const mealData = {
         id: editingMealId || makeId(),
         name,
         category,
-        ingredients: ingredientRows
+        ingredients: ingredientRows,
+        instructions
     };
 
     // Update if exists
@@ -4047,6 +4083,13 @@ async function saveRecipe() {
 
 // ES modules have their own scope - we need to expose functions
 // that are called from HTML inline onclick handlers
+
+// Toggle cooking instructions visibility in recipe card
+function toggleRecipeInstructions(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+}
+window.toggleRecipeInstructions = toggleRecipeInstructions;
 
 window.openRecipeModalNew = openRecipeModalNew;
 window.openRecipeModalEdit = openRecipeModalEdit;
