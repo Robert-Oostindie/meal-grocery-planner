@@ -156,6 +156,7 @@ export async function publishToGlobal(mealId) {
             name: meal.name,
             category: meal.category || "Uncategorized",
             ingredients: publicIngredients,
+            instructions: meal.instructions || "",
             userCount: 1,
             createdBy: _state.user.id,
             createdByName: _state.data.publicName || _state.user.name || _state.user.email || "Anonymous",
@@ -214,6 +215,7 @@ export async function importGlobalRecipe(globalId) {
             name: recipe.name,
             category: recipe.category,
             globalRecipeId: globalId,
+            instructions: recipe.instructions || "",
             ingredients: (recipe.ingredients || []).map(ing => ({
                 ...ing,
                 id: _makeId(),
@@ -412,6 +414,15 @@ export async function renderGlobalRecipesTab() {
             ? `<span style="font-size:0.75rem; color:#9ca3af; font-style:italic;">Shared by you</span>`
             : `<span style="font-size:0.75rem; color:#9ca3af;">by ${recipe.createdByName || "Anonymous"}</span>`;
 
+        const hasInstructions = !!(recipe.instructions && recipe.instructions.trim());
+        const instrBtn = hasInstructions
+            ? `<button
+                onclick="toggleGlobalRecipeInstructions('${recipe.id}')"
+                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                📋 Instructions
+               </button>`
+            : "";
+
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
                 <div style="flex:1; min-width:0;">
@@ -431,6 +442,7 @@ export async function renderGlobalRecipesTab() {
                         style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
                         View Ingredients
                     </button>
+                    ${instrBtn}
                     ${deleteGlobalBtn}
                 </div>
             </div>
@@ -438,6 +450,11 @@ export async function renderGlobalRecipesTab() {
                  style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid #e5e7eb;">
                 ${buildIngredientListHTML(recipe.ingredients || [])}
             </div>
+            ${hasInstructions ? `
+            <div id="globalInstructions_${recipe.id}"
+                 style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid #e5e7eb; font-size:0.9rem; white-space:pre-line; color:#374151;">
+                ${recipe.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+            </div>` : ""}
         `;
 
         container.appendChild(card);
@@ -506,6 +523,12 @@ function buildIngredientListHTML(ingredients) {
 
 export function toggleGlobalRecipeIngredients(recipeId) {
     const el = document.getElementById(`globalIngredients_${recipeId}`);
+    if (!el) return;
+    el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+export function toggleGlobalRecipeInstructions(recipeId) {
+    const el = document.getElementById(`globalInstructions_${recipeId}`);
     if (!el) return;
     el.style.display = el.style.display === "none" ? "block" : "none";
 }
