@@ -2449,7 +2449,15 @@ function renderRecipes() {
                     card.style.marginLeft = "1rem";
 
                     const hasInstructions = !!(meal.instructions && meal.instructions.trim());
+                    const ingId  = `recipeIng_${meal.id}`;
                     const instrId = `recipeInstr_${meal.id}`;
+
+                    // Build ingredients HTML for the collapsible panel
+                    const ingHTML = (meal.ingredients || []).map(ing => {
+                        const qty = ing.qty > 1 ? ` — ${ing.qty} ${ing.unit}` : "";
+                        return `<li style="padding:0.1rem 0;">• ${ing.name}${qty}</li>`;
+                    }).join("");
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
@@ -2464,15 +2472,25 @@ function renderRecipes() {
                                 <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
                             </div>
                         </div>
-                        ${hasInstructions ? `
-                        <div style="margin-top:0.5rem;">
-                            <button onclick="toggleRecipeInstructions('${instrId}')"
+                        <div style="margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+                            <button onclick="toggleRecipePanel('${ingId}', '${instrId}')"
+                                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                View Ingredients
+                            </button>
+                            ${hasInstructions ? `
+                            <button onclick="toggleRecipePanel('${instrId}', '${ingId}')"
                                 style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
                                 📋 Instructions
-                            </button>
-                            <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
-                                ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-                            </div>
+                            </button>` : ""}
+                        </div>
+                        <div id="${ingId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px;">
+                            <ul style="margin:0; padding-left:0; list-style:none; font-size:0.9rem; color:#374151; line-height:1.8;">
+                                ${ingHTML}
+                            </ul>
+                        </div>
+                        ${hasInstructions ? `
+                        <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
+                            ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
                         </div>` : ""}
                     `;
                     catDiv.appendChild(card);
@@ -4085,12 +4103,17 @@ async function saveRecipe() {
 // ES modules have their own scope - we need to expose functions
 // that are called from HTML inline onclick handlers
 
-// Toggle cooking instructions visibility in recipe card
-function toggleRecipeInstructions(id) {
-    const el = document.getElementById(id);
-    if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+// Toggle one recipe panel (ingredients OR instructions) and close the other
+function toggleRecipePanel(showId, hideId) {
+    const showEl = document.getElementById(showId);
+    const hideEl = document.getElementById(hideId);
+    if (!showEl) return;
+    const isOpen = showEl.style.display !== "none";
+    // Close both first, then open the target if it was closed
+    if (hideEl) hideEl.style.display = "none";
+    showEl.style.display = isOpen ? "none" : "block";
 }
-window.toggleRecipeInstructions = toggleRecipeInstructions;
+window.toggleRecipePanel = toggleRecipePanel;
 
 window.openRecipeModalNew = openRecipeModalNew;
 window.openRecipeModalEdit = openRecipeModalEdit;
