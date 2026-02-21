@@ -72,16 +72,16 @@ export async function importRecipeFromPhoto() {
     document.getElementById("photoImportError").classList.add("hidden");
 
     try {
-        // Convert image to base64
-        const base64Image = await fileToBase64(file);
+        // Compress image to stay under Anthropic's 5MB limit
+        const { base64, mediaType } = await compressImage(file);
 
         // Call our secure Cloud Function (not Anthropic directly)
         const response = await fetch(CLOUD_FUNCTION_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                imageBase64: base64Image,
-                mediaType: file.type
+                imageBase64: base64,
+                mediaType: mediaType
             })
         });
 
@@ -103,18 +103,65 @@ export async function importRecipeFromPhoto() {
     }
 }
 
-// ── Convert file to base64 ────────────────────────────────
+// ── Compress image using canvas before sending ────────────
+// Resizes and re-encodes to JPEG to stay under the 5MB API limit.
+// Most phone photos are 3-10MB; this brings them under 4MB safely.
 
-function fileToBase64(file) {
+function compressImage(file) {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            // Remove the "data:image/jpeg;base64," prefix
-            const base64 = reader.result.split(",")[1];
-            resolve(base64);
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+
+            // Target: max 1600px on the longest side (enough for Claude to read text)
+            const MAX_DIMENSION = 1600;
+            let { width, height } = img;
+
+            if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                if (width > height) {
+                    height = Math.round((height / width) * MAX_DIMENSION);
+                    width = MAX_DIMENSION;
+                } else {
+                    width = Math.round((width / height) * MAX_DIMENSION);
+                    height = MAX_DIMENSION;
+                }
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Encode as JPEG at 85% quality — good balance of size vs clarity
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        reject(new Error("Failed to compress image."));
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(",")[1];
+                        resolve({ base64, mediaType: "image/jpeg" });
+                    };
+                    reader.onerror = () => reject(new Error("Failed to read compressed image."));
+                    reader.readAsDataURL(blob);
+                },
+                "image/jpeg",
+                0.85
+            );
         };
-        reader.onerror = () => reject(new Error("Failed to read image file."));
-        reader.readAsDataURL(file);
+
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Failed to load image for compression."));
+        };
+
+        img.src = objectUrl;
     });
 }
 
