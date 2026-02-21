@@ -48,6 +48,13 @@ import {
     refreshGlobalRecipes
 } from "./globalRecipes.js";
 
+import {
+    openPhotoImportModal,
+    closePhotoImportModal,
+    handlePhotoSelected,
+    importRecipeFromPhoto
+} from "./photoImport.js";
+
 // ==============================
 // DOM ELEMENTS
 // ==============================
@@ -2539,6 +2546,41 @@ async function openRecipeModalEdit(mealId) {
     updateStepUI();
 }
 
+// ==============================
+// OPEN RECIPE MODAL FROM PHOTO
+// Receives parsed recipe data and pre-populates the modal
+// ==============================
+function openRecipeModalFromPhoto(recipeData) {
+    editingMealId = null;
+    currentStep = 1;
+
+    document.getElementById("recipeModalTitle").textContent = "Review Imported Recipe";
+    document.getElementById("modalRecipeName").value = recipeData.name || "";
+
+    populateCategoryDropdown(recipeData.category || "");
+
+    const allStores = getAllStores();
+    const defaultStore = state.data.defaultStoreName || allStores[0]?.name || "";
+
+    ingredientRows = (recipeData.ingredients || []).map(ing => ({
+        id: makeId(),
+        name: ing.name || "",
+        qty: Number(ing.qty) || 1,
+        unit: ing.unit || "CT",
+        store: defaultStore,
+        group: "",
+        isDefault: false
+    }));
+
+    renderIngredientsEditor();
+    updateReview();
+    showModal(true);
+
+    // Drop user into Step 2 so they can review/edit ingredients
+    currentStep = 2;
+    updateStepUI();
+}
+
 
 function closeRecipeModal() {
     showModal(false);
@@ -4046,6 +4088,13 @@ window.state = state;
 window.makeId = makeId;
 window.persistState = persistState;
 window.renderApp = renderApp;
+
+// Photo Import (imported from photoImport.js)
+window.openRecipeModalFromPhoto = openRecipeModalFromPhoto;
+window.openPhotoImportModal  = openPhotoImportModal;
+window.closePhotoImportModal = closePhotoImportModal;
+window.handlePhotoSelected   = handlePhotoSelected;
+window.importRecipeFromPhoto = importRecipeFromPhoto;
 
 console.log("✅ All functions exposed to global scope");
 // ============================================================
