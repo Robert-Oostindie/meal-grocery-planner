@@ -2606,12 +2606,11 @@ async function openRecipeModalFromPhoto(recipeData) {
         isDefault: false
     }));
 
-    // Populate instructions textarea if present
-    document.getElementById("modalInstructions").value = recipeData.instructions || "";
-
     // ── Auto-save immediately ──────────────────────────────
     // Recipe is saved the moment the modal opens. If the user
     // closes without clicking Save, they still keep the recipe.
+    // NOTE: populate textarea AFTER the save so a missing element
+    // can never abort this function before the save completes.
     const newMeal = {
         id: makeId(),
         name: recipeData.name || "Imported Recipe",
@@ -2626,6 +2625,10 @@ async function openRecipeModalFromPhoto(recipeData) {
     // Point editingMealId at the new recipe so "Save Recipe"
     // updates it rather than creating a duplicate.
     editingMealId = newMeal.id;
+
+    // Populate instructions textarea now that save is guaranteed
+    const instrEl = document.getElementById("modalInstructions");
+    if (instrEl) instrEl.value = recipeData.instructions || "";
 
     renderIngredientsEditor();
     updateReview();
