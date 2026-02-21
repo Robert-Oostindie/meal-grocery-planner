@@ -521,16 +521,23 @@ function buildIngredientListHTML(ingredients) {
 
 // ── UI helpers exposed to window via app.js ───────────────
 
+// Toggle one panel and close the other so only one is open at a time
 export function toggleGlobalRecipeIngredients(recipeId) {
-    const el = document.getElementById(`globalIngredients_${recipeId}`);
-    if (!el) return;
-    el.style.display = el.style.display === "none" ? "block" : "none";
+    const showEl = document.getElementById(`globalIngredients_${recipeId}`);
+    const hideEl = document.getElementById(`globalInstructions_${recipeId}`);
+    if (!showEl) return;
+    const isOpen = showEl.style.display !== "none";
+    if (hideEl) hideEl.style.display = "none";
+    showEl.style.display = isOpen ? "none" : "block";
 }
 
 export function toggleGlobalRecipeInstructions(recipeId) {
-    const el = document.getElementById(`globalInstructions_${recipeId}`);
-    if (!el) return;
-    el.style.display = el.style.display === "none" ? "block" : "none";
+    const showEl = document.getElementById(`globalInstructions_${recipeId}`);
+    const hideEl = document.getElementById(`globalIngredients_${recipeId}`);
+    if (!showEl) return;
+    const isOpen = showEl.style.display !== "none";
+    if (hideEl) hideEl.style.display = "none";
+    showEl.style.display = isOpen ? "none" : "block";
 }
 
 export function setGlobalRecipesSearch(term) {
