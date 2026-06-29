@@ -1,0 +1,29 @@
+<svg viewBox="0 0 500 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Substitute group screen</title>
+  <desc id="desc">A substitute picker letting the person choose which ingredient in a group to use for this meal, such as chicken thighs or chicken breast for the Protein group.</desc>
+
+  <rect x="0" y="0" width="500" height="380" fill="#f2f2f7" rx="0"/>
+
+  <rect x="50" y="40" width="400" height="300" rx="16" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="72" y="78" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="17" font-weight="700" fill="#111827">Choose: Protein</text>
+  <text x="72" y="100" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="13" fill="#6b7280">Pick which one you're using this time.</text>
+
+  <rect x="72" y="120" width="356" height="48" rx="10" fill="#eef4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <circle cx="92" cy="144" r="7" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="92" cy="144" r="3" fill="#2563eb"/>
+  <text x="110" y="140" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" fill="#111827" font-weight="600">Chicken thighs</text>
+  <text x="110" y="156" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">2 lb</text>
+
+  <rect x="72" y="178" width="356" height="48" rx="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <circle cx="92" cy="202" r="7" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+  <text x="110" y="198" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" fill="#111827">Chicken breast</text>
+  <text x="110" y="214" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">1.5 lb</text>
+
+  <rect x="72" y="236" width="356" height="48" rx="10" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <circle cx="92" cy="260" r="7" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+  <text x="110" y="256" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" fill="#111827">Ground turkey</text>
+  <text x="110" y="272" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">1 lb</text>
+
+  <rect x="296" y="300" width="132" height="36" rx="9" fill="#2563eb"/>
+  <text x="362" y="323" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="600">Use this</text>
+</svg>

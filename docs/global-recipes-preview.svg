@@ -1,0 +1,33 @@
+<svg viewBox="0 0 500 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Global Recipes screen</title>
+  <desc id="desc">The Global Recipes tab showing a search bar, sort dropdown, and a list of community recipes with ingredient counts and popularity, each with an Add to My Recipes button.</desc>
+
+  <rect x="0" y="0" width="500" height="380" fill="#f2f2f7" rx="0"/>
+
+  <text x="20" y="34" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="20" font-weight="700" fill="#111827">Global Recipes</text>
+
+  <rect x="20" y="48" width="300" height="32" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1"/>
+  <text x="32" y="69" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="13" fill="#9ca3af">Search recipes...</text>
+  <rect x="328" y="48" width="100" height="32" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1"/>
+  <text x="340" y="69" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#374151">Most Popular</text>
+  <rect x="436" y="48" width="44" height="32" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1"/>
+  <text x="458" y="69" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="13" fill="#374151" text-anchor="middle">🔄</text>
+
+  <rect x="20" y="98" width="460" height="78" rx="14" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="36" y="124" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="15" font-weight="600" fill="#111827">Sheet Pan Fajitas</text>
+  <text x="36" y="145" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">8 ingredients · 42 people using this</text>
+  <rect x="360" y="118" width="104" height="30" rx="8" fill="#2563eb"/>
+  <text x="412" y="138" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="600">+ Add to Mine</text>
+
+  <rect x="20" y="188" width="460" height="78" rx="14" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="36" y="214" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="15" font-weight="600" fill="#111827">Crock Pot Chili</text>
+  <text x="36" y="235" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">10 ingredients · 31 people using this</text>
+  <rect x="360" y="208" width="104" height="30" rx="8" fill="#2563eb"/>
+  <text x="412" y="228" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="600">+ Add to Mine</text>
+
+  <rect x="20" y="278" width="460" height="78" rx="14" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="36" y="304" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="15" font-weight="600" fill="#111827">Weeknight Tacos</text>
+  <text x="36" y="325" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#6b7280">7 ingredients · 19 people using this</text>
+  <rect x="360" y="298" width="104" height="30" rx="8" fill="#2563eb"/>
+  <text x="412" y="318" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="600">+ Add to Mine</text>
+</svg>

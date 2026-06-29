@@ -1,0 +1,30 @@
+<svg viewBox="0 0 500 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Sync across devices</title>
+  <desc id="desc">The same meal plan and grocery list shown on a phone and a laptop at the same time, illustrating that data stays in sync across devices.</desc>
+
+  <rect x="0" y="0" width="500" height="380" fill="#f2f2f7" rx="0"/>
+
+  <rect x="40" y="60" width="220" height="260" rx="20" fill="#1f2937"/>
+  <rect x="52" y="78" width="196" height="224" rx="6" fill="#ffffff"/>
+  <text x="64" y="100" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12" font-weight="700" fill="#111827">Planner</text>
+  <rect x="64" y="112" width="172" height="26" rx="6" fill="#eef4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="74" y="129" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" fill="#1d4ed8">Sheet Pan Fajitas</text>
+  <rect x="64" y="142" width="172" height="26" rx="6" fill="#eef4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="74" y="159" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" fill="#1d4ed8">Crock Pot Chili</text>
+  <rect x="64" y="172" width="172" height="26" rx="6" fill="#f8f8fa" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="74" y="189" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" fill="#6b7280">Weeknight Tacos</text>
+
+  <rect x="300" y="100" width="170" height="120" rx="8" fill="#1f2937"/>
+  <rect x="306" y="106" width="158" height="100" rx="3" fill="#ffffff"/>
+  <rect x="280" y="218" width="210" height="10" rx="4" fill="#374151"/>
+  <text x="316" y="128" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="700" fill="#111827">Grocery List</text>
+  <rect x="316" y="138" width="11" height="11" rx="2" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="333" y="148" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="10" fill="#111827">2 onions</text>
+  <rect x="316" y="156" width="11" height="11" rx="2" fill="#2563eb"/>
+  <text x="333" y="166" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="10" fill="#9ca3af">Bell peppers</text>
+  <rect x="316" y="174" width="11" height="11" rx="2" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="333" y="184" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="10" fill="#111827">Chicken thighs</text>
+
+  <path d="M270 150 C285 150 285 150 296 150" stroke="#9ca3af" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+  <text x="270" y="142" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="20" text-anchor="middle">☁️</text>
+</svg>
