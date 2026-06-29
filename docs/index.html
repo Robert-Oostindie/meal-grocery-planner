@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipe to Grocery List - Meal Planning Made Easy</title>
-    <meta name="description" content="Turn your favorite recipes into organized grocery lists. Plan meals, manage substitutes, and shop smarter.">
-    
+    <meta name="description" content="Turn your favorite recipes into organized grocery lists. Browse community recipes, plan meals, and shop smarter — split automatically by store and aisle.">
+
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-99D49BLDF7"></script>
     <script>
@@ -14,7 +14,7 @@
       gtag('js', new Date());
       gtag('config', 'G-99D49BLDF7');
     </script>
-    
+
     <style>
         * {
             margin: 0;
@@ -72,6 +72,73 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
 
+        /* Product Preview Header */
+        .preview {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 4rem 2rem 0;
+            text-align: center;
+        }
+
+        .preview-text h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .preview-text p {
+            color: #666;
+            font-size: 1.05rem;
+        }
+
+        /* Feature Rows */
+        .feature-row {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            max-width: 1100px;
+            margin: 0 auto 4rem;
+        }
+
+        .feature-row.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .feature-row-text {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .feature-row-text h3 {
+            font-size: 1.6rem;
+            margin-bottom: 0.75rem;
+            color: #667eea;
+        }
+
+        .feature-row-text p {
+            color: #666;
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        .feature-row-img {
+            flex: 1;
+            min-width: 280px;
+            max-width: 480px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .feature-row,
+            .feature-row.reverse {
+                flex-direction: column;
+                gap: 1.5rem;
+                margin-bottom: 3rem;
+            }
+        }
+
         /* Features Section */
         .features {
             padding: 4rem 2rem;
@@ -86,40 +153,9 @@
             color: #333;
         }
 
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        }
-
         .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-card h3 {
-            font-size: 1.5rem;
+            font-size: 2.5rem;
             margin-bottom: 0.75rem;
-            color: #667eea;
-        }
-
-        .feature-card p {
-            color: #666;
-            line-height: 1.6;
         }
 
         /* How It Works Section */
@@ -210,49 +246,74 @@
     <!-- Hero Section -->
     <section class="hero">
         <h1>🍽️ Recipe to Grocery List</h1>
-        <p>Plan your meals and generate organized grocery lists in seconds. No more forgotten ingredients or wasted trips to the store.</p>
+        <p>Build your recipes once, plan your week, and get a grocery list that's already split by store and aisle. No more rewriting the same list every week.</p>
         <a href="/app" class="cta-button">Launch App →</a>
     </section>
 
+    <!-- Product Preview -->
+    <section class="preview">
+        <div class="preview-text">
+            <h2>See it in action</h2>
+            <p>Six things you can actually do today — not a roadmap, the real app.</p>
+        </div>
+    </section>
+
     <!-- Features Section -->
-    <section class="features">
+    <section class="features" id="features">
         <h2>Why You'll Love It</h2>
-        <div class="feature-grid">
-            <div class="feature-card">
+
+        <div class="feature-row">
+            <div class="feature-row-text">
                 <div class="feature-icon">📝</div>
-                <h3>Recipe Management</h3>
-                <p>Store all your favorite recipes in one place. Add ingredients, quantities, and substitutes.</p>
+                <h3>Recipe Builder</h3>
+                <p>Add a recipe once with ingredients, quantities, and substitutes — or skip the typing and import one straight from a photo.</p>
             </div>
+            <img src="recipe-builder-preview.svg" alt="The recipe builder showing the ingredients step, with quantity, unit, store, and substitute group fields" class="feature-row-img">
+        </div>
 
-            <div class="feature-card">
-                <div class="feature-icon">📅</div>
-                <h3>Meal Planning</h3>
-                <p>Select recipes for the week and adjust servings. See exactly what you need to buy.</p>
-            </div>
-
-            <div class="feature-card">
+        <div class="feature-row reverse">
+            <div class="feature-row-text">
                 <div class="feature-icon">🛒</div>
-                <h3>Smart Grocery Lists</h3>
-                <p>Automatically organized by store and aisle. No more backtracking through the supermarket.</p>
+                <h3>Multi-Store Grocery Lists</h3>
+                <p>Assign each ingredient to the store you actually buy it from. Your list builds itself, already grouped by store and aisle.</p>
             </div>
+            <img src="grocery-list-preview.svg" alt="The grocery list grouped first by store, then by aisle, with checkboxes for each item" class="feature-row-img">
+        </div>
 
-            <div class="feature-card">
+        <div class="feature-row">
+            <div class="feature-row-text">
+                <div class="feature-icon">🌍</div>
+                <h3>Global Recipes</h3>
+                <p>Browse recipes shared by other home cooks and add any of them straight to your own library.</p>
+            </div>
+            <img src="global-recipes-preview.svg" alt="The Global Recipes tab with search, sort, and a list of community recipes with an Add to My Recipes button" class="feature-row-img">
+        </div>
+
+        <div class="feature-row reverse">
+            <div class="feature-row-text">
+                <div class="feature-icon">⭐</div>
+                <h3>Default Store</h3>
+                <p>Set the store you shop at most as your default, so new ingredients are pre-filled automatically.</p>
+            </div>
+            <img src="default-store-preview.svg" alt="The Stores tab with a star badge marking the current default store" class="feature-row-img">
+        </div>
+
+        <div class="feature-row">
+            <div class="feature-row-text">
                 <div class="feature-icon">🔄</div>
                 <h3>Ingredient Substitutes</h3>
                 <p>Set up substitute groups so you can easily swap ingredients based on what's available.</p>
             </div>
+            <img src="substitutes-preview.svg" alt="A substitute picker letting the person choose which ingredient in a group to use, such as chicken thighs or chicken breast" class="feature-row-img">
+        </div>
 
-            <div class="feature-card">
+        <div class="feature-row reverse">
+            <div class="feature-row-text">
                 <div class="feature-icon">☁️</div>
                 <h3>Sync Across Devices</h3>
                 <p>Access your recipes and meal plans from phone, tablet, or computer. Always in sync.</p>
             </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">🚀</div>
-                <h3>Delivery Integration</h3>
-                <p>Send your grocery list to Instacart or DoorDash with one click. Shop from your couch.</p>
-            </div>
+            <img src="sync-preview.svg" alt="The same meal plan and grocery list shown on a phone and a laptop at the same time" class="feature-row-img">
         </div>
     </section>
 
@@ -264,7 +325,7 @@
                 <div class="step-number">1</div>
                 <div class="step-content">
                     <h3>Add Your Recipes</h3>
-                    <p>Create recipes with ingredients, quantities, and your preferred stores. Set up substitute groups for flexibility.</p>
+                    <p>Build them from scratch, import from a photo, or grab one from Global Recipes. Assign a store to each ingredient — or let your default store fill it in.</p>
                 </div>
             </div>
 
@@ -288,7 +349,7 @@
                 <div class="step-number">4</div>
                 <div class="step-content">
                     <h3>Shop Smart</h3>
-                    <p>Use the list in-store or send it to delivery services. Check off items as you go.</p>
+                    <p>Check items off as you go, or copy the whole list to your clipboard to take with you.</p>
                 </div>
             </div>
         </div>
