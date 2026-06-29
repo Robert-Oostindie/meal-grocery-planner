@@ -11,6 +11,42 @@ const ALLOWED_ORIGINS = [
     "https://meal-grocery-planner.web.app"
 ];
 
+// Shared JSON contract both prompt variants must follow.
+const RESPONSE_FORMAT = `Return ONLY a valid JSON object with this exact structure, nothing else:
+{
+  "name": "Recipe Name",
+  "category": "Medium Prep",
+  "ingredients": [
+    {"name": "ingredient name", "qty": 1, "unit": "CT"},
+    {"name": "another ingredient", "qty": 2, "unit": "cup"}
+  ],
+  "instructions": "1. First step.\\n2. Second step.\\n3. Third step."
+}
+
+Rules:
+- "name": The recipe name. If not visible, make a reasonable guess from the ingredients.
+- "category": Must be exactly one of: "Low Prep", "Medium Prep", "High Prep / Longer Cook Times", "Grilling", "Breakfast", "Crock Pot", "Sides", "Appetizers"
+- "ingredients": Array of all ingredients you can see
+- "qty": A number (use 1 if not specified)
+- "unit": Use standard units like "CT", "cup", "tbsp", "tsp", "oz", "lb", "g", "ml", "clove", "slice", "can", "pkg"
+- "instructions": A single string with numbered steps separated by \\n. If no instructions are visible, use an empty string "".
+- Return ONLY the JSON, no explanation, no markdown code blocks`;
+
+// Single photo: everything (ingredients + instructions) may be on one image.
+const SINGLE_PHOTO_PROMPT = `You are a recipe parser. Analyze this recipe image and extract the recipe information.
+
+${RESPONSE_FORMAT}`;
+
+// Two photos: each image is scoped to one job, to keep Claude from
+// mixing ingredient text into instructions or vice versa.
+const SPLIT_PHOTO_PROMPT = `You are a recipe parser. You are given two images of the SAME recipe.
+
+- Image 1 contains ONLY the ingredients list (name, quantity, unit for each item). Extract ingredients from Image 1 only. Ignore any instructional or narrative text that may incidentally appear in Image 1.
+- Image 2 contains ONLY the cooking instructions / steps. Extract the "instructions" field from Image 2 only. Ignore any ingredient list that may incidentally appear in Image 2.
+- Combine what you extract from both images into a single recipe object.
+
+${RESPONSE_FORMAT}`;
+
 exports.parseRecipeFromPhoto = onRequest(
     { secrets: ["ANTHROPIC_API_KEY"] },
     async (req, res) => {
@@ -33,53 +69,49 @@ exports.parseRecipeFromPhoto = onRequest(
             return res.status(405).json({ error: "Method not allowed" });
         }
 
-        const { imageBase64, mediaType } = req.body;
+        const {
+            imageBase64,
+            mediaType,
+            splitMode,
+            imageBase64_2,
+            mediaType_2
+        } = req.body;
 
         if (!imageBase64 || !mediaType) {
             return res.status(400).json({ error: "Missing imageBase64 or mediaType" });
         }
 
-        const prompt = `You are a recipe parser. Analyze this recipe image and extract the recipe information.
+        if (splitMode && (!imageBase64_2 || !mediaType_2)) {
+            return res.status(400).json({ error: "Split mode requires a second image (instructions photo)." });
+        }
 
-Return ONLY a valid JSON object with this exact structure, nothing else:
-{
-  "name": "Recipe Name",
-  "category": "Medium Prep",
-  "ingredients": [
-    {"name": "ingredient name", "qty": 1, "unit": "CT"},
-    {"name": "another ingredient", "qty": 2, "unit": "cup"}
-  ],
-  "instructions": "1. First step.\n2. Second step.\n3. Third step."
-}
+        // Build the image blocks + prompt based on mode
+        const imageBlocks = [
+            {
+                type: "image",
+                source: { type: "base64", media_type: mediaType, data: imageBase64 }
+            }
+        ];
 
-Rules:
-- "name": The recipe name. If not visible, make a reasonable guess from the ingredients.
-- "category": Must be exactly one of: "Low Prep", "Medium Prep", "High Prep / Longer Cook Times", "Grilling", "Breakfast", "Crock Pot", "Sides", "Appetizers"
-- "ingredients": Array of all ingredients you can see
-- "qty": A number (use 1 if not specified)
-- "unit": Use standard units like "CT", "cup", "tbsp", "tsp", "oz", "lb", "g", "ml", "clove", "slice", "can", "pkg"
-- "instructions": A single string with numbered steps separated by \n. If no instructions are visible, use an empty string "".
-- Return ONLY the JSON, no explanation, no markdown code blocks`;
+        let prompt = SINGLE_PHOTO_PROMPT;
+
+        if (splitMode) {
+            imageBlocks.push({
+                type: "image",
+                source: { type: "base64", media_type: mediaType_2, data: imageBase64_2 }
+            });
+            prompt = SPLIT_PHOTO_PROMPT;
+        }
 
         const requestBody = JSON.stringify({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 1500,
+            max_tokens: 1800,
             messages: [
                 {
                     role: "user",
                     content: [
-                        {
-                            type: "image",
-                            source: {
-                                type: "base64",
-                                media_type: mediaType,
-                                data: imageBase64
-                            }
-                        },
-                        {
-                            type: "text",
-                            text: prompt
-                        }
+                        ...imageBlocks,
+                        { type: "text", text: prompt }
                     ]
                 }
             ]
