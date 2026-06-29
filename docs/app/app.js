@@ -53,6 +53,8 @@ import {
     openPhotoImportModal,
     closePhotoImportModal,
     handlePhotoSelected,
+    handleSecondPhotoSelected,
+    toggleSplitInstructions,
     importRecipeFromPhoto
 } from "./photoImport.js";
 
@@ -4193,6 +4195,8 @@ window.openRecipeModalFromPhoto = openRecipeModalFromPhoto;
 window.openPhotoImportModal  = openPhotoImportModal;
 window.closePhotoImportModal = closePhotoImportModal;
 window.handlePhotoSelected   = handlePhotoSelected;
+window.handleSecondPhotoSelected = handleSecondPhotoSelected;
+window.toggleSplitInstructions = toggleSplitInstructions;
 window.importRecipeFromPhoto = importRecipeFromPhoto;
 
 console.log("✅ All functions exposed to global scope");
