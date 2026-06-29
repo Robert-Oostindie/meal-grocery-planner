@@ -565,35 +565,59 @@
 
         </div>
     </div>
-    <!-- PHOTO IMPORT MODAL -->
-    <div id="photoImportModal" class="modal hidden">
-        <div class="modal-backdrop" onclick="closePhotoImportModal()"></div>
-        <div class="modal-content" style="max-width:480px;">
-            <div class="modal-header">
-                <h2>📷 Import Recipe from Photo</h2>
-                <button class="modal-close" onclick="closePhotoImportModal()">×</button>
-            </div>
-            <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
-                Take a photo of a recipe card or cookbook page and we'll read it for you.
+   <!-- PHOTO IMPORT MODAL -->
+<div id="photoImportModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closePhotoImportModal()"></div>
+    <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+            <h2>📷 Import Recipe from Photo</h2>
+            <button class="modal-close" onclick="closePhotoImportModal()">×</button>
+        </div>
+        <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
+            Take a photo of a recipe card or cookbook page and we'll read it for you.
+        </p>
+        <input
+            id="photoFileInput"
+            type="file"
+            accept="image/*"
+            onchange="handlePhotoSelected(this)"
+            style="margin-bottom:1rem; width:100%;"
+        >
+        <img id="photoPreview" class="hidden" style="width:100%; border-radius:10px; margin-bottom:1rem; max-height:300px; object-fit:contain;">
+
+        <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:1rem; font-size:0.9rem; color:#374151; cursor:pointer;">
+            <input
+                id="splitInstructionsCheckbox"
+                type="checkbox"
+                onchange="toggleSplitInstructions(this)"
+                style="margin-top:0.2rem;"
+            >
+            <span>The cooking instructions are on a different photo than the ingredients — I'll add a second photo for them.</span>
+        </label>
+
+        <div id="secondPhotoSection" class="hidden" style="margin-bottom:1rem;">
+            <p style="color:#6b7280; font-size:0.85rem; margin-bottom:0.5rem;">
+                Now add a photo of just the cooking instructions / steps.
             </p>
             <input
-                id="photoFileInput"
+                id="photoFileInput2"
                 type="file"
                 accept="image/*"
-                onchange="handlePhotoSelected(this)"
+                onchange="handleSecondPhotoSelected(this)"
                 style="margin-bottom:1rem; width:100%;"
             >
-            <img id="photoPreview" class="hidden" style="width:100%; border-radius:10px; margin-bottom:1rem; max-height:300px; object-fit:contain;">
-            <div id="photoImportStatus" style="text-align:center; color:#6b7280; font-size:0.9rem; margin-bottom:0.5rem;"></div>
-            <div id="photoImportError" class="auth-error hidden" style="margin-bottom:0.75rem;"></div>
-            <div class="modal-actions">
-                <button onclick="closePhotoImportModal()">Cancel</button>
-                <button id="photoImportBtn" class="primary" onclick="importRecipeFromPhoto()" disabled>
-                    Import Recipe
-                </button>
-            </div>
+            <img id="photoPreview2" class="hidden" style="width:100%; border-radius:10px; max-height:300px; object-fit:contain;">
+        </div>
+
+        <div id="photoImportStatus" style="text-align:center; color:#6b7280; font-size:0.9rem; margin-bottom:0.5rem;"></div>
+        <div id="photoImportError" class="auth-error hidden" style="margin-bottom:0.75rem;"></div>
+        <div class="modal-actions">
+            <button onclick="closePhotoImportModal()">Cancel</button>
+            <button id="photoImportBtn" class="primary" onclick="importRecipeFromPhoto()" disabled>
+                Import Recipe
+            </button>
         </div>
     </div>
-
+</div>
 </body>
 </html>
