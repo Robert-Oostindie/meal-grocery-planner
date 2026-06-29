@@ -3,6 +3,11 @@
 // Allows users to take/upload a photo of a recipe and have
 // it automatically parsed into the app's recipe format.
 //
+// Supports two modes:
+//  - Single photo: ingredients + instructions on one image.
+//  - Split mode (checkbox): a second photo for instructions,
+//    when the recipe card/page splits them across two images.
+//
 // API key is stored securely in Firebase Cloud Functions —
 // never exposed in this file or on GitHub.
 // ============================================================
@@ -20,6 +25,17 @@ export function openPhotoImportModal() {
     document.getElementById("photoPreview").src = "";
     document.getElementById("photoPreview").classList.add("hidden");
     document.getElementById("photoFileInput").value = "";
+
+    document.getElementById("photoPreview2").src = "";
+    document.getElementById("photoPreview2").classList.add("hidden");
+    document.getElementById("photoFileInput2").value = "";
+
+    const checkbox = document.getElementById("splitInstructionsCheckbox");
+    if (checkbox) checkbox.checked = false;
+
+    const secondSection = document.getElementById("secondPhotoSection");
+    if (secondSection) secondSection.classList.add("hidden");
+
     document.getElementById("photoImportError").classList.add("hidden");
     document.getElementById("photoImportBtn").disabled = true;
     document.getElementById("photoImportStatus").textContent = "";
@@ -32,28 +48,80 @@ export function closePhotoImportModal() {
     if (modal) modal.classList.add("hidden");
 }
 
-// ── Handle image selection ────────────────────────────────
+// ── Checkbox toggle: show/hide the second photo input ─────
+
+export function toggleSplitInstructions(checkbox) {
+    const secondSection = document.getElementById("secondPhotoSection");
+    if (!secondSection) return;
+
+    if (checkbox.checked) {
+        secondSection.classList.remove("hidden");
+    } else {
+        secondSection.classList.add("hidden");
+        // Clear the second photo if they uncheck — keeps state consistent
+        document.getElementById("photoFileInput2").value = "";
+        document.getElementById("photoPreview2").src = "";
+        document.getElementById("photoPreview2").classList.add("hidden");
+    }
+
+    updateImportButtonState();
+}
+
+// ── Handle image selection (photo 1: ingredients / full recipe) ──
 
 export function handlePhotoSelected(input) {
     const file = input.files[0];
     if (!file) return;
 
-    // Validate it's an image
     if (!file.type.startsWith("image/")) {
         showPhotoError("Please select an image file.");
         return;
     }
 
-    // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
         const preview = document.getElementById("photoPreview");
         preview.src = e.target.result;
         preview.classList.remove("hidden");
-        document.getElementById("photoImportBtn").disabled = false;
         document.getElementById("photoImportError").classList.add("hidden");
+        updateImportButtonState();
     };
     reader.readAsDataURL(file);
+}
+
+// ── Handle image selection (photo 2: instructions, optional) ─────
+
+export function handleSecondPhotoSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        showPhotoError("Please select an image file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const preview = document.getElementById("photoPreview2");
+        preview.src = e.target.result;
+        preview.classList.remove("hidden");
+        document.getElementById("photoImportError").classList.add("hidden");
+        updateImportButtonState();
+    };
+    reader.readAsDataURL(file);
+}
+
+// ── Enable Import button only when required photo(s) are present ──
+
+function updateImportButtonState() {
+    const btn = document.getElementById("photoImportBtn");
+    if (!btn) return;
+
+    const hasFirst = document.getElementById("photoFileInput").files.length > 0;
+    const splitChecked = document.getElementById("splitInstructionsCheckbox")?.checked;
+    const hasSecond = document.getElementById("photoFileInput2").files.length > 0;
+
+    btn.disabled = splitChecked ? !(hasFirst && hasSecond) : !hasFirst;
 }
 
 // ── Main import function ──────────────────────────────────
@@ -63,26 +131,45 @@ export async function importRecipeFromPhoto() {
     const file = fileInput.files[0];
     if (!file) return;
 
+    const splitChecked = document.getElementById("splitInstructionsCheckbox")?.checked;
+    const fileInput2 = document.getElementById("photoFileInput2");
+    const file2 = splitChecked ? fileInput2.files[0] : null;
+
+    if (splitChecked && !file2) {
+        showPhotoError("Add a second photo for the cooking instructions, or uncheck the box above.");
+        return;
+    }
+
     const btn = document.getElementById("photoImportBtn");
     const status = document.getElementById("photoImportStatus");
 
-    // Show loading state
     btn.disabled = true;
-    status.textContent = "📖 Reading recipe...";
+    status.textContent = splitChecked
+        ? "📖 Reading ingredients and instructions..."
+        : "📖 Reading recipe...";
     document.getElementById("photoImportError").classList.add("hidden");
 
     try {
-        // Compress image to stay under Anthropic's 5MB limit
+        // Compress image(s) to stay under Anthropic's 5MB limit
         const { base64, mediaType } = await compressImage(file);
+
+        const payload = {
+            imageBase64: base64,
+            mediaType: mediaType,
+            splitMode: !!splitChecked
+        };
+
+        if (splitChecked) {
+            const { base64: base64_2, mediaType: mediaType_2 } = await compressImage(file2);
+            payload.imageBase64_2 = base64_2;
+            payload.mediaType_2 = mediaType_2;
+        }
 
         // Call our secure Cloud Function (not Anthropic directly)
         const response = await fetch(CLOUD_FUNCTION_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                imageBase64: base64,
-                mediaType: mediaType
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
@@ -98,7 +185,7 @@ export async function importRecipeFromPhoto() {
     } catch (err) {
         console.error("❌ Photo import failed:", err);
         showPhotoError(err.message || "Something went wrong. Please try again.");
-        btn.disabled = false;
+        updateImportButtonState();
         status.textContent = "";
     }
 }
