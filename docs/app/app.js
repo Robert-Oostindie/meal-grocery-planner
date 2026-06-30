@@ -2453,7 +2453,7 @@ function renderRecipes() {
                             ? "1 ingredient"
                             : `${ingredientCount} ingredients`;
 
-                    const card = document.createElement("div");
+                   const card = document.createElement("div");
                     card.className = "card";
                     card.style.marginLeft = "1rem";
 
@@ -2467,12 +2467,20 @@ function renderRecipes() {
                         return `<li style="padding:0.1rem 0;">• ${ing.name}${qty}</li>`;
                     }).join("");
 
+                    const recipePhotoHTML = meal.photoUrl
+                        ? `<img src="${meal.photoUrl}" alt="${meal.name}"
+                               style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex-shrink:0;">`
+                        : "";
+
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
-                                <div style="font-size:0.9rem; color:#6b7280;">
-                                    ${countText}
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                ${recipePhotoHTML}
+                                <div>
+                                    <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
+                                    <div style="font-size:0.9rem; color:#6b7280;">
+                                        ${countText}
+                                    </div>
                                 </div>
                             </div>
                             <div style="display:flex; gap:0.4rem;">
