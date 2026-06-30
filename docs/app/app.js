@@ -2483,6 +2483,7 @@ function renderRecipes() {
                                     </div>
                                 </div>
                             </div>
+                            </div>
                             <div style="display:flex; gap:0.4rem;">
                                 <button onclick="publishToGlobal('${meal.id}')" title="Share to Global Recipes" style="font-size:0.8rem;">🌐 Share</button>
                                 <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
