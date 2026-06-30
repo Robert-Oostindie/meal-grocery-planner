@@ -1,7 +1,7 @@
 // ==============================
 // FIREBASE IMPORTS - ALL v10.7.1
 // ==============================
-import { auth, db, googleProvider } from "./firebase.js";
+import { auth, db, googleProvider, storage } from "./firebase.js";
 
 // Always show the Google account chooser — prevents auto sign-in
 // with the last used account, which is confusing especially in incognito
@@ -34,7 +34,11 @@ import {
   where,
   increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+import {
+        ref as storageRef,
+        uploadBytes,
+        getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import {
     initGlobalRecipes,
     publishToGlobal,
@@ -1864,6 +1868,8 @@ function getAllCategories() {
 // for the recipe modal
 let ingredientRows = [];
 let editingMealId = null;
+let selectedRecipePhotoFile = null;   // pending File object, not yet uploaded
+let currentRecipePhotoUrl = null;     // existing photo URL when editing
 let currentStep = 1;
 let subModalMealId = null;
 let subModalGroupName = null;
@@ -2534,6 +2540,12 @@ async function deleteRecipe(id) {
 // RECIPE MODAL: OPEN / CLOSE
 // ==============================
 function openRecipeModalNew() {
+    selectedRecipePhotoFile = null;
+    currentRecipePhotoUrl = null;
+    document.getElementById("recipePhotoPreviewWrap").classList.add("hidden");
+    document.getElementById("recipePhotoPreview").src = "";
+    document.getElementById("recipePhotoFileInput").value = "";
+    document.getElementById("recipePhotoAddBtn").style.display = "inline-block";
     editingMealId = null;
     currentStep = 1;
 
@@ -2566,6 +2578,21 @@ async function openRecipeModalEdit(mealId) {
     }
 
     editingMealId = meal.id;
+  selectedRecipePhotoFile = null;
+    currentRecipePhotoUrl = meal.photoUrl || null;
+ 
+    const photoWrap = document.getElementById("recipePhotoPreviewWrap");
+    const photoPreview = document.getElementById("recipePhotoPreview");
+    const photoAddBtn = document.getElementById("recipePhotoAddBtn");
+ 
+    if (currentRecipePhotoUrl) {
+        photoPreview.src = currentRecipePhotoUrl;
+        photoWrap.classList.remove("hidden");
+        photoAddBtn.style.display = "none";
+    } else {
+        photoWrap.classList.add("hidden");
+        photoAddBtn.style.display = "inline-block";
+    }
     currentStep = 1;
 
     document.getElementById("recipeModalTitle").textContent = "Edit Recipe";
@@ -4077,40 +4104,142 @@ function updateReview() {
         }
     }
 }
+
+// ── Recipe cover photo: select / preview ──────────────────
+function handleRecipePhotoSelected(input) {
+    const file = input.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+ 
+    selectedRecipePhotoFile = file;
+ 
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const preview = document.getElementById("recipePhotoPreview");
+        const wrap = document.getElementById("recipePhotoPreviewWrap");
+        preview.src = e.target.result;
+        wrap.classList.remove("hidden");
+        document.getElementById("recipePhotoAddBtn").style.display = "none";
+    };
+    reader.readAsDataURL(file);
+}
+ 
+// ── Recipe cover photo: remove (clears pending file AND any existing URL) ──
+function removeRecipePhoto() {
+    selectedRecipePhotoFile = null;
+    currentRecipePhotoUrl = null;
+ 
+    document.getElementById("recipePhotoPreviewWrap").classList.add("hidden");
+    document.getElementById("recipePhotoPreview").src = "";
+    document.getElementById("recipePhotoFileInput").value = "";
+    document.getElementById("recipePhotoAddBtn").style.display = "inline-block";
+}
+ 
+// ── Compress + upload to Firebase Storage, return a download URL ──
+// Keeps photo files small (max ~1200px) so Storage costs and load
+// times stay low. Returns null if there's no photo to attach.
+function compressRecipePhoto(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+ 
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+ 
+            const MAX_DIMENSION = 1200;
+            let { width, height } = img;
+            if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                if (width > height) {
+                    height = Math.round((height / width) * MAX_DIMENSION);
+                    width = MAX_DIMENSION;
+                } else {
+                    width = Math.round((width / height) * MAX_DIMENSION);
+                    height = MAX_DIMENSION;
+                }
+            }
+ 
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+ 
+            canvas.toBlob(
+                (blob) => blob ? resolve(blob) : reject(new Error("Compression failed")),
+                "image/jpeg",
+                0.8
+            );
+        };
+ 
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("Failed to load image"));
+        };
+ 
+        img.src = objectUrl;
+    });
+}
+ 
+async function uploadRecipePhotoIfNeeded(mealId) {
+    // No new file selected — keep whatever URL already exists (or null if removed)
+    if (!selectedRecipePhotoFile) {
+        return currentRecipePhotoUrl;
+    }
+ 
+    const blob = await compressRecipePhoto(selectedRecipePhotoFile);
+    const path = `recipePhotos/${state.user.id}/${mealId}.jpg`;
+    const fileRef = storageRef(storage, path);
+ 
+    await uploadBytes(fileRef, blob, { contentType: "image/jpeg" });
+    const url = await getDownloadURL(fileRef);
+ 
+    selectedRecipePhotoFile = null;
+    currentRecipePhotoUrl = url;
+    return url;
+}
+ 
 // ==============================
 // SAVE RECIPE (FROM STEP 3)
 // ==============================
-async function saveRecipe() {
-    syncIngredientsFromDOM();
-
-    const name = document.getElementById("modalRecipeName").value.trim();
-    const category = document.getElementById("modalRecipeCategory").value.trim();
-
-    const instructions = document.getElementById("modalInstructions").value.trim();
-
-    const mealData = {
-        id: editingMealId || makeId(),
-        name,
-        category,
-        ingredients: ingredientRows,
-        instructions
-    };
-
-    // Update if exists
-    const idx = state.data.userMeals.findIndex(m => m.id === editingMealId);
-
-    if (idx !== -1) {
-        state.data.userMeals[idx] = mealData;
-    } else {
-        // new user meal
-        state.data.userMeals.push(mealData);
+    async function saveRecipe() {
+        syncIngredientsFromDOM();
+ 
+        const name = document.getElementById("modalRecipeName").value.trim();
+        const category = document.getElementById("modalRecipeCategory").value.trim();
+        const instructions = document.getElementById("modalInstructions").value.trim();
+ 
+        const mealId = editingMealId || makeId();
+ 
+        // Upload photo (if a new one was picked) BEFORE building mealData,
+        // so the URL is ready to attach in one save.
+        let photoUrl = null;
+        try {
+            photoUrl = await uploadRecipePhotoIfNeeded(mealId);
+        } catch (err) {
+            console.error("❌ Photo upload failed:", err);
+            alert("Recipe will be saved, but the photo couldn't be uploaded. Try again from Edit.");
+        }
+ 
+        const mealData = {
+            id: mealId,
+            name,
+            category,
+            ingredients: ingredientRows,
+            instructions,
+            photoUrl: photoUrl || null
+        };
+ 
+        const idx = state.data.userMeals.findIndex(m => m.id === editingMealId);
+ 
+        if (idx !== -1) {
+            state.data.userMeals[idx] = mealData;
+        } else {
+            state.data.userMeals.push(mealData);
+        }
+ 
+        await persistState();
+        closeRecipeModal();
+        renderRecipes();
+        renderPlanner();
     }
-
-    await persistState();
-    closeRecipeModal();
-    renderRecipes();
-    renderPlanner();
-}
 // ============================================================
 // EXPOSE FUNCTIONS TO GLOBAL SCOPE FOR HTML onclick HANDLERS
 // ADD THIS SECTION TO THE END OF YOUR app.js FILE
@@ -4181,6 +4310,8 @@ window.goToStep = goToStep;
 window.addIngredientRow = addIngredientRow;
 window.removeIngredientRow = removeIngredientRow;
 window.toggleDefault = toggleDefault;
+window.handleRecipePhotoSelected = handleRecipePhotoSelected;
+window.removeRecipePhoto = removeRecipePhoto;
 window.saveRecipe = saveRecipe;
 window.handleGroupFinished = handleGroupFinished;
 window.showGroupSuggestions = showGroupSuggestions;
