@@ -52,9 +52,10 @@ import {
 import {
     openPhotoImportModal,
     closePhotoImportModal,
-    handlePhotoSelected,
-    handleSecondPhotoSelected,
+    handleIngredientPhotosSelected,
+    handleInstructionPhotosSelected,
     toggleSplitInstructions,
+    removePhoto,
     importRecipeFromPhoto
 } from "./photoImport.js";
 
@@ -4194,9 +4195,10 @@ window.renderApp = renderApp;
 window.openRecipeModalFromPhoto = openRecipeModalFromPhoto;
 window.openPhotoImportModal  = openPhotoImportModal;
 window.closePhotoImportModal = closePhotoImportModal;
-window.handlePhotoSelected   = handlePhotoSelected;
-window.handleSecondPhotoSelected = handleSecondPhotoSelected;
+window.handleIngredientPhotosSelected = handleIngredientPhotosSelected;
+window.handleInstructionPhotosSelected = handleInstructionPhotosSelected;
 window.toggleSplitInstructions = toggleSplitInstructions;
+window.removePhoto = removePhoto;
 window.importRecipeFromPhoto = importRecipeFromPhoto;
 
 console.log("✅ All functions exposed to global scope");
