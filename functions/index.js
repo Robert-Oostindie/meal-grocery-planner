@@ -14,8 +14,8 @@ const ALLOWED_ORIGINS = [
 // Hard server-side caps — enforced regardless of what the client sends.
 // Keeps a single import bounded at 5 images max, so cost per import
 // has a predictable ceiling even if the front-end cap is ever bypassed.
-const MAX_INGREDIENT_IMAGES = 2;
-const MAX_INSTRUCTION_IMAGES = 3;
+const MAX_INGREDIENT_IMAGES = 3;
+const MAX_INSTRUCTION_IMAGES = 5;
 
 const RESPONSE_FORMAT = `Return ONLY a valid JSON object with this exact structure, nothing else:
 {
