@@ -1,19 +1,29 @@
 // ============================================================
 // PHOTO IMPORT MODULE (photoImport.js)
-// Allows users to take/upload a photo of a recipe and have
+// Allows users to take/upload photos of a recipe and have
 // it automatically parsed into the app's recipe format.
 //
-// Supports two modes:
-//  - Single photo: ingredients + instructions on one image.
-//  - Split mode (checkbox): a second photo for instructions,
-//    when the recipe card/page splits them across two images.
+// Supports:
+//  - Ingredients slot: up to 2 photos (e.g. a long list split
+//    across two cards/pages).
+//  - Instructions slot (checkbox): up to 3 photos, for recipes
+//    whose steps don't fit on one photo.
+//
+// Capped to keep Claude API cost per import predictable —
+// max 5 images total (2 ingredients + 3 instructions).
 //
 // API key is stored securely in Firebase Cloud Functions —
 // never exposed in this file or on GitHub.
 // ============================================================
 
-// Your deployed Firebase Cloud Function URL
 const CLOUD_FUNCTION_URL = "https://us-central1-meal-grocery-planner.cloudfunctions.net/parseRecipeFromPhoto";
+
+const MAX_INGREDIENT_PHOTOS = 2;
+const MAX_INSTRUCTION_PHOTOS = 3;
+
+// In-memory list of selected files per slot. Reset whenever the modal opens.
+let ingredientFiles = [];
+let instructionFiles = [];
 
 // ── Open / Close the photo import modal ──────────────────
 
@@ -21,24 +31,23 @@ export function openPhotoImportModal() {
     const modal = document.getElementById("photoImportModal");
     if (!modal) return;
 
-    // Reset state each time it opens
-    document.getElementById("photoPreview").src = "";
-    document.getElementById("photoPreview").classList.add("hidden");
-    document.getElementById("photoFileInput").value = "";
+    ingredientFiles = [];
+    instructionFiles = [];
 
-    document.getElementById("photoPreview2").src = "";
-    document.getElementById("photoPreview2").classList.add("hidden");
-    document.getElementById("photoFileInput2").value = "";
+    document.getElementById("ingredientFileInput").value = "";
+    document.getElementById("instructionFileInput").value = "";
 
     const checkbox = document.getElementById("splitInstructionsCheckbox");
     if (checkbox) checkbox.checked = false;
 
-    const secondSection = document.getElementById("secondPhotoSection");
-    if (secondSection) secondSection.classList.add("hidden");
+    document.getElementById("secondPhotoSection").classList.add("hidden");
 
     document.getElementById("photoImportError").classList.add("hidden");
     document.getElementById("photoImportBtn").disabled = true;
     document.getElementById("photoImportStatus").textContent = "";
+
+    renderThumbnails("ingredient");
+    renderThumbnails("instruction");
 
     modal.classList.remove("hidden");
 }
@@ -48,7 +57,7 @@ export function closePhotoImportModal() {
     if (modal) modal.classList.add("hidden");
 }
 
-// ── Checkbox toggle: show/hide the second photo input ─────
+// ── Checkbox toggle: show/hide the instructions photo slot ────
 
 export function toggleSplitInstructions(checkbox) {
     const secondSection = document.getElementById("secondPhotoSection");
@@ -58,57 +67,110 @@ export function toggleSplitInstructions(checkbox) {
         secondSection.classList.remove("hidden");
     } else {
         secondSection.classList.add("hidden");
-        // Clear the second photo if they uncheck — keeps state consistent
-        document.getElementById("photoFileInput2").value = "";
-        document.getElementById("photoPreview2").src = "";
-        document.getElementById("photoPreview2").classList.add("hidden");
+        instructionFiles = [];
+        document.getElementById("instructionFileInput").value = "";
+        renderThumbnails("instruction");
     }
 
     updateImportButtonState();
 }
 
-// ── Handle image selection (photo 1: ingredients / full recipe) ──
+// ── Handle file selection for each slot ───────────────────
+// Both slots support selecting multiple files at once (input has
+// the `multiple` attribute) and adding more later, up to the cap.
 
-export function handlePhotoSelected(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-        showPhotoError("Please select an image file.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const preview = document.getElementById("photoPreview");
-        preview.src = e.target.result;
-        preview.classList.remove("hidden");
-        document.getElementById("photoImportError").classList.add("hidden");
-        updateImportButtonState();
-    };
-    reader.readAsDataURL(file);
+export function handleIngredientPhotosSelected(input) {
+    addFiles("ingredient", input.files);
+    input.value = ""; // allow re-selecting the same file later if removed
 }
 
-// ── Handle image selection (photo 2: instructions, optional) ─────
+export function handleInstructionPhotosSelected(input) {
+    addFiles("instruction", input.files);
+    input.value = "";
+}
 
-export function handleSecondPhotoSelected(input) {
-    const file = input.files[0];
-    if (!file) return;
+function addFiles(slot, fileList) {
+    const isIngredient = slot === "ingredient";
+    const files = isIngredient ? ingredientFiles : instructionFiles;
+    const max = isIngredient ? MAX_INGREDIENT_PHOTOS : MAX_INSTRUCTION_PHOTOS;
 
-    if (!file.type.startsWith("image/")) {
-        showPhotoError("Please select an image file.");
-        return;
+    for (const file of fileList) {
+        if (files.length >= max) break;
+        if (!file.type.startsWith("image/")) continue;
+        files.push(file);
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const preview = document.getElementById("photoPreview2");
-        preview.src = e.target.result;
-        preview.classList.remove("hidden");
-        document.getElementById("photoImportError").classList.add("hidden");
-        updateImportButtonState();
-    };
-    reader.readAsDataURL(file);
+    renderThumbnails(slot);
+    updateImportButtonState();
+    document.getElementById("photoImportError").classList.add("hidden");
+}
+
+export function removePhoto(slot, index) {
+    const files = slot === "ingredient" ? ingredientFiles : instructionFiles;
+    files.splice(index, 1);
+    renderThumbnails(slot);
+    updateImportButtonState();
+}
+
+// ── Render thumbnail strip + add control + cap message ────
+
+function renderThumbnails(slot) {
+    const isIngredient = slot === "ingredient";
+    const files = isIngredient ? ingredientFiles : instructionFiles;
+    const max = isIngredient ? MAX_INGREDIENT_PHOTOS : MAX_INSTRUCTION_PHOTOS;
+    const stripId = isIngredient ? "ingredientThumbStrip" : "instructionThumbStrip";
+    const addBtnId = isIngredient ? "ingredientAddBtn" : "instructionAddBtn";
+    const capMsgId = isIngredient ? "ingredientCapMsg" : "instructionCapMsg";
+
+    const strip = document.getElementById(stripId);
+    const addBtn = document.getElementById(addBtnId);
+    const capMsg = document.getElementById(capMsgId);
+    if (!strip) return;
+
+    strip.innerHTML = "";
+
+    files.forEach((file, i) => {
+        const reader = new FileReader();
+        const wrap = document.createElement("div");
+        wrap.style.position = "relative";
+        wrap.style.display = "inline-block";
+
+        const img = document.createElement("img");
+        img.style.width = "72px";
+        img.style.height = "72px";
+        img.style.objectFit = "cover";
+        img.style.borderRadius = "8px";
+        img.style.border = "1px solid #e5e7eb";
+
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "×";
+        removeBtn.type = "button";
+        removeBtn.style.position = "absolute";
+        removeBtn.style.top = "-6px";
+        removeBtn.style.right = "-6px";
+        removeBtn.style.width = "20px";
+        removeBtn.style.height = "20px";
+        removeBtn.style.borderRadius = "50%";
+        removeBtn.style.border = "none";
+        removeBtn.style.background = "#374151";
+        removeBtn.style.color = "#fff";
+        removeBtn.style.fontSize = "12px";
+        removeBtn.style.lineHeight = "20px";
+        removeBtn.style.padding = "0";
+        removeBtn.style.cursor = "pointer";
+        removeBtn.onclick = () => removePhoto(slot, i);
+
+        reader.onload = (e) => { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+
+        wrap.appendChild(img);
+        wrap.appendChild(removeBtn);
+        strip.appendChild(wrap);
+    });
+
+    const atCap = files.length >= max;
+    if (addBtn) addBtn.style.display = atCap ? "none" : "inline-block";
+    if (capMsg) capMsg.classList.toggle("hidden", !atCap);
 }
 
 // ── Enable Import button only when required photo(s) are present ──
@@ -117,26 +179,22 @@ function updateImportButtonState() {
     const btn = document.getElementById("photoImportBtn");
     if (!btn) return;
 
-    const hasFirst = document.getElementById("photoFileInput").files.length > 0;
     const splitChecked = document.getElementById("splitInstructionsCheckbox")?.checked;
-    const hasSecond = document.getElementById("photoFileInput2").files.length > 0;
+    const hasIngredients = ingredientFiles.length > 0;
+    const hasInstructions = instructionFiles.length > 0;
 
-    btn.disabled = splitChecked ? !(hasFirst && hasSecond) : !hasFirst;
+    btn.disabled = splitChecked ? !(hasIngredients && hasInstructions) : !hasIngredients;
 }
 
 // ── Main import function ──────────────────────────────────
 
 export async function importRecipeFromPhoto() {
-    const fileInput = document.getElementById("photoFileInput");
-    const file = fileInput.files[0];
-    if (!file) return;
+    if (ingredientFiles.length === 0) return;
 
     const splitChecked = document.getElementById("splitInstructionsCheckbox")?.checked;
-    const fileInput2 = document.getElementById("photoFileInput2");
-    const file2 = splitChecked ? fileInput2.files[0] : null;
 
-    if (splitChecked && !file2) {
-        showPhotoError("Add a second photo for the cooking instructions, or uncheck the box above.");
+    if (splitChecked && instructionFiles.length === 0) {
+        showPhotoError("Add at least one photo for the cooking instructions, or uncheck the box above.");
         return;
     }
 
@@ -150,22 +208,21 @@ export async function importRecipeFromPhoto() {
     document.getElementById("photoImportError").classList.add("hidden");
 
     try {
-        // Compress image(s) to stay under Anthropic's 5MB limit
-        const { base64, mediaType } = await compressImage(file);
+        const ingredientImages = await Promise.all(
+            ingredientFiles.map(f => compressImage(f))
+        );
 
         const payload = {
-            imageBase64: base64,
-            mediaType: mediaType,
+            ingredientImages,
             splitMode: !!splitChecked
         };
 
         if (splitChecked) {
-            const { base64: base64_2, mediaType: mediaType_2 } = await compressImage(file2);
-            payload.imageBase64_2 = base64_2;
-            payload.mediaType_2 = mediaType_2;
+            payload.instructionImages = await Promise.all(
+                instructionFiles.map(f => compressImage(f))
+            );
         }
 
-        // Call our secure Cloud Function (not Anthropic directly)
         const response = await fetch(CLOUD_FUNCTION_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -178,7 +235,6 @@ export async function importRecipeFromPhoto() {
             throw new Error(data.error || "Something went wrong. Please try again.");
         }
 
-        // Close photo modal and open recipe modal with parsed data
         closePhotoImportModal();
         window.openRecipeModalFromPhoto(data.recipe);
 
@@ -192,7 +248,6 @@ export async function importRecipeFromPhoto() {
 
 // ── Compress image using canvas before sending ────────────
 // Resizes and re-encodes to JPEG to stay under the 5MB API limit.
-// Most phone photos are 3-10MB; this brings them under 4MB safely.
 
 function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -202,7 +257,6 @@ function compressImage(file) {
         img.onload = () => {
             URL.revokeObjectURL(objectUrl);
 
-            // Target: max 1600px on the longest side (enough for Claude to read text)
             const MAX_DIMENSION = 1600;
             let { width, height } = img;
 
@@ -223,7 +277,6 @@ function compressImage(file) {
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Encode as JPEG at 85% quality — good balance of size vs clarity
             canvas.toBlob(
                 (blob) => {
                     if (!blob) {
