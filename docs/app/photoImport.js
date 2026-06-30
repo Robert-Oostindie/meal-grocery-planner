@@ -18,8 +18,8 @@
 
 const CLOUD_FUNCTION_URL = "https://us-central1-meal-grocery-planner.cloudfunctions.net/parseRecipeFromPhoto";
 
-const MAX_INGREDIENT_PHOTOS = 2;
-const MAX_INSTRUCTION_PHOTOS = 3;
+const MAX_INGREDIENT_PHOTOS = 3;
+const MAX_INSTRUCTION_PHOTOS = 5;
 
 // In-memory list of selected files per slot. Reset whenever the modal opens.
 let ingredientFiles = [];
