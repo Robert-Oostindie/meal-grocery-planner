@@ -11,7 +11,12 @@ const ALLOWED_ORIGINS = [
     "https://meal-grocery-planner.web.app"
 ];
 
-// Shared JSON contract both prompt variants must follow.
+// Hard server-side caps — enforced regardless of what the client sends.
+// Keeps a single import bounded at 5 images max, so cost per import
+// has a predictable ceiling even if the front-end cap is ever bypassed.
+const MAX_INGREDIENT_IMAGES = 2;
+const MAX_INSTRUCTION_IMAGES = 3;
+
 const RESPONSE_FORMAT = `Return ONLY a valid JSON object with this exact structure, nothing else:
 {
   "name": "Recipe Name",
@@ -32,20 +37,34 @@ Rules:
 - "instructions": A single string with numbered steps separated by \\n. If no instructions are visible, use an empty string "".
 - Return ONLY the JSON, no explanation, no markdown code blocks`;
 
-// Single photo: everything (ingredients + instructions) may be on one image.
-const SINGLE_PHOTO_PROMPT = `You are a recipe parser. Analyze this recipe image and extract the recipe information.
+// Builds the prompt text based on how many images are in each role.
+function buildPrompt({ ingredientCount, instructionCount, splitMode }) {
+    if (!splitMode) {
+        if (ingredientCount === 1) {
+            return `You are a recipe parser. Analyze this recipe image and extract the recipe information.\n\n${RESPONSE_FORMAT}`;
+        }
+        return `You are a recipe parser. You are given ${ingredientCount} images that together show the SAME recipe (e.g. multiple pages or photos of one recipe card). Combine the ingredients and instructions across all ${ingredientCount} images into a single recipe.\n\n${RESPONSE_FORMAT}`;
+    }
+
+    // Split mode: first block of images = ingredients only, next block = instructions only.
+    const ingredientLabel = ingredientCount === 1
+        ? `Image 1 contains ONLY the ingredients list`
+        : `Images 1-${ingredientCount} contain ONLY the ingredients list, possibly split across multiple photos of the same list`;
+
+    const instrStart = ingredientCount + 1;
+    const instrEnd = ingredientCount + instructionCount;
+    const instructionLabel = instructionCount === 1
+        ? `Image ${instrStart} contains ONLY the cooking instructions / steps`
+        : `Images ${instrStart}-${instrEnd} contain ONLY the cooking instructions / steps, possibly split across multiple photos in order`;
+
+    return `You are a recipe parser. You are given ${ingredientCount + instructionCount} images of the SAME recipe, split into two groups.
+
+- ${ingredientLabel}. Extract ingredients from these image(s) only. Ignore any instructional or narrative text that may incidentally appear in them.
+- ${instructionLabel}. Extract the "instructions" field from these image(s) only, preserving step order across photos. Ignore any ingredient list that may incidentally appear in them.
+- Combine what you extract from both groups into a single recipe object.
 
 ${RESPONSE_FORMAT}`;
-
-// Two photos: each image is scoped to one job, to keep Claude from
-// mixing ingredient text into instructions or vice versa.
-const SPLIT_PHOTO_PROMPT = `You are a recipe parser. You are given two images of the SAME recipe.
-
-- Image 1 contains ONLY the ingredients list (name, quantity, unit for each item). Extract ingredients from Image 1 only. Ignore any instructional or narrative text that may incidentally appear in Image 1.
-- Image 2 contains ONLY the cooking instructions / steps. Extract the "instructions" field from Image 2 only. Ignore any ingredient list that may incidentally appear in Image 2.
-- Combine what you extract from both images into a single recipe object.
-
-${RESPONSE_FORMAT}`;
+}
 
 exports.parseRecipeFromPhoto = onRequest(
     { secrets: ["ANTHROPIC_API_KEY"] },
@@ -59,53 +78,56 @@ exports.parseRecipeFromPhoto = onRequest(
         res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
         res.set("Access-Control-Allow-Headers", "Content-Type");
 
-        // Handle preflight OPTIONS request
         if (req.method === "OPTIONS") {
             return res.status(204).send("");
         }
 
-        // Only allow POST requests
         if (req.method !== "POST") {
             return res.status(405).json({ error: "Method not allowed" });
         }
 
-        const {
-            imageBase64,
-            mediaType,
-            splitMode,
-            imageBase64_2,
-            mediaType_2
-        } = req.body;
+        const { ingredientImages, instructionImages, splitMode } = req.body;
 
-        if (!imageBase64 || !mediaType) {
-            return res.status(400).json({ error: "Missing imageBase64 or mediaType" });
+        if (!Array.isArray(ingredientImages) || ingredientImages.length === 0) {
+            return res.status(400).json({ error: "Missing ingredient photo(s)." });
         }
 
-        if (splitMode && (!imageBase64_2 || !mediaType_2)) {
-            return res.status(400).json({ error: "Split mode requires a second image (instructions photo)." });
+        if (ingredientImages.length > MAX_INGREDIENT_IMAGES) {
+            return res.status(400).json({ error: `Too many ingredient photos — max ${MAX_INGREDIENT_IMAGES}.` });
         }
 
-        // Build the image blocks + prompt based on mode
-        const imageBlocks = [
-            {
-                type: "image",
-                source: { type: "base64", media_type: mediaType, data: imageBase64 }
+        const instrImgs = splitMode && Array.isArray(instructionImages) ? instructionImages : [];
+
+        if (splitMode && instrImgs.length === 0) {
+            return res.status(400).json({ error: "Split mode requires at least one instruction photo." });
+        }
+
+        if (instrImgs.length > MAX_INSTRUCTION_IMAGES) {
+            return res.status(400).json({ error: `Too many instruction photos — max ${MAX_INSTRUCTION_IMAGES}.` });
+        }
+
+        // Validate each image entry has the required fields
+        const allImages = [...ingredientImages, ...instrImgs];
+        for (const img of allImages) {
+            if (!img || !img.base64 || !img.mediaType) {
+                return res.status(400).json({ error: "One or more images is missing data." });
             }
-        ];
-
-        let prompt = SINGLE_PHOTO_PROMPT;
-
-        if (splitMode) {
-            imageBlocks.push({
-                type: "image",
-                source: { type: "base64", media_type: mediaType_2, data: imageBase64_2 }
-            });
-            prompt = SPLIT_PHOTO_PROMPT;
         }
+
+        const imageBlocks = allImages.map(img => ({
+            type: "image",
+            source: { type: "base64", media_type: img.mediaType, data: img.base64 }
+        }));
+
+        const prompt = buildPrompt({
+            ingredientCount: ingredientImages.length,
+            instructionCount: instrImgs.length,
+            splitMode: !!splitMode
+        });
 
         const requestBody = JSON.stringify({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 1800,
+            max_tokens: 2000,
             messages: [
                 {
                     role: "user",
@@ -117,7 +139,6 @@ exports.parseRecipeFromPhoto = onRequest(
             ]
         });
 
-        // Call Anthropic API using Node's built-in https
         const apiResponse = await new Promise((resolve, reject) => {
             const options = {
                 hostname: "api.anthropic.com",
@@ -153,10 +174,7 @@ exports.parseRecipeFromPhoto = onRequest(
             return res.status(500).json({ error: errMsg });
         }
 
-        // Extract the text response
         const rawText = apiResponse.body.content?.[0]?.text || "";
-
-        // Strip any accidental markdown fences and parse JSON
         const cleaned = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
 
         let recipe;
@@ -166,19 +184,16 @@ exports.parseRecipeFromPhoto = onRequest(
             return res.status(500).json({ error: "Couldn't parse recipe from image. Try a clearer photo." });
         }
 
-        // Basic validation
         if (!recipe.name || !Array.isArray(recipe.ingredients)) {
             return res.status(500).json({ error: "Recipe data incomplete. Try a clearer photo." });
         }
 
-        // Clean up ingredients
         recipe.ingredients = recipe.ingredients.map(ing => ({
             name: ing.name || "Unknown",
             qty: Number(ing.qty) || 1,
             unit: ing.unit || "CT"
         }));
 
-        // Ensure instructions is always a string (model may omit it)
         recipe.instructions = typeof recipe.instructions === "string"
             ? recipe.instructions
             : "";
