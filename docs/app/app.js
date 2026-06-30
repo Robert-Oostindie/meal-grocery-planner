@@ -2517,8 +2517,6 @@ function renderRecipes() {
                     `;
                     catDiv.appendChild(card);
                 });
-                    catDiv.appendChild(card);
-                });
         }
 
         container.appendChild(catDiv);
