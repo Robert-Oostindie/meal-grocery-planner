@@ -381,7 +381,31 @@
 
                 <label>Category:</label>
                 <select id="modalRecipeCategory"></select>
-
+                <label>Photo (optional):</label>
+    <p class="small-note" style="margin-top:-0.4rem;">
+        Add a photo of the finished dish — recipes with photos stand out a lot more
+        when shared in Global Recipes.
+    </p>
+ 
+    <div id="recipePhotoPreviewWrap" class="hidden" style="position:relative; display:inline-block; margin-bottom:0.75rem;">
+        <img id="recipePhotoPreview" style="width:140px; height:140px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;">
+        <button type="button" onclick="removeRecipePhoto()"
+            style="position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%;
+                   border:none; background:#374151; color:#fff; font-size:14px; line-height:24px;
+                   padding:0; cursor:pointer;">×</button>
+    </div>
+ 
+    <label id="recipePhotoAddBtn" style="display:inline-block; padding:0.5rem 1rem; border:1px solid #d1d5db;
+        border-radius:8px; cursor:pointer; font-size:0.85rem; color:#374151; margin-bottom:1rem;">
+        + Add photo
+        <input
+            id="recipePhotoFileInput"
+            type="file"
+            accept="image/*"
+            onchange="handleRecipePhotoSelected(this)"
+            style="display:none;"
+        >
+    </label>
                 <div class="modal-actions">
                     <button onclick="closeRecipeModal()">Cancel</button>
                     <button class="primary" onclick="goToStep(2)">Next →</button>
