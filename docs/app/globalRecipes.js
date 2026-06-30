@@ -157,6 +157,7 @@ export async function publishToGlobal(mealId) {
             category: meal.category || "Uncategorized",
             ingredients: publicIngredients,
             instructions: meal.instructions || "",
+            photoUrl: meal.photoUrl || null,
             userCount: 1,
             createdBy: _state.user.id,
             createdByName: _state.data.publicName || _state.user.name || _state.user.email || "Anonymous",
@@ -216,6 +217,7 @@ export async function importGlobalRecipe(globalId) {
             category: recipe.category,
             globalRecipeId: globalId,
             instructions: recipe.instructions || "",
+            photoUrl: recipe.photoUrl || null,
             ingredients: (recipe.ingredients || []).map(ing => ({
                 ...ing,
                 id: _makeId(),
@@ -423,27 +425,37 @@ export async function renderGlobalRecipesTab() {
                </button>`
             : "";
 
+        const photoHtml = recipe.photoUrl
+            ? `<img src="${recipe.photoUrl}" alt="${recipe.name}"
+                   style="width:140px; height:140px; object-fit:cover; border-radius:10px; flex-shrink:0;">`
+            : "";
+
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+            <div style="display:flex; gap:1rem; align-items:flex-start;">
+                ${photoHtml}
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:1rem;">${recipe.name}</div>
-                    <div style="font-size:0.85rem; color:#6b7280; margin-top:0.15rem;">
-                        ${recipe.category || "Uncategorized"} &middot; ${ingLabel}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; font-size:1rem;">${recipe.name}</div>
+                            <div style="font-size:0.85rem; color:#6b7280; margin-top:0.15rem;">
+                                ${recipe.category || "Uncategorized"} &middot; ${ingLabel}
+                            </div>
+                            <div style="font-size:0.85rem; color:#059669; font-weight:500; margin-top:0.2rem;">
+                                👥 ${popLabel}
+                            </div>
+                            ${byLine}
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.4rem; align-items:flex-end; flex-shrink:0;">
+                            ${actionBtn}
+                            <button
+                                onclick="toggleGlobalRecipeIngredients('${recipe.id}')"
+                                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                View Ingredients
+                            </button>
+                            ${instrBtn}
+                            ${deleteGlobalBtn}
+                        </div>
                     </div>
-                    <div style="font-size:0.85rem; color:#059669; font-weight:500; margin-top:0.2rem;">
-                        👥 ${popLabel}
-                    </div>
-                    ${byLine}
-                </div>
-                <div style="display:flex; flex-direction:column; gap:0.4rem; align-items:flex-end; flex-shrink:0;">
-                    ${actionBtn}
-                    <button
-                        onclick="toggleGlobalRecipeIngredients('${recipe.id}')"
-                        style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
-                        View Ingredients
-                    </button>
-                    ${instrBtn}
-                    ${deleteGlobalBtn}
                 </div>
             </div>
             <div id="globalIngredients_${recipe.id}"
@@ -456,7 +468,6 @@ export async function renderGlobalRecipesTab() {
                 ${recipe.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
             </div>` : ""}
         `;
-
         container.appendChild(card);
     });
 }
