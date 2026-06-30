@@ -2472,45 +2472,51 @@ function renderRecipes() {
                                style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex-shrink:0;">`
                         : "";
 
-                    card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center; gap:0.6rem;">
-                                ${recipePhotoHTML}
-                                <div>
-                                    <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
-                                    <div style="font-size:0.9rem; color:#6b7280;">
-                                        ${countText}
+                   card.innerHTML = `
+                        <div style="display:flex; gap:1rem; align-items:flex-start;">
+                            ${meal.photoUrl ? `
+                            <img src="${meal.photoUrl}" alt="${meal.name}"
+                                 style="width:140px; height:140px; object-fit:cover; border-radius:10px; flex-shrink:0;">
+                            ` : ""}
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
+                                        <div style="font-size:0.9rem; color:#6b7280;">
+                                            ${countText}
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                        <button onclick="publishToGlobal('${meal.id}')" title="Share to Global Recipes" style="font-size:0.8rem;">🌐 Share</button>
+                                        <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
+                                        <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
                                     </div>
                                 </div>
-                            </div>
-                            </div>
-                            <div style="display:flex; gap:0.4rem;">
-                                <button onclick="publishToGlobal('${meal.id}')" title="Share to Global Recipes" style="font-size:0.8rem;">🌐 Share</button>
-                                <button class="primary" onclick="openRecipeModalEdit('${meal.id}')">Edit</button>
-                                <button class="danger" onclick="deleteRecipe('${meal.id}')">Delete</button>
+                                <div style="margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                    <button onclick="toggleRecipePanel('${ingId}', '${instrId}')"
+                                        style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                        View Ingredients
+                                    </button>
+                                    ${hasInstructions ? `
+                                    <button onclick="toggleRecipePanel('${instrId}', '${ingId}')"
+                                        style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                        📋 Instructions
+                                    </button>` : ""}
+                                </div>
+                                <div id="${ingId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px;">
+                                    <ul style="margin:0; padding-left:0; list-style:none; font-size:0.9rem; color:#374151; line-height:1.8;">
+                                        ${ingHTML}
+                                    </ul>
+                                </div>
+                                ${hasInstructions ? `
+                                <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
+                                    ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                                </div>` : ""}
                             </div>
                         </div>
-                        <div style="margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
-                            <button onclick="toggleRecipePanel('${ingId}', '${instrId}')"
-                                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
-                                View Ingredients
-                            </button>
-                            ${hasInstructions ? `
-                            <button onclick="toggleRecipePanel('${instrId}', '${ingId}')"
-                                style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
-                                📋 Instructions
-                            </button>` : ""}
-                        </div>
-                        <div id="${ingId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px;">
-                            <ul style="margin:0; padding-left:0; list-style:none; font-size:0.9rem; color:#374151; line-height:1.8;">
-                                ${ingHTML}
-                            </ul>
-                        </div>
-                        ${hasInstructions ? `
-                        <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
-                            ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-                        </div>` : ""}
                     `;
+                    catDiv.appendChild(card);
+                });
                     catDiv.appendChild(card);
                 });
         }
