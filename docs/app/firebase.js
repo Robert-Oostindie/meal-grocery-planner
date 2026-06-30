@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDE1aDCqaUomVzAeQhyLPvFxUTb6Jm5Cp8",
   authDomain: "meal-grocery-planner.firebaseapp.com",
   projectId: "meal-grocery-planner",
-  storageBucket: "meal-grocery-planner.appspot.com",
+  storageBucket: "meal-grocery-planner.firebasestorage.app",
   messagingSenderId: "1064158049824",
   appId: "1:1064158049824:web:e50f951ef3f23cc988ee45"
 };
