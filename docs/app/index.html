@@ -565,7 +565,7 @@
 
         </div>
     </div>
-   <!-- PHOTO IMPORT MODAL -->
+<!-- PHOTO IMPORT MODAL -->
 <div id="photoImportModal" class="modal hidden">
     <div class="modal-backdrop" onclick="closePhotoImportModal()"></div>
     <div class="modal-content" style="max-width:480px;">
@@ -575,38 +575,57 @@
         </div>
         <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
             Take a photo of a recipe card or cookbook page and we'll read it for you.
+            You can add up to 2 photos here if the ingredient list spans more than one card.
         </p>
-        <input
-            id="photoFileInput"
-            type="file"
-            accept="image/*"
-            onchange="handlePhotoSelected(this)"
-            style="margin-bottom:1rem; width:100%;"
-        >
-        <img id="photoPreview" class="hidden" style="width:100%; border-radius:10px; margin-bottom:1rem; max-height:300px; object-fit:contain;">
 
-        <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:1rem; font-size:0.9rem; color:#374151; cursor:pointer;">
+        <div id="ingredientThumbStrip" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;"></div>
+
+        <label id="ingredientAddBtn" style="display:inline-block; padding:0.5rem 1rem; border:1px solid #d1d5db; border-radius:8px; cursor:pointer; font-size:0.85rem; color:#374151; margin-bottom:0.25rem;">
+            + Add photo
+            <input
+                id="ingredientFileInput"
+                type="file"
+                accept="image/*"
+                multiple
+                onchange="handleIngredientPhotosSelected(this)"
+                style="display:none;"
+            >
+        </label>
+        <p id="ingredientCapMsg" class="hidden" style="color:#9ca3af; font-size:0.8rem; margin:0.25rem 0 0;">
+            Max reached — try splitting into a clearer combined photo.
+        </p>
+
+        <label style="display:flex; align-items:flex-start; gap:0.5rem; margin:1rem 0; font-size:0.9rem; color:#374151; cursor:pointer;">
             <input
                 id="splitInstructionsCheckbox"
                 type="checkbox"
                 onchange="toggleSplitInstructions(this)"
                 style="margin-top:0.2rem;"
             >
-            <span>The cooking instructions are on a different photo than the ingredients — I'll add a second photo for them.</span>
+            <span>The cooking instructions are on different photo(s) than the ingredients — I'll add those separately.</span>
         </label>
 
         <div id="secondPhotoSection" class="hidden" style="margin-bottom:1rem;">
             <p style="color:#6b7280; font-size:0.85rem; margin-bottom:0.5rem;">
-                Now add a photo of just the cooking instructions / steps.
+                Add photo(s) of the cooking instructions / steps — up to 3, if they span multiple pages.
             </p>
-            <input
-                id="photoFileInput2"
-                type="file"
-                accept="image/*"
-                onchange="handleSecondPhotoSelected(this)"
-                style="margin-bottom:1rem; width:100%;"
-            >
-            <img id="photoPreview2" class="hidden" style="width:100%; border-radius:10px; max-height:300px; object-fit:contain;">
+
+            <div id="instructionThumbStrip" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;"></div>
+
+            <label id="instructionAddBtn" style="display:inline-block; padding:0.5rem 1rem; border:1px solid #d1d5db; border-radius:8px; cursor:pointer; font-size:0.85rem; color:#374151; margin-bottom:0.25rem;">
+                + Add photo
+                <input
+                    id="instructionFileInput"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onchange="handleInstructionPhotosSelected(this)"
+                    style="display:none;"
+                >
+            </label>
+            <p id="instructionCapMsg" class="hidden" style="color:#9ca3af; font-size:0.8rem; margin:0.25rem 0 0;">
+                Max reached — try splitting into a clearer combined photo.
+            </p>
         </div>
 
         <div id="photoImportStatus" style="text-align:center; color:#6b7280; font-size:0.9rem; margin-bottom:0.5rem;"></div>
@@ -619,5 +638,3 @@
         </div>
     </div>
 </div>
-</body>
-</html>
