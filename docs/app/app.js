@@ -988,356 +988,479 @@ const DELIVERY_SERVICES = [
     }
 ];
 // ============================================================
-// OPTIMIZED INGREDIENT MATCHING SYSTEM
-// High-performance categorization with intelligent caching
+// INGREDIENT CATEGORIZATION SYSTEM v2 — Head-Noun Strategy
+// ============================================================
+// Replaces the previous keyword-rule system. Core insight: in
+// English food names, the LAST meaningful word (the "head noun")
+// determines what the item IS. Everything before it is a modifier.
+//   "red wine VINEGAR"  → vinegar  → Condiments  (not Drinks)
+//   "chocolate MILK"    → milk     → Dairy       (not Snacks)
+//   "sugar snap PEAS"   → peas     → Produce     (not Baking)
+//   "egg NOODLES"       → noodles  → Dry Goods   (not Dairy)
+// State modifiers (frozen/canned/dried) relocate the item AFTER
+// the base food is identified.
+//
+// Lookup tiers in determineAisleForIngredient():
+//   0. Memoization cache
+//   0.5 User overrides (persisted — user corrections always win)
+//   1. Head-noun engine (exact phrase → trailing bigram → head noun)
+//   2. USDA exact match (autocomplete-selected ingredients)
+//   3. USDA token match WITH confidence threshold
+//   4. "Other"
 // ============================================================
 
-// ==============================
-// PERFORMANCE OPTIMIZATION STRUCTURES
-// ==============================
-
-// Memoization cache for lookups (prevent redundant processing)
+// ------------------------------
+// CACHES & INDEX STRUCTURES
+// ------------------------------
 const aisleCache = new Map();          // rawName → aisle
-const normalizeCache = new Map();      // rawName → normalized
+const normalizeCache = new Map();      // rawName → normalized string
 
-// Pre-built lookup structures (populated on index load)
-let tokenToEntries = new Map();        // token → [entry, entry, ...]
-let exactMatchMap = new Map();         // normalized → entry
-let keywordRules = null;               // Fast keyword-based routing
+let tokenToEntries = new Map();        // USDA token → [entries]
+let exactMatchMap = new Map();         // USDA normalized → entry
+let tokenDocFreq = new Map();          // USDA token → # entries containing it
+
 // Autocomplete state tracking (REQUIRED for UI)
 let activeAutocompleteMenu = null;
 let activeAutocompleteIndex = -1;
 
-// Performance tracking (optional - can be disabled in production)
-const ENABLE_PERF_TRACKING = false;
-let perfStats = {
-    cacheHits: 0,
-    cacheMisses: 0,
-    keywordMatches: 0,
-    indexLookups: 0
+// All aisles the app uses (also powers the override picker UI)
+const ALL_AISLES = [
+    "Bakery", "Baking", "Canned Goods", "Condiments", "Dairy", "Drinks",
+    "Dry Goods", "Frozen", "Household", "Meat", "Oils", "Prepared Foods",
+    "Produce", "Seafood", "Snacks", "Spices", "Other"
+];
+
+// ------------------------------
+// TOKENIZATION
+// ------------------------------
+
+const NOISE_WORDS = new Set([
+    'boneless', 'skinless', 'large', 'small', 'medium', 'jumbo', 'mini',
+    'organic', 'raw', 'ripe', 'baby', 'thin', 'thick', 'lean', 'extra',
+    'chopped', 'sliced', 'minced', 'shredded', 'grated',
+    'cubed', 'halved', 'quartered', 'trimmed', 'pitted', 'melted',
+    'softened', 'divided', 'packed', 'optional', 'plus', 'more', 'taste',
+    'about', 'approximately', 'roughly', 'and', 'or', 'of', 'the', 'a', 'an',
+    'stalks', 'stalk', 'sprigs', 'sprig', 'bunch', 'bunches', 'head', 'heads',
+    'package', 'packages', 'pkg', 'box', 'boxes', 'container',
+    'jar', 'jars', 'bottle', 'bottles', 'florets', 'floret', 'fillets',
+    'fillet', 'filets', 'filet', 'pieces', 'piece', 'slices', 'wedges',
+    'chunks', 'strips', 'cubes', 'each', 'to', 'for', 'with', 'into', 'cut'
+]);
+
+const UNIT_REGEX = /\b\d+([./]\d+)?\s*(oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|liters|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ct|count|pieces?|cans?|pkgs?|inch|inches|quart|quarts|pint|pints|gallon|gallons|stick|sticks|clove|cloves|dash|dashes|pinch|pinches|handful)\b/gi;
+
+const SINGULAR_EXCEPTIONS = {
+    cookies: 'cookie', brownies: 'brownie', smoothies: 'smoothie',
+    veggies: 'veggie', pies: 'pie', hoagies: 'hoagie',
+    molasses: 'molasses', hummus: 'hummus', couscous: 'couscous',
 };
 
+function singularize(word) {
+    if (SINGULAR_EXCEPTIONS[word]) return SINGULAR_EXCEPTIONS[word];
+    if (word.length <= 3) return word;
+    if (/(ss|us|is)$/.test(word)) return word;                // grass, hummus
+    if (/ies$/.test(word)) return word.slice(0, -3) + 'y';     // berries → berry
+    if (/^(leaves|loaves|halves|calves|knives)$/.test(word)) return word.slice(0, -3) + 'f';
+    if (/(oes)$/.test(word)) return word.slice(0, -2);         // tomatoes → tomato
+    if (/(ches|shes|xes|zes|sses)$/.test(word)) return word.slice(0, -2);
+    if (/s$/.test(word)) return word.slice(0, -1);
+    return word;
+}
 
-// ==============================
-// CRITICAL KEYWORDS (Preserve These!)
-// ==============================
+function tokenizeIngredient(rawName) {
+    let text = String(rawName).toLowerCase();
 
-const CRITICAL_KEYWORDS = {
-    // State modifiers (affect categorization)
-    state: new Set([
-        'fresh', 'frozen', 'canned', 'dried', 'jarred', 
-        'bottled', 'refrigerated', 'raw', 'cooked'
-    ]),
-    
-    // Preparation modifiers
-    prep: new Set([
-        'ground', 'diced', 'chopped', 'sliced', 'whole',
-        'shredded', 'grated', 'minced', 'crushed'
-    ]),
-    
-    // Quality/type modifiers
-    type: new Set([
-        'organic', 'extra virgin', 'dark', 'light', 'heavy',
-        'sharp', 'mild', 'sweet', 'unsweetened', 'reduced fat',
-        'low fat', 'whole', 'skim', 'part skim'
-    ])
-};
+    // Strip " - StoreName" suffix
+    const storeSplit = text.indexOf(' - ');
+    if (storeSplit > 0) text = text.substring(0, storeSplit);
 
+    // Pull parenthetical content into the main string (keeps "fresh"/"dried" signals)
+    text = text.replace(/[()]/g, ' ');
 
-// ==============================
-// SMART TEXT EXTRACTION
-// Preserves important keywords while removing noise
-// ==============================
+    // Remove quantities + units, then stray numbers (keep % for "2% milk")
+    text = text.replace(UNIT_REGEX, ' ');
+    text = text.replace(/\b\d+([./]\d+)?\b/g, ' ');
+    text = text.replace(/[^a-z0-9\s%]/g, ' ').replace(/\s+/g, ' ').trim();
 
+    return text.split(' ')
+        .map(singularize)
+        .filter(t => t && !NOISE_WORDS.has(t));
+}
+
+// Legacy-compatible normalized string (used by cache keys, USDA lookups)
 function extractSmartIngredientName(rawName) {
     if (!rawName) return "";
-    
-    // Check cache first
-    if (normalizeCache.has(rawName)) {
-        return normalizeCache.get(rawName);
-    }
-    
-    let text = rawName.toLowerCase();
-    
-    // 1️⃣ Remove store suffix (always " - StoreName")
-    const storeSplit = text.indexOf(' - ');
-    if (storeSplit > 0) {
-        text = text.substring(0, storeSplit);
-    }
-    
-    // 2️⃣ Extract keywords FROM parentheses before removing them
-    const parenContent = [];
-    const parenMatches = text.matchAll(/\(([^)]+)\)/g);
-    for (const match of parenMatches) {
-        const content = match[1].toLowerCase();
-        
-        // Check if parentheses contain critical keywords
-        for (const category of Object.values(CRITICAL_KEYWORDS)) {
-            for (const keyword of category) {
-                if (content.includes(keyword)) {
-                    parenContent.push(keyword);
-                }
-            }
-        }
-        
-        // Preserve "canned", "can", "frozen" etc.
-        if (/\b(canned|can|cans|frozen|dried|fresh)\b/.test(content)) {
-            parenContent.push(content.match(/\b(canned|can|cans|frozen|dried|fresh)\b/)[1]);
-        }
-    }
-    
-    // 3️⃣ Remove parentheses and their contents
-    text = text.replace(/\([^)]*\)/g, ' ');
-    
-    // 4️⃣ Re-add critical keywords we extracted
-    if (parenContent.length > 0) {
-        text += ' ' + parenContent.join(' ');
-    }
-    
-    // 5️⃣ Remove measurements but NOT descriptive numbers
-    // Remove: "4 oz", "2 cups", "10 ct"
-    // Keep: "00 flour", "2% milk"
-    text = text.replace(/\b\d+\s*(oz|lb|g|kg|ml|l|cup|cups|tbsp|tsp|ct|count|pieces?)\b/gi, ' ');
-    
-    // 6️⃣ Normalize whitespace and punctuation
-    text = text
-        .replace(/[^a-z0-9\s%]/g, ' ')  // Keep % for "2% milk"
-        .replace(/\s+/g, ' ')
-        .trim();
-    
-    // Cache the result
-    normalizeCache.set(rawName, text);
-    
-    return text;
+    if (normalizeCache.has(rawName)) return normalizeCache.get(rawName);
+    const result = tokenizeIngredient(rawName).join(' ');
+    normalizeCache.set(rawName, result);
+    return result;
 }
 
+// ------------------------------
+// DICTIONARIES (all keys singular, lowercase)
+// ------------------------------
 
-// ==============================
-// FAST KEYWORD-BASED ROUTING
-// Short-circuit for common items (10-20x faster)
-// ==============================
+const HERBS_LEAFY = new Set(['basil', 'cilantro', 'parsley', 'mint', 'dill', 'chive', 'tarragon']);
+const HERBS_WOODY = new Set(['oregano', 'thyme', 'rosemary', 'sage', 'marjoram']);
 
-function initializeKeywordRules() {
-    // These rules are checked BEFORE index lookup
-    // Format: [regex, category, priority]
-    // Lower priority number = checked first
-    
-    keywordRules = [
-        // ====================================
-        // PRIORITY 1: EXACT PHRASES (Highest)
-        // ====================================
-        
-        // Baking supplies
-        [/\bbaking soda\b/i, 'Baking', 1],
-        [/\bbaking powder\b/i, 'Baking', 1],
-        [/\bvanilla extract\b/i, 'Baking', 1],
-        [/\bcocoa powder\b/i, 'Baking', 1],
-        
-        // Sugar (all types) → Baking
-        [/\b(powdered|granulated|superfine|brown|white|confectioner'?s?)\s*sugar\b/i, 'Baking', 1],
-        [/\bsugar\b/i, 'Baking', 1],
-        
-        // Salt → Spices
-        [/\b(sea salt|kosher salt|table salt|salt)\b/i, 'Spices', 1],
-        
-        // Chocolate → Snacks (not Drinks!)
-        [/\b(semi sweet|dark|milk|white)\s*chocolate\b/i, 'Snacks', 1],
-        [/\bchocolate\s*(chip|bar|chunk)s?\b/i, 'Snacks', 1],
-        
-        // Ground meats
-        [/\bground\s+(beef|turkey|chicken|pork|lamb)\b/i, 'Meat', 1],
-        
-        // Bell peppers
-        [/\bbell pepper/i, 'Produce', 1],
-        
-        // Pepper spices (not produce)
-        [/\b(black|white|red)\s+pepper\b/i, 'Spices', 1],
-        
-        // Garlic/onion powder
-        [/\b(garlic|onion)\s+powder\b/i, 'Spices', 1],
-        
-        // Household items
-        [/\bpaper towel/i, 'Household', 1],
-        [/\baluminum foil\b/i, 'Household', 1],
-        [/\bplastic wrap\b/i, 'Household', 1],
-        [/\bparchment paper\b/i, 'Household', 1],
-        [/\blaundry\s+detergent\b/i, 'Household', 1],
-        
-        // Glassware (not drinks!)
-        [/\b(wine|beer|cocktail)\s+glass(es)?\b/i, 'Household', 1],
-        
-       // Tomato products (comprehensive detection)
-        [/\bcanned.*tomato/i, 'Canned Goods', 1],
-        [/\btomato.*canned/i, 'Canned Goods', 1],
-        [/\btomato paste\b/i, 'Canned Goods', 1],
-        [/\btomato sauce\b/i, 'Canned Goods', 1],
-        [/\b(diced|crushed|stewed|whole)\s+tomato/i, 'Canned Goods', 1],
-        
-        // Artichoke
-        [/\bartichoke hearts?\b/i, 'Canned Goods', 1],
-        
-        
-        // ====================================
-        // PRIORITY 2: STRONG INDICATORS
-        // ====================================
-        
-        // Pasta
-        [/\b(fettuccine|penne|spaghetti|linguine|rigatoni|macaroni|ziti|rotini)\b/i, 'Dry Goods', 2],
-        [/\bpasta\b/i, 'Dry Goods', 2],
-        [/\b(ramen|noodles?)\b/i, 'Dry Goods', 2],
-        
-        // Fresh herbs → Produce (all variations)
-        [/\bfresh\s+(basil|cilantro|parsley|mint|dill|thyme|rosemary|oregano|sage)\b/i, 'Produce', 2],
-        [/\b(regular|fresh|thai|italian|sweet)?\s*(basil|cilantro|parsley|mint|dill)\s*(bunch)?\b/i, 'Produce', 2],
-        [/\b(thai|italian|sweet)\s+(basil|cilantro|mint)\b/i, 'Produce', 2],
-        
-        // Cheese
-        [/\b(sharp|mild|medium|aged|extra sharp)\s+(cheddar|cheese)\b/i, 'Dairy', 2],
-        [/\b(cheddar|mozzarella|parmesan|gouda|swiss|brie|feta|provolone|burrata)\s*cheese\b/i, 'Dairy', 2],
-        [/\bcheese\b/i, 'Dairy', 2],
-        
-        // Eggs
-        [/\begg\s*(white|yolk)s?\b/i, 'Dairy', 2],
-        [/\beggs?\b/i, 'Dairy', 2],
-        
-        // Meat cuts
-        [/\b(chicken|turkey|beef|pork)\s+(breast|thigh|leg|wing|rib)\b/i, 'Meat', 2],
-        
-        // Rice
-        [/\b(jasmine|basmati|arborio|bomba|brown|white|wild)\s+rice\b/i, 'Dry Goods', 2],
-        
-        // Cream products
-        [/\b(heavy|whipping|sour|light)\s+cream\b/i, 'Dairy', 2],
-        [/\bcream cheese\b/i, 'Dairy', 2],
-        [/\bhalf and half\b/i, 'Dairy', 2],
-        
-        // Stock/broth
-        [/\b(chicken|beef|vegetable|seafood)\s+(stock|broth)\b/i, 'Canned Goods', 2],
-        
-        
-        // ====================================
-        // PRIORITY 3: CATEGORY INDICATORS
-        // ====================================
-        
-        // Spices (dried herbs)
-        [/\b(cumin|paprika|turmeric|cinnamon|nutmeg|cardamom|coriander)\b/i, 'Spices', 3],
-        [/\b(oregano|thyme|rosemary|sage)\b(?!\s+bunch)/i, 'Spices', 3],
-        [/\b(bay leaf|bay leaves)\b/i, 'Spices', 3],
-        [/\bchili powder\b/i, 'Spices', 3],
-        [/\b(curry|taco)\s+(powder|seasoning)\b/i, 'Spices', 3],
-        [/\bsaffron\b/i, 'Spices', 3],
-        
-        // Produce
-        [/\b(lettuce|spinach|kale|arugula|chard)\b/i, 'Produce', 3],
-        [/\b(tomato|tomatoes|carrot|carrots|onion|onions)\b/i, 'Produce', 3],
-        [/\b(broccoli|cauliflower|asparagus|zucchini|eggplant)\b/i, 'Produce', 3],
-        [/\b(mushroom|mushrooms|shiitake|cremini|portobello)\b/i, 'Produce', 3],
-        [/\b(banana|bananas|apple|apples|orange|oranges|lemon|lemons|lime|limes)\b/i, 'Produce', 3],
-        [/\b(berries|strawberry|blueberry|raspberry|blackberry)\b/i, 'Produce', 3],
-        [/\b(shallot|shallots|scallion|leek|green onion)\b/i, 'Produce', 3],
-        [/\b(garlic|ginger)\b(?!\s+powder)/i, 'Produce', 3],
-        
-        // Canned goods
-        [/\bcanned\b/i, 'Canned Goods', 3],
-        [/\bcan\b.*\b(beans|tomato|soup|vegetable)\b/i, 'Canned Goods', 3],
-        
-        // Beverages (but not glassware!)
-        [/\b(wine|beer|coffee|tea)\b(?!\s+glass)/i, 'Drinks', 3],
-        [/\b(red wine|white wine|port wine|champagne)\b/i, 'Drinks', 3],
-        
-        // Condiments
-        [/\b(ketchup|mustard|mayo|mayonnaise|bbq sauce|hot sauce)\b/i, 'Condiments', 3],
-        [/\b(soy sauce|teriyaki|fish sauce|oyster sauce|hoisin)\b/i, 'Condiments', 3],
-        [/\b(honey|maple syrup|agave|molasses)\b/i, 'Condiments', 3],
-        [/\b(vinegar|balsamic)\b/i, 'Condiments', 3],
-        [/\b(curry|miso)\s+paste\b/i, 'Condiments', 3],
-        
-        // Oils
-        [/\bolive oil\b/i, 'Oils', 3],
-        [/\b(coconut|sesame|vegetable|canola|avocado)\s+oil\b/i, 'Oils', 3],
-        [/\bextra virgin\b/i, 'Oils', 3],
-        
-        // Seafood
-        [/\b(salmon|tuna|cod|shrimp|scallops|clams|mussels|lobster|crab|fish sauce)\b/i, 'Seafood', 3],
-        
-        // Tofu
-        [/\btofu\b/i, 'Dry Goods', 3],
-        
-        // Frozen
-        [/\bfrozen\b/i, 'Frozen', 3],
-    ];
-    
-    // Sort by priority (lower number = higher priority)
-    keywordRules.sort((a, b) => a[2] - b[2]);
-}
-function checkKeywordRules(text) {
-    if (!keywordRules) {
-        initializeKeywordRules();
+const EXACT_PHRASES = {
+    'half and half': 'Dairy',
+    'half half': 'Dairy',
+    'mac cheese': 'Dry Goods',
+    'cream cheese': 'Dairy',
+    'extra virgin olive oil': 'Oils',
+    'toilet paper': 'Household',
+};
+
+const BIGRAM_MAP = {
+    // Produce edge cases
+    'bell pepper': 'Produce', 'green bean': 'Produce', 'garlic clove': 'Produce',
+    'serrano pepper': 'Produce', 'poblano pepper': 'Produce',
+    'habanero pepper': 'Produce', 'jalapeno pepper': 'Produce',
+    'anaheim pepper': 'Produce', 'banana pepper': 'Produce',
+    'chili pepper': 'Produce', 'spring mix': 'Produce', 'salad mix': 'Produce',
+    'fennel bulb': 'Produce',
+    'snap pea': 'Produce', 'snow pea': 'Produce', 'green onion': 'Produce',
+    'lemon juice': 'Produce', 'lime juice': 'Produce', 'garlic bulb': 'Produce',
+    // Spices vs produce
+    'black pepper': 'Spices', 'white pepper': 'Spices', 'cayenne pepper': 'Spices',
+    'garlic powder': 'Spices', 'onion powder': 'Spices', 'chili powder': 'Spices',
+    'curry powder': 'Spices', 'ginger powder': 'Spices', 'mustard powder': 'Spices',
+    'pepper flake': 'Spices', 'bay leaf': 'Spices', 'taco seasoning': 'Spices',
+    'italian seasoning': 'Spices', 'poultry seasoning': 'Spices',
+    'sesame seed': 'Spices', 'poppy seed': 'Spices', 'fennel seed': 'Spices',
+    'ground ginger': 'Spices', 'ground mustard': 'Spices',
+    'celery seed': 'Spices', 'celery salt': 'Spices', 'garlic salt': 'Spices',
+    // Dairy
+    'sour cream': 'Dairy', 'whipped cream': 'Dairy', 'heavy cream': 'Dairy',
+    'whipping cream': 'Dairy', 'cottage cheese': 'Dairy', 'cream cheese': 'Dairy',
+    'almond milk': 'Dairy', 'oat milk': 'Dairy', 'soy milk': 'Dairy',
+    // Baking
+    'cocoa powder': 'Baking', 'baking soda': 'Baking', 'baking powder': 'Baking',
+    'chocolate chip': 'Baking', 'condensed milk': 'Baking', 'evaporated milk': 'Baking',
+    'cake mix': 'Baking', 'brownie mix': 'Baking', 'pie crust': 'Baking',
+    'pancake mix': 'Baking', 'muffin mix': 'Baking',
+    'food coloring': 'Baking', 'corn syrup': 'Baking',
+    // Canned Goods
+    'coconut milk': 'Canned Goods', 'coconut cream': 'Canned Goods',
+    'tomato paste': 'Canned Goods', 'tomato sauce': 'Canned Goods',
+    'pasta sauce': 'Canned Goods', 'marinara sauce': 'Canned Goods',
+    'alfredo sauce': 'Canned Goods', 'enchilada sauce': 'Canned Goods',
+    'pizza sauce': 'Canned Goods', 'diced tomato': 'Canned Goods',
+    'crushed tomato': 'Canned Goods', 'stewed tomato': 'Canned Goods',
+    'peeled tomato': 'Canned Goods',
+    'black bean': 'Canned Goods', 'kidney bean': 'Canned Goods',
+    'pinto bean': 'Canned Goods', 'refried bean': 'Canned Goods',
+    'garbanzo bean': 'Canned Goods', 'white bean': 'Canned Goods',
+    'cannellini bean': 'Canned Goods', 'navy bean': 'Canned Goods',
+    'baked bean': 'Canned Goods', 'artichoke heart': 'Canned Goods',
+    'green chile': 'Canned Goods', 'green chili': 'Canned Goods',
+    // Condiments
+    'curry paste': 'Condiments', 'miso paste': 'Condiments',
+    'peanut butter': 'Condiments', 'almond butter': 'Condiments',
+    'soy sauce': 'Condiments', 'hot sauce': 'Condiments', 'bbq sauce': 'Condiments',
+    'fish sauce': 'Condiments', 'oyster sauce': 'Condiments',
+    'worcestershire sauce': 'Condiments', 'steak sauce': 'Condiments',
+    'tartar sauce': 'Condiments', 'cocktail sauce': 'Condiments',
+    'maple syrup': 'Condiments', 'salad dressing': 'Condiments',
+    'ranch dressing': 'Condiments',
+    // Meat
+    'hot dog': 'Meat', 'stew meat': 'Meat', 'pork loin': 'Meat',
+    'crab meat': 'Seafood',
+    'corned beef': 'Meat',
+    // Dry Goods
+    'egg noodle': 'Dry Goods', 'ramen noodle': 'Dry Goods',
+    'bread crumb': 'Dry Goods', 'corn flake': 'Dry Goods',
+    'instant rice': 'Dry Goods',
+    // Snacks
+    'granola bar': 'Snacks', 'trail mix': 'Snacks', 'sunflower seed': 'Snacks',
+    'pumpkin seed': 'Snacks', 'dark chocolate': 'Snacks', 'milk chocolate': 'Snacks',
+    // Frozen
+    'ice cream': 'Frozen',
+    // Drinks
+    'sparkling water': 'Drinks', 'apple cider': 'Drinks',
+    // Household
+    'plastic wrap': 'Household', 'trash bag': 'Household', 'ziploc bag': 'Household',
+    'sandwich bag': 'Household', 'freezer bag': 'Household', 'storage bag': 'Household',
+    'paper towel': 'Household', 'paper plate': 'Household',
+    'aluminum foil': 'Household', 'parchment paper': 'Household',
+    'wax paper': 'Household', 'dish soap': 'Household', 'hand soap': 'Household',
+    'dryer sheet': 'Household', 'cookie sheet': 'Household',
+    'wine glass': 'Household', 'plastic cup': 'Household', 'paper cup': 'Household',
+    'solo cup': 'Household',
+    // Oils
+    'cooking spray': 'Oils', 'nonstick spray': 'Oils',
+};
+
+const HEAD_NOUN_MAP = {
+    // Produce
+    onion: 'Produce', garlic: 'Produce', shallot: 'Produce', leek: 'Produce',
+    scallion: 'Produce', potato: 'Produce', carrot: 'Produce', celery: 'Produce',
+    tomato: 'Produce', lettuce: 'Produce', spinach: 'Produce', kale: 'Produce',
+    arugula: 'Produce', romaine: 'Produce', cabbage: 'Produce', broccoli: 'Produce',
+    cauliflower: 'Produce', cucumber: 'Produce', zucchini: 'Produce',
+    squash: 'Produce', pumpkin: 'Produce', mushroom: 'Produce', ginger: 'Produce',
+    jalapeno: 'Produce', serrano: 'Produce', poblano: 'Produce', habanero: 'Produce',
+    pea: 'Produce', corn: 'Produce', asparagus: 'Produce', eggplant: 'Produce',
+    radish: 'Produce', beet: 'Produce', turnip: 'Produce', avocado: 'Produce',
+    apple: 'Produce', banana: 'Produce', orange: 'Produce', lemon: 'Produce',
+    lime: 'Produce', grape: 'Produce', strawberry: 'Produce', blueberry: 'Produce',
+    raspberry: 'Produce', blackberry: 'Produce', cranberry: 'Produce',
+    berry: 'Produce', melon: 'Produce', watermelon: 'Produce', cantaloupe: 'Produce',
+    mango: 'Produce', pineapple: 'Produce', peach: 'Produce', pear: 'Produce',
+    plum: 'Produce', cherry: 'Produce', kiwi: 'Produce', apricot: 'Produce',
+    grapefruit: 'Produce', lemongrass: 'Produce', cilantro: 'Produce',
+    pomegranate: 'Produce', clementine: 'Produce', tangerine: 'Produce',
+    nectarine: 'Produce', parsnip: 'Produce', rutabaga: 'Produce',
+    jicama: 'Produce', choy: 'Produce', endive: 'Produce',
+    basil: 'Produce', parsley: 'Produce', mint: 'Produce', dill: 'Produce',
+    chive: 'Produce', tarragon: 'Produce', greens: 'Produce', green: 'Produce',
+    sprout: 'Produce', slaw: 'Produce', coleslaw: 'Produce', salad: 'Produce',
+    fruit: 'Produce', vegetable: 'Produce', veggie: 'Produce', okra: 'Produce',
+    // Meat
+    chicken: 'Meat', beef: 'Meat', pork: 'Meat', turkey: 'Meat', lamb: 'Meat',
+    veal: 'Meat', bacon: 'Meat', sausage: 'Meat', ham: 'Meat', steak: 'Meat',
+    brisket: 'Meat', rib: 'Meat', chop: 'Meat', roast: 'Meat', meat: 'Meat',
+    tenderloin: 'Meat', sirloin: 'Meat', drumstick: 'Meat', thigh: 'Meat',
+    breast: 'Meat', wing: 'Meat', meatball: 'Meat', prosciutto: 'Meat',
+    salami: 'Meat', pepperoni: 'Meat', chorizo: 'Meat', bratwurst: 'Meat',
+    kielbasa: 'Meat', pastrami: 'Meat', bologna: 'Meat', ribeye: 'Meat',
+    chuck: 'Meat', flank: 'Meat', shank: 'Meat', liver: 'Meat',
+    mignon: 'Meat',
+    // Seafood
+    salmon: 'Seafood', tuna: 'Seafood', shrimp: 'Seafood', cod: 'Seafood',
+    tilapia: 'Seafood', halibut: 'Seafood', scallop: 'Seafood', clam: 'Seafood',
+    mussel: 'Seafood', lobster: 'Seafood', crab: 'Seafood', trout: 'Seafood',
+    catfish: 'Seafood', sardine: 'Seafood', anchovy: 'Seafood', mahi: 'Seafood',
+    fish: 'Seafood', calamari: 'Seafood', crawfish: 'Seafood',
+    swordfish: 'Seafood', snapper: 'Seafood', flounder: 'Seafood',
+    grouper: 'Seafood', pollock: 'Seafood',
+    // Dairy
+    milk: 'Dairy', cheese: 'Dairy', butter: 'Dairy', yogurt: 'Dairy',
+    cream: 'Dairy', egg: 'Dairy', buttermilk: 'Dairy', mozzarella: 'Dairy',
+    cheddar: 'Dairy', parmesan: 'Dairy', feta: 'Dairy', ricotta: 'Dairy',
+    gouda: 'Dairy', brie: 'Dairy', provolone: 'Dairy', mascarpone: 'Dairy',
+    creamer: 'Dairy', margarine: 'Dairy', velveeta: 'Dairy', queso: 'Dairy',
+    asiago: 'Dairy', gruyere: 'Dairy', colby: 'Dairy', monterey: 'Dairy',
+    // Bakery
+    bread: 'Bakery', bagel: 'Bakery', bun: 'Bakery', roll: 'Bakery',
+    tortilla: 'Bakery', pita: 'Bakery', baguette: 'Bakery', croissant: 'Bakery',
+    muffin: 'Bakery', donut: 'Bakery', naan: 'Bakery', loaf: 'Bakery',
+    ciabatta: 'Bakery', sourdough: 'Bakery', brioche: 'Bakery', wrap: 'Bakery',
+    // Dry Goods
+    pasta: 'Dry Goods', spaghetti: 'Dry Goods', penne: 'Dry Goods',
+    fettuccine: 'Dry Goods', linguine: 'Dry Goods', rigatoni: 'Dry Goods',
+    macaroni: 'Dry Goods', ziti: 'Dry Goods', rotini: 'Dry Goods',
+    noodle: 'Dry Goods', rice: 'Dry Goods', quinoa: 'Dry Goods',
+    lentil: 'Dry Goods', oat: 'Dry Goods', oatmeal: 'Dry Goods',
+    cereal: 'Dry Goods', couscous: 'Dry Goods', barley: 'Dry Goods',
+    tofu: 'Dry Goods', ramen: 'Dry Goods', orzo: 'Dry Goods', farro: 'Dry Goods',
+    grit: 'Dry Goods', panko: 'Dry Goods', breadcrumb: 'Dry Goods',
+    tortellini: 'Dry Goods', gnocchi: 'Dry Goods', lasagna: 'Dry Goods',
+    vermicelli: 'Dry Goods', granola: 'Dry Goods', stuffing: 'Dry Goods',
+    cheerio: 'Dry Goods',
+    // Baking
+    flour: 'Baking', sugar: 'Baking', yeast: 'Baking', cornstarch: 'Baking',
+    extract: 'Baking', cocoa: 'Baking', shortening: 'Baking', cornmeal: 'Baking',
+    frosting: 'Baking', sprinkle: 'Baking', gelatin: 'Baking', vanilla: 'Baking',
+    crust: 'Baking',
+    // Spices
+    salt: 'Spices', pepper: 'Spices', peppercorn: 'Spices', cumin: 'Spices',
+    paprika: 'Spices', cinnamon: 'Spices', nutmeg: 'Spices', oregano: 'Spices',
+    thyme: 'Spices', rosemary: 'Spices', sage: 'Spices', turmeric: 'Spices',
+    coriander: 'Spices', cardamom: 'Spices', clove: 'Spices',
+    seasoning: 'Spices', spice: 'Spices', allspice: 'Spices', cayenne: 'Spices',
+    flake: 'Spices', powder: 'Spices', seed: 'Spices', marjoram: 'Spices',
+    saffron: 'Spices', anise: 'Spices', fennel: 'Spices', bouillon: 'Spices',
+    // Oils
+    oil: 'Oils', spray: 'Oils', lard: 'Oils', ghee: 'Oils',
+    // Condiments
+    ketchup: 'Condiments', mustard: 'Condiments', mayonnaise: 'Condiments',
+    mayo: 'Condiments', vinegar: 'Condiments', salsa: 'Condiments',
+    dressing: 'Condiments', syrup: 'Condiments', honey: 'Condiments',
+    jam: 'Condiments', jelly: 'Condiments', relish: 'Condiments',
+    sriracha: 'Condiments', tahini: 'Condiments', pesto: 'Condiments',
+    hummus: 'Condiments', sauce: 'Condiments', marinade: 'Condiments',
+    mirin: 'Condiments', teriyaki: 'Condiments', hoisin: 'Condiments',
+    molasses: 'Condiments', aioli: 'Condiments', guacamole: 'Condiments',
+    // Canned Goods
+    soup: 'Canned Goods', broth: 'Canned Goods', stock: 'Canned Goods',
+    chickpea: 'Canned Goods', olive: 'Canned Goods', caper: 'Canned Goods',
+    puree: 'Canned Goods',
+    applesauce: 'Canned Goods', marinara: 'Canned Goods',
+    bean: 'Canned Goods',
+    // Snacks
+    chip: 'Snacks', cracker: 'Snacks', cookie: 'Snacks', pretzel: 'Snacks',
+    popcorn: 'Snacks', nut: 'Snacks', almond: 'Snacks', peanut: 'Snacks',
+    cashew: 'Snacks', walnut: 'Snacks', pecan: 'Snacks', pistachio: 'Snacks',
+    candy: 'Snacks', raisin: 'Snacks', jerky: 'Snacks', marshmallow: 'Snacks',
+    bar: 'Snacks', chocolate: 'Snacks', gummy: 'Snacks',
+    snack: 'Snacks', brownie: 'Snacks',
+    // Drinks
+    juice: 'Drinks', soda: 'Drinks', water: 'Drinks', coffee: 'Drinks',
+    tea: 'Drinks', wine: 'Drinks', beer: 'Drinks', lemonade: 'Drinks',
+    kombucha: 'Drinks', cider: 'Drinks', gatorade: 'Drinks', espresso: 'Drinks',
+    cola: 'Drinks', coke: 'Drinks', pepsi: 'Drinks', sprite: 'Drinks',
+    ale: 'Drinks', lager: 'Drinks', drink: 'Drinks', smoothie: 'Drinks',
+    // Frozen
+    popsicle: 'Frozen', waffle: 'Frozen', pizza: 'Frozen', nugget: 'Frozen',
+    // Household
+    towel: 'Household', foil: 'Household', detergent: 'Household',
+    soap: 'Household', sponge: 'Household', napkin: 'Household',
+    tissue: 'Household', cleaner: 'Household', bleach: 'Household',
+    toothpaste: 'Household', shampoo: 'Household', deodorant: 'Household',
+    bag: 'Household', sheet: 'Household', glass: 'Household',
+    pie: 'Bakery', cupcake: 'Bakery',
+};
+
+// ------------------------------
+// HEAD-NOUN CATEGORIZATION ENGINE
+// ------------------------------
+
+function baseCategorize(tokens) {
+    if (!tokens.length) return null;
+
+    const joined = tokens.join(' ');
+
+    // 1. Exact full phrase
+    if (EXACT_PHRASES[joined]) return EXACT_PHRASES[joined];
+
+    // 2. Trailing bigram (last two tokens)
+    if (tokens.length >= 2) {
+        const bigram = tokens[tokens.length - 2] + ' ' + tokens[tokens.length - 1];
+        if (BIGRAM_MAP[bigram]) return BIGRAM_MAP[bigram];
     }
-    
-    for (const [regex, category, priority] of keywordRules) {
-        if (regex.test(text)) {
-            if (ENABLE_PERF_TRACKING) perfStats.keywordMatches++;
-            return category;
-        }
+
+    // 3. Head noun (last token)
+    const head = tokens[tokens.length - 1];
+    if (HEAD_NOUN_MAP[head]) return HEAD_NOUN_MAP[head];
+
+    // 4. Rescue scan right-to-left (rightmost words most likely the true head)
+    for (let i = tokens.length - 2; i >= 0; i--) {
+        const bg = tokens[i] + ' ' + tokens[i + 1];
+        if (BIGRAM_MAP[bg]) return BIGRAM_MAP[bg];
     }
-    
+    for (let i = tokens.length - 1; i >= 0; i--) {
+        if (HEAD_NOUN_MAP[tokens[i]]) return HEAD_NOUN_MAP[tokens[i]];
+    }
+
     return null;
 }
 
+function categorizeByHeadNoun(rawName) {
+    if (!rawName) return null;
 
-// ==============================
-// INDEX OPTIMIZATION
-// Pre-build lookup structures for O(1) access
-// ==============================
+    const tokens = tokenizeIngredient(rawName);
+    if (!tokens.length) return null;
+
+    const tokenSet = new Set(tokens);
+    const hasFresh = tokenSet.has('fresh');
+    const hasFrozen = tokenSet.has('frozen');
+    const hasCanned = tokenSet.has('canned') || tokenSet.has('can');
+    const hasDried = tokenSet.has('dried') || tokenSet.has('dry');
+
+    // Strip state modifiers for the base lookup, re-apply as relocations
+    const foodTokens = tokens.filter(t =>
+        !['fresh', 'frozen', 'canned', 'can', 'dried', 'dry', 'jarred', 'bottled'].includes(t));
+
+    let aisle = baseCategorize(foodTokens.length ? foodTokens : tokens);
+    const foodHead = foodTokens[foodTokens.length - 1] || tokens[tokens.length - 1];
+
+    // Herb resolution: fresh → Produce, dried → Spices, default by herb type
+    if (HERBS_LEAFY.has(foodHead) || HERBS_WOODY.has(foodHead)) {
+        if (hasFresh) return 'Produce';
+        if (hasDried) return 'Spices';
+        return HERBS_LEAFY.has(foodHead) ? 'Produce' : 'Spices';
+    }
+
+    // Relocation modifiers
+    if (hasFrozen) return 'Frozen';
+    if (hasCanned) return 'Canned Goods';
+
+    if (hasDried && aisle) {
+        if (['bean', 'pea', 'lentil', 'chickpea'].includes(foodHead)) return 'Dry Goods';
+        if (aisle === 'Produce') return 'Snacks'; // dried cranberries, raisins
+    }
+
+    // "fresh" overrides implied-canned bigrams (fresh diced tomatoes → Produce)
+    if (hasFresh && aisle === 'Canned Goods') {
+        const freshBase = baseCategorize([foodHead]);
+        if (freshBase && freshBase !== 'Canned Goods') return freshBase;
+    }
+
+    return aisle;
+}
+
+// ------------------------------
+// USER OVERRIDES (Tier 0.5)
+// User corrections are stored in state.data.aisleOverrides,
+// keyed by normalized name, and always win over automatic logic.
+// ------------------------------
+
+function getAisleOverride(rawName) {
+    const overrides = state?.data?.aisleOverrides;
+    if (!overrides) return null;
+    const key = extractSmartIngredientName(rawName);
+    return overrides[key] || null;
+}
+
+async function setAisleOverride(rawName, aisle) {
+    if (!state.data.aisleOverrides) state.data.aisleOverrides = {};
+    const key = extractSmartIngredientName(rawName);
+
+    if (aisle && ALL_AISLES.includes(aisle)) {
+        state.data.aisleOverrides[key] = aisle;
+    } else {
+        delete state.data.aisleOverrides[key]; // remove override → back to automatic
+    }
+
+    aisleCache.clear(); // recategorize on next render
+    await persistState();
+    renderGroceryList();
+}
+window.setAisleOverride = setAisleOverride;
+
+// ------------------------------
+// USDA INDEX LOADING (Tiers 2–3 support + autocomplete)
+// ------------------------------
 
 async function loadIngredientIndex() {
     const startTime = performance.now();
-    
+
     try {
         const res = await fetch("ingredient_category_index.json");
         const data = await res.json();
-        
-        // Store original index
+
         window.INGREDIENT_INDEX = data;
-        
-        // Clear optimization structures
+
         exactMatchMap.clear();
         tokenToEntries.clear();
+        tokenDocFreq.clear();
         aisleCache.clear();
         normalizeCache.clear();
-        
-        console.log("📦 Building optimized lookup structures...");
-        
-        // Build exact match map (normalized → entry)
+
         const entries = Object.values(data);
         for (const entry of entries) {
             if (entry?.usda?.normalized) {
-                // Use Map for O(1) lookup
                 exactMatchMap.set(entry.usda.normalized, entry);
-                
-                // Build token → entries index
-                const tokens = entry.usda.normalized.split(' ');
+
+                const tokens = new Set(entry.usda.normalized.split(' '));
                 for (const token of tokens) {
-                    if (token.length > 2) {  // Skip tiny tokens
-                        if (!tokenToEntries.has(token)) {
-                            tokenToEntries.set(token, []);
-                        }
+                    if (token.length > 2) {
+                        if (!tokenToEntries.has(token)) tokenToEntries.set(token, []);
                         tokenToEntries.get(token).push(entry);
+                        tokenDocFreq.set(token, (tokenDocFreq.get(token) || 0) + 1);
                     }
                 }
             }
         }
-        
-        // Initialize keyword rules
-        initializeKeywordRules();
-        
+
         const elapsed = performance.now() - startTime;
-        console.log("✅ Ingredient index optimized in", elapsed.toFixed(0), "ms");
+        console.log("✅ Ingredient index loaded in", elapsed.toFixed(0), "ms");
         console.log("   - Exact matches:", exactMatchMap.size);
         console.log("   - Token index:", tokenToEntries.size, "unique tokens");
-        console.log("   - Keyword rules:", keywordRules.length);
-        
+
     } catch (err) {
         console.error("❌ Failed to load ingredient index:", err);
         window.INGREDIENT_INDEX = {};
@@ -1346,241 +1469,140 @@ async function loadIngredientIndex() {
     }
 }
 
+// ------------------------------
+// USDA TOKEN FALLBACK (Tier 3) — with confidence threshold
+// Only trusted when the entry covers most of the query tokens.
+// Rare tokens count more (IDF weighting). If confidence is low,
+// return null and let the item land in "Other" — a predictable
+// "Other" beats a confidently wrong aisle.
+// ------------------------------
 
-// ==============================
-// OPTIMIZED AISLE DETERMINATION
-// Multi-tier strategy with caching
-// ==============================
+function usdaTokenFallback(smartName) {
+    const tokens = smartName.split(' ').filter(t => t.length > 2);
+    if (!tokens.length) return null;
+
+    const totalEntries = exactMatchMap.size || 1;
+    const candidateMap = new Map();
+
+    for (const token of tokens) {
+        const entries = tokenToEntries.get(token);
+        if (!entries) continue;
+        const idf = Math.log(totalEntries / (tokenDocFreq.get(token) || 1));
+        for (const entry of entries) {
+            const id = entry.usda.fdcId;
+            if (!candidateMap.has(id)) {
+                candidateMap.set(id, { entry, matched: 0, weight: 0 });
+            }
+            const c = candidateMap.get(id);
+            c.matched++;
+            c.weight += idf;
+        }
+    }
+
+    let best = null;
+    let bestScore = -Infinity;
+
+    for (const { entry, matched, weight } of candidateMap.values()) {
+        const coverage = matched / tokens.length;
+        if (coverage < 0.6) continue;                 // must cover ≥60% of query
+        if (!entry.aisle || entry.aisle === "Other") continue;
+
+        const entryTokens = entry.usda.normalized.split(' ');
+        // Prefer entries close to the query length; weight by rarity of shared tokens
+        const score = weight * coverage
+            - Math.abs(entryTokens.length - tokens.length) * 0.5;
+
+        if (score > bestScore) {
+            bestScore = score;
+            best = entry;
+        }
+    }
+
+    return best ? best.aisle : null;
+}
+
+// ------------------------------
+// MAIN ENTRY POINT
+// ------------------------------
 
 function determineAisleForIngredient(rawName) {
     if (!rawName) return "Other";
-    
-    // 🚀 TIER 0: Cache check (instant return)
-    if (aisleCache.has(rawName)) {
-        if (ENABLE_PERF_TRACKING) perfStats.cacheHits++;
-        return aisleCache.get(rawName);
+
+    // TIER 0: Cache
+    if (aisleCache.has(rawName)) return aisleCache.get(rawName);
+
+    let result;
+
+    // TIER 0.5: User override (always wins)
+    result = getAisleOverride(rawName);
+
+    // TIER 1: Head-noun engine
+    if (!result) result = categorizeByHeadNoun(rawName);
+
+    // TIER 2: USDA exact match (autocomplete-selected names)
+    if (!result) {
+        const smartName = extractSmartIngredientName(rawName);
+        const exact = exactMatchMap.get(smartName);
+        if (exact && exact.aisle && exact.aisle !== "Other") result = exact.aisle;
+
+        // TIER 3: USDA token match with confidence threshold
+        if (!result) result = usdaTokenFallback(smartName);
     }
-    
-    if (ENABLE_PERF_TRACKING) perfStats.cacheMisses++;
-    
-    let result = "Other";
-    
-    // Get smart normalized name (preserves critical keywords)
-    const smartName = extractSmartIngredientName(rawName);
-    
-    // 🚀 TIER 1: Keyword rules (fastest - regex check only)
-    const keywordMatch = checkKeywordRules(smartName);
-    if (keywordMatch) {
-        result = keywordMatch;
-        aisleCache.set(rawName, result);
-        return result;
-    }
-    
-    // 🚀 TIER 2: Exact match lookup (O(1))
-    const exactMatch = exactMatchMap.get(smartName);
-    if (exactMatch) {
-        result = exactMatch.aisle || "Other";
-        aisleCache.set(rawName, result);
-        return result;
-    }
-    
-    // 🚀 TIER 3: Token-based lookup (much faster than full scan)
-    if (ENABLE_PERF_TRACKING) perfStats.indexLookups++;
-    
-    const tokens = smartName.split(' ').filter(t => t.length > 2);
-    
-    if (tokens.length === 0) {
-        aisleCache.set(rawName, "Other");
-        return "Other";
-    }
-    
-    // Collect candidate entries by token intersection
-    const candidateMap = new Map();
-    
-    for (const token of tokens) {
-        const entries = tokenToEntries.get(token);
-        if (entries) {
-            for (const entry of entries) {
-                const id = entry.usda.fdcId;
-                if (!candidateMap.has(id)) {
-                    candidateMap.set(id, { entry, sharedTokens: 0 });
-                }
-                candidateMap.get(id).sharedTokens++;
-            }
-        }
-    }
-    
-    // Score and find best match
-    let bestAisle = "Other";
-    let bestScore = -Infinity;
-    
-    for (const { entry, sharedTokens } of candidateMap.values()) {
-        if (sharedTokens === 0) continue;
-        
-        const entryNorm = entry.usda.normalized;
-        const entryTokens = entryNorm.split(' ');
-        
-        // Calculate score (optimized)
-        let score = sharedTokens * 20;
-        
-        if (entry.aisle && entry.aisle !== "Other") {
-            score += 30;
-        }
-        
-        score += Math.min(entryTokens.length * 10, 40);
-        
-        if (entryTokens.length === 1) {
-            score -= 25;
-        }
-        
-        score -= Math.abs(entryNorm.length - smartName.length);
-        
-        if (score > bestScore) {
-            bestScore = score;
-            bestAisle = entry.aisle || "Other";
-        }
-    }
-    
-    result = bestAisle;
-    
-    // Cache the result
+
+    // TIER 4: Give up predictably
+    if (!result) result = "Other";
+
     aisleCache.set(rawName, result);
-    
     return result;
 }
 
-
-// ==============================
-// OPTIMIZED AUTOCOMPLETE SEARCH
-// ==============================
+// ------------------------------
+// AUTOCOMPLETE SEARCH (unchanged behavior)
+// ------------------------------
 
 function searchIngredientIndex(query) {
     if (!window.INGREDIENT_INDEX || query.length < 2) return [];
-    
+
     const norm = query.toLowerCase().trim();
     const results = [];
     const seenIds = new Set();
-    
     const AUTOCOMPLETE_LIMIT = 8;
-    
-    // Strategy: Use token index for fast candidate collection
+
     const tokens = norm.split(/\s+/);
     const primaryToken = tokens[0];
-    
-    // Get candidates from token index
+
     let candidates = [];
-    
     if (tokenToEntries.has(primaryToken)) {
         candidates = tokenToEntries.get(primaryToken);
     } else {
-        // Fallback: find tokens that START with query
         for (const [token, entries] of tokenToEntries) {
             if (token.startsWith(primaryToken)) {
                 candidates.push(...entries);
             }
         }
     }
-    
-    // Score and sort candidates
+
     for (const entry of candidates) {
         if (seenIds.has(entry.usda.fdcId)) continue;
-        
         const candidate = entry.usda.normalized;
-        
+
         let score = 0;
-        
-        if (candidate.startsWith(norm)) {
-            score = 1;  // Best match
-        } else if (candidate.includes(norm)) {
-            score = 2;  // Good match
-        } else {
-            continue;  // Skip
-        }
-        
+        if (candidate.startsWith(norm)) score = 1;
+        else if (candidate.includes(norm)) score = 2;
+        else continue;
+
         results.push({ fdcId: entry.usda.fdcId, entry, score });
         seenIds.add(entry.usda.fdcId);
-        
         if (results.length >= AUTOCOMPLETE_LIMIT) break;
     }
-    
+
     return results.sort((a, b) => a.score - b.score);
 }
 
-
-// ==============================
-// PERFORMANCE MONITORING
-// (Optional - disable in production)
-// ==============================
-
-function getPerformanceStats() {
-    const total = perfStats.cacheHits + perfStats.cacheMisses;
-    const hitRate = total > 0 ? (perfStats.cacheHits / total * 100).toFixed(1) : 0;
-    
-    return {
-        ...perfStats,
-        totalLookups: total,
-        cacheHitRate: hitRate + '%',
-        avgCacheSize: aisleCache.size
-    };
-}
-
-function resetPerformanceStats() {
-    perfStats = {
-        cacheHits: 0,
-        cacheMisses: 0,
-        keywordMatches: 0,
-        indexLookups: 0
-    };
-}
-
-function clearCache() {
-    aisleCache.clear();
-    normalizeCache.clear();
-    console.log("🗑️ Cache cleared");
-}
-
-
-// ==============================
-// DEBUG UTILITIES
-// ==============================
-
-window.debugIngredient = function(rawName) {
-    console.group(`🔍 Debugging: "${rawName}"`);
-    
-    console.log("Smart extracted:", extractSmartIngredientName(rawName));
-    console.log("Keyword match:", checkKeywordRules(rawName));
-    console.log("Final aisle:", determineAisleForIngredient(rawName));
-    
-    console.log("\nPerformance stats:", getPerformanceStats());
-    
-    console.groupEnd();
-};
-
-window.testIngredients = function(items) {
-    console.log("🧪 Testing", items.length, "ingredients...\n");
-    
-    resetPerformanceStats();
-    const startTime = performance.now();
-    
-    for (const [name, expected] of items) {
-        const result = determineAisleForIngredient(name);
-        const match = result === expected ? "✅" : "❌";
-        console.log(`${match} ${name.padEnd(40)} → ${result.padEnd(15)} (expected: ${expected})`);
-    }
-    
-    const elapsed = performance.now() - startTime;
-    console.log(`\n⏱️  Total time: ${elapsed.toFixed(2)}ms`);
-    console.log(`⚡ Avg per ingredient: ${(elapsed / items.length).toFixed(2)}ms`);
-    console.log("\n📊 Stats:", getPerformanceStats());
-};
-
-
-// ==============================
+// ------------------------------
 // LEGACY COMPATIBILITY
-// Keep old function names working
-// ==============================
+// ------------------------------
 
-// These are kept for compatibility but now use optimized versions
 function normalizeIngredientName(name) {
     return extractSmartIngredientName(name);
 }
@@ -1594,12 +1616,44 @@ function findIngredientInIndex(rawName) {
     return exactMatchMap.get(smartName) || null;
 }
 
+function clearCache() {
+    aisleCache.clear();
+    normalizeCache.clear();
+    console.log("🗑️ Cache cleared");
+}
 
-// ==============================
-// GLOBAL SCOPE (for inline handlers & console access)
-// ==============================
+// ------------------------------
+// DEBUG & TEST UTILITIES
+// ------------------------------
 
-// Make ingredient matcher functions globally accessible
+window.debugIngredient = function (rawName) {
+    console.group(`🔍 Debugging: "${rawName}"`);
+    console.log("Tokens:", tokenizeIngredient(rawName));
+    console.log("Override:", getAisleOverride(rawName));
+    console.log("Head-noun result:", categorizeByHeadNoun(rawName));
+    console.log("Final aisle:", determineAisleForIngredient(rawName));
+    console.groupEnd();
+};
+
+window.testIngredients = function (items) {
+    console.log("🧪 Testing", items.length, "ingredients...\n");
+    let pass = 0;
+    const startTime = performance.now();
+    for (const [name, expected] of items) {
+        const result = determineAisleForIngredient(name);
+        const match = result === expected;
+        if (match) pass++;
+        console.log(`${match ? "✅" : "❌"} ${name.padEnd(40)} → ${result.padEnd(15)} (expected: ${expected})`);
+    }
+    const elapsed = performance.now() - startTime;
+    console.log(`\n📊 ${pass}/${items.length} correct (${(pass / items.length * 100).toFixed(1)}%)`);
+    console.log(`⏱️  ${elapsed.toFixed(2)}ms total, ${(elapsed / items.length).toFixed(2)}ms avg`);
+};
+
+// ------------------------------
+// GLOBAL SCOPE
+// ------------------------------
+
 window.loadIngredientIndex = loadIngredientIndex;
 window.determineAisleForIngredient = determineAisleForIngredient;
 window.searchIngredientIndex = searchIngredientIndex;
@@ -1607,11 +1661,9 @@ window.extractSmartIngredientName = extractSmartIngredientName;
 window.normalizeIngredientName = normalizeIngredientName;
 window.getSemanticIngredientName = getSemanticIngredientName;
 window.findIngredientInIndex = findIngredientInIndex;
-window.getPerformanceStats = getPerformanceStats;
-window.resetPerformanceStats = resetPerformanceStats;
 window.clearCache = clearCache;
 
-console.log("✅ Ingredient matcher functions exposed to global scope");
+console.log("✅ Categorization system v2 loaded (head-noun strategy)");
 function closeAutocompleteMenu() {
     if (activeAutocompleteMenu) {
         activeAutocompleteMenu.remove();
@@ -4062,10 +4114,28 @@ function renderGroceryList() {
                   left.className = "grocery-item-name";
                   left.textContent = `${item.name}${qtyPart}`;
 
-                  // RIGHT SIDE — aisle text (grey)
+// RIGHT SIDE — aisle text (grey, tap to correct)
                   const right = document.createElement("span");
                   right.className = "grocery-item-aisle";
                   right.textContent = aisle;
+                  right.title = "Tap to change aisle";
+                  right.style.cursor = "pointer";
+                  right.onclick = (e) => {
+                      e.stopPropagation();
+                      const sel = document.createElement("select");
+                      sel.className = "grocery-aisle-select";
+                      ALL_AISLES.forEach(a => {
+                          const opt = document.createElement("option");
+                          opt.value = a;
+                          opt.textContent = a;
+                          if (a === aisle) opt.selected = true;
+                          sel.appendChild(opt);
+                      });
+                      sel.onchange = () => setAisleOverride(item.name, sel.value);
+                      sel.onblur = () => { if (sel.parentNode) sel.replaceWith(right); };
+                      right.replaceWith(sel);
+                      sel.focus();
+                  };
 
                   row.appendChild(cb);
                   row.appendChild(left);
