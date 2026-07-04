@@ -1050,6 +1050,12 @@ const NOISE_WORDS = new Set([
 
 const UNIT_REGEX = /\b\d+([./]\d+)?\s*(oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|liters|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ct|count|pieces?|cans?|pkgs?|inch|inches|quart|quarts|pint|pints|gallon|gallons|stick|sticks|clove|cloves|dash|dashes|pinch|pinches|handful)\b/gi;
 
+// Product variant specs: labels that describe the product version but carry NO
+// aisle information. Stripped before tokenizing so "(no added salt)" can't make
+// "salt" the head noun. Note: frozen/canned/dried/fresh are NOT here — those
+// are relocation modifiers and intentionally kept.
+const SPEC_PHRASES_REGEX = /\b(no added salt|no salt added|low sodium|reduced sodium|less sodium|low fat|reduced fat|fat free|nonfat|non fat|sugar free|no sugar added|gluten free|dairy free|lactose free|caffeine free|alcohol free|low carb|low calorie|jarred|bottled)\b/g;
+
 const SINGULAR_EXCEPTIONS = {
     cookies: 'cookie', brownies: 'brownie', smoothies: 'smoothie',
     veggies: 'veggie', pies: 'pie', hoagies: 'hoagie',
@@ -1077,6 +1083,11 @@ function tokenizeIngredient(rawName) {
 
     // Pull parenthetical content into the main string (keeps "fresh"/"dried" signals)
     text = text.replace(/[()]/g, ' ');
+
+    // Normalize hyphens so "sugar-free" matches "sugar free", then strip
+    // product variant specs that carry no aisle meaning
+    text = text.replace(/-/g, ' ');
+    text = text.replace(SPEC_PHRASES_REGEX, ' ');
 
     // Remove quantities + units, then stray numbers (keep % for "2% milk")
     text = text.replace(UNIT_REGEX, ' ');
@@ -1111,9 +1122,17 @@ const EXACT_PHRASES = {
     'cream cheese': 'Dairy',
     'extra virgin olive oil': 'Oils',
     'toilet paper': 'Household',
+    'pepper jack': 'Dairy',
+    'pepper jack cheese': 'Dairy',
+    'monterey jack': 'Dairy',
+    'monterey jack cheese': 'Dairy',
+    'milk powder': 'Dairy',
+    'hot dog bun': 'Bakery',
 };
 
 const BIGRAM_MAP = {
+    'pepper jack': 'Dairy', 'monterey jack': 'Dairy', 'milk powder': 'Dairy',
+    'dog bun': 'Bakery',
     // Produce edge cases
     'bell pepper': 'Produce', 'green bean': 'Produce', 'garlic clove': 'Produce',
     'serrano pepper': 'Produce', 'poblano pepper': 'Produce',
@@ -1167,7 +1186,8 @@ const BIGRAM_MAP = {
     'ranch dressing': 'Condiments',
     // Meat
     'hot dog': 'Meat', 'stew meat': 'Meat', 'pork loin': 'Meat',
-    'crab meat': 'Seafood',
+    'crab meat': 'Seafood', 'crab leg': 'Seafood', 'chicken leg': 'Meat',
+    'turkey leg': 'Meat', 'frog leg': 'Seafood',
     'corned beef': 'Meat',
     // Dry Goods
     'egg noodle': 'Dry Goods', 'ramen noodle': 'Dry Goods',
@@ -1211,6 +1231,7 @@ const HEAD_NOUN_MAP = {
     mango: 'Produce', pineapple: 'Produce', peach: 'Produce', pear: 'Produce',
     plum: 'Produce', cherry: 'Produce', kiwi: 'Produce', apricot: 'Produce',
     grapefruit: 'Produce', lemongrass: 'Produce', cilantro: 'Produce',
+    watercress: 'Produce', coconut: 'Produce', papaya: 'Produce', guava: 'Produce',
     pomegranate: 'Produce', clementine: 'Produce', tangerine: 'Produce',
     nectarine: 'Produce', parsnip: 'Produce', rutabaga: 'Produce',
     jicama: 'Produce', choy: 'Produce', endive: 'Produce',
@@ -1226,7 +1247,7 @@ const HEAD_NOUN_MAP = {
     breast: 'Meat', wing: 'Meat', meatball: 'Meat', prosciutto: 'Meat',
     salami: 'Meat', pepperoni: 'Meat', chorizo: 'Meat', bratwurst: 'Meat',
     kielbasa: 'Meat', pastrami: 'Meat', bologna: 'Meat', ribeye: 'Meat',
-    chuck: 'Meat', flank: 'Meat', shank: 'Meat', liver: 'Meat',
+    chuck: 'Meat', flank: 'Meat', shank: 'Meat', liver: 'Meat', leg: 'Meat',
     mignon: 'Meat',
     // Seafood
     salmon: 'Seafood', tuna: 'Seafood', shrimp: 'Seafood', cod: 'Seafood',
@@ -1245,6 +1266,7 @@ const HEAD_NOUN_MAP = {
     asiago: 'Dairy', gruyere: 'Dairy', colby: 'Dairy', monterey: 'Dairy',
     // Bakery
     bread: 'Bakery', bagel: 'Bakery', bun: 'Bakery', roll: 'Bakery',
+    flatbread: 'Bakery',
     tortilla: 'Bakery', pita: 'Bakery', baguette: 'Bakery', croissant: 'Bakery',
     muffin: 'Bakery', donut: 'Bakery', naan: 'Bakery', loaf: 'Bakery',
     ciabatta: 'Bakery', sourdough: 'Bakery', brioche: 'Bakery', wrap: 'Bakery',
@@ -1367,16 +1389,16 @@ function categorizeByHeadNoun(rawName) {
     let aisle = baseCategorize(foodTokens.length ? foodTokens : tokens);
     const foodHead = foodTokens[foodTokens.length - 1] || tokens[tokens.length - 1];
 
+    // Relocation modifiers win over everything (frozen basil → Frozen)
+    if (hasFrozen) return 'Frozen';
+    if (hasCanned) return 'Canned Goods';
+
     // Herb resolution: fresh → Produce, dried → Spices, default by herb type
     if (HERBS_LEAFY.has(foodHead) || HERBS_WOODY.has(foodHead)) {
         if (hasFresh) return 'Produce';
         if (hasDried) return 'Spices';
         return HERBS_LEAFY.has(foodHead) ? 'Produce' : 'Spices';
     }
-
-    // Relocation modifiers
-    if (hasFrozen) return 'Frozen';
-    if (hasCanned) return 'Canned Goods';
 
     if (hasDried && aisle) {
         if (['bean', 'pea', 'lentil', 'chickpea'].includes(foodHead)) return 'Dry Goods';
