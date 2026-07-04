@@ -400,6 +400,16 @@ h1 {
     margin-left: 1rem;
     white-space: nowrap;
 }
+/* Aisle correction dropdown */
+.grocery-aisle-select {
+    font-size: 0.85rem;
+    margin-left: 1rem;
+    padding: 2px 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    background: #ffffff;
+}
 /* Grocery item checkbox */
 .grocery-checkbox {
     margin-right: 0.5rem;
