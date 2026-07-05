@@ -1027,3 +1027,85 @@ textarea {
     width: 80px;
     flex-shrink: 0;
 }
+/* ===========================================================
+   PRICE BOOK BROWSER (Stores tab)
+   =========================================================== */
+
+.pricebook-store {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #ffffff;
+}
+
+.pricebook-store-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.25rem 0;
+}
+
+.pricebook-count {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.pricebook-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0;
+    border-top: 1px solid #f3f4f6;
+}
+
+.pricebook-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: #374151;
+    overflow-wrap: anywhere;
+}
+
+.pricebook-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.pricebook-price {
+    color: #059669;
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.pricebook-price-input {
+    width: 80px;
+    padding: 2px 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+
+.pricebook-delete {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.pricebook-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
