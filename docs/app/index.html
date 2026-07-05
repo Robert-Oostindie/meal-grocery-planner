@@ -27,7 +27,7 @@
             color: #1d4ed8;
         }
     </style>
-    <script type="module" src="app.js?v=27"></script>
+    <script type="module" src="app.js?v=28"></script>
 </head>
 
 <body>
@@ -262,6 +262,9 @@
                 <p class="section-note">
                     Based on your selected meals and other items.
                 </p>
+                <button onclick="openReceiptScannerModal()" style="margin-bottom:0.75rem;">
+                    🧾 Scan Receipt for Prices
+                </button>
                 <div id="groceryContainer"></div>
             </div>
 
@@ -662,3 +665,56 @@
         </div>
     </div>
 </div>
+<!-- RECEIPT SCANNER MODAL -->
+<div id="receiptScannerModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeReceiptScannerModal()"></div>
+    <div class="modal-content" style="max-width:520px;">
+        <div class="modal-header">
+            <h2>🧾 Scan Receipt</h2>
+            <button class="modal-close" onclick="closeReceiptScannerModal()">×</button>
+        </div>
+
+        <!-- Store picker (visible in both steps) -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.9rem; font-weight:600;">Store</label>
+            <select id="receiptStoreSelect" style="width:100%; margin-top:0.25rem;"></select>
+        </div>
+
+        <!-- STEP 1: PHOTOS -->
+        <div id="receiptStep1">
+            <p style="color:#6b7280; font-size:0.9rem; margin-bottom:1rem;">
+                Take a photo of your grocery receipt and we'll pull out item prices for future
+                planning. Long receipt? Add a second photo for the bottom half.
+            </p>
+            <div id="receiptThumbStrip" style="display:flex; gap:0.5rem; margin-bottom:0.5rem;"></div>
+            <button id="receiptAddBtn" type="button"
+                onclick="document.getElementById('receiptFileInput').click()">
+                📷 Add Photo
+            </button>
+            <input id="receiptFileInput" type="file" accept="image/*" multiple class="hidden"
+                onchange="handleReceiptPhotosSelected(this)">
+            <p id="receiptCapMsg" class="hidden" style="font-size:0.8rem; color:#6b7280; margin-top:0.5rem;">
+                Maximum of 2 photos.
+            </p>
+        </div>
+
+        <!-- STEP 2: REVIEW -->
+        <div id="receiptReview" class="hidden">
+            <p style="color:#6b7280; font-size:0.9rem; margin-bottom:0.75rem;">
+                Check the items below. Fix any names so they match how you write them in recipes
+                (e.g. "chkn brst" → "chicken breast"). Uncheck anything you don't want saved.
+            </p>
+            <div id="receiptItemsList" style="max-height:45vh; overflow-y:auto;"></div>
+        </div>
+
+        <div id="receiptStatus" style="text-align:center; color:#6b7280; font-size:0.9rem; margin:0.5rem 0;"></div>
+        <div id="receiptError" class="auth-error hidden" style="margin-bottom:0.75rem;"></div>
+
+        <div class="modal-actions">
+            <button onclick="closeReceiptScannerModal()">Cancel</button>
+            <button id="receiptScanBtn" class="primary" onclick="scanReceipt()" disabled>Scan Receipt</button>
+            <button id="receiptSaveBtn" class="primary hidden" onclick="saveReceiptPrices()">Save Prices</button>
+        </div>
+    </div>
+</div>
+    
