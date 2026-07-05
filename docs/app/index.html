@@ -304,6 +304,18 @@
                            style="flex:1;">
                     <button class="primary" onclick="addUserStore()">Add</button>
                 </div>
+                <h3 style="margin-top:2rem;">💲 Price Book</h3>
+                <p style="color:#6b7280; font-size:0.85rem; margin:0.25rem 0 0.75rem;">
+                    Prices shown throughout the app are estimates based on your own past
+                    purchases and entries — not live store pricing. Actual prices,
+                    availability, and taxes may differ at checkout.
+                </p>
+                <input id="priceBookSearch"
+                       type="text"
+                       placeholder="Search items..."
+                       style="width:100%; box-sizing:border-box; margin-bottom:0.75rem;"
+                       oninput="renderPriceBook()">
+                <div id="priceBookContainer"></div>
             </div>
 
             <!-- GLOBAL RECIPES TAB -->
