@@ -62,6 +62,15 @@ import {
     removePhoto,
     importRecipeFromPhoto
 } from "./photoImport.js";
+import {
+    initReceiptScanner,
+    openReceiptScannerModal,
+    closeReceiptScannerModal,
+    handleReceiptPhotosSelected,
+    removeReceiptPhoto,
+    scanReceipt,
+    saveReceiptPrices
+} from "./receiptScanner.js";
 
 // ==============================
 // DOM ELEMENTS
@@ -1442,7 +1451,182 @@ async function setAisleOverride(rawName, aisle) {
     renderGroceryList();
 }
 window.setAisleOverride = setAisleOverride;
+// ------------------------------
+// PRICE BOOK — per-store item prices (Cost Tracking feature)
+// Keyed by extractSmartIngredientName(name), same normalization
+// as aisle overrides, so "2 boneless chicken breasts" and
+// "chicken breast" share one price entry.
+// A price = expected shelf cost of that line item at that store.
+// ------------------------------
 
+function formatPrice(n) {
+    return "$" + (Math.round(n * 100) / 100).toFixed(2);
+}
+
+function getItemPrice(rawName, store) {
+    const book = state?.data?.priceBook;
+    if (!book) return null;
+
+    const key = extractSmartIngredientName(rawName);
+    const storeKey = store || "Other";
+
+    // Exact store match
+    if (book[storeKey] && book[storeKey][key] && book[storeKey][key].price != null) {
+        return { price: book[storeKey][key].price, estimated: false };
+    }
+
+    // Fallback: price known at a different store → flagged as estimate (~)
+    for (const s of Object.keys(book)) {
+        if (s === storeKey) continue;
+        if (book[s] && book[s][key] && book[s][key].price != null) {
+            return { price: book[s][key].price, estimated: true };
+        }
+    }
+
+    return null;
+}
+
+async function setItemPrice(rawName, store, price, options = {}) {
+    if (!state.data.priceBook) state.data.priceBook = {};
+    const key = extractSmartIngredientName(rawName);
+    const storeKey = store || "Other";
+
+    if (!state.data.priceBook[storeKey]) state.data.priceBook[storeKey] = {};
+
+    const parsed = parseFloat(price);
+    if (!isNaN(parsed) && parsed > 0) {
+        state.data.priceBook[storeKey][key] = {
+            price: Math.round(parsed * 100) / 100,
+            updatedAt: Date.now()
+        };
+    } else {
+        // Blank or 0 clears the price
+        delete state.data.priceBook[storeKey][key];
+    }
+
+    if (!options.skipPersist) await persistState();
+    if (!options.skipRender) renderGroceryList();
+}
+window.setItemPrice = setItemPrice;
+
+// Bulk write used by the receipt scanner — one persist, one render.
+async function bulkSetItemPrices(store, items) {
+    for (const it of items) {
+        await setItemPrice(it.name, store, it.price, { skipPersist: true, skipRender: true });
+    }
+    await persistState();
+    renderGroceryList();
+    renderRecipes();
+}
+// ------------------------------
+// RECIPE COSTS — badge + editable Costs panel on recipe cards
+// ------------------------------
+
+function computeRecipeCost(meal) {
+    let total = 0, priced = 0, count = 0, estimated = false;
+    (meal.ingredients || []).forEach(ing => {
+        if (!ing || !ing.name) return;
+        count++;
+        const p = getItemPrice(ing.name, ing.store);
+        if (p) {
+            total += p.price;
+            priced++;
+            if (p.estimated) estimated = true;
+        }
+    });
+    return { total, priced, count, estimated };
+}
+
+function recipeCostBadgeHTML(meal) {
+    const c = computeRecipeCost(meal);
+    let inner = "";
+    if (c.priced > 0) {
+        const approx = (c.priced < c.count || c.estimated) ? "~" : "";
+        const suffix = c.priced < c.count ? "+" : "";
+        inner = ` · ${approx}${formatPrice(c.total)}${suffix}`;
+    }
+    return `<span id="costBadge_${meal.id}" style="color:#059669; font-weight:600;">${inner}</span>`;
+}
+
+function toggleRecipeCosts(costsId, mealId, hideId1, hideId2) {
+    const panel = document.getElementById(costsId);
+    if (!panel) return;
+
+    // Close the ingredients / instructions panels
+    [hideId1, hideId2].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+    });
+
+    const isOpen = panel.style.display !== "none";
+    if (isOpen) {
+        panel.style.display = "none";
+        return;
+    }
+
+    renderRecipeCostsPanel(panel, mealId);
+    panel.style.display = "block";
+}
+window.toggleRecipeCosts = toggleRecipeCosts;
+
+function renderRecipeCostsPanel(panel, mealId) {
+    const meal = getAllMeals().find(m => m.id === mealId);
+    if (!meal) return;
+
+    panel.innerHTML = "";
+
+    const note = document.createElement("p");
+    note.style.cssText = "margin:0 0 0.5rem; font-size:0.8rem; color:#6b7280;";
+    note.textContent = "Enter what each item costs at its store. Prices are shared across all recipes and your grocery list.";
+    panel.appendChild(note);
+
+    (meal.ingredients || []).forEach(ing => {
+        if (!ing || !ing.name) return;
+
+        const row = document.createElement("div");
+        row.className = "recipe-cost-row";
+
+        const label = document.createElement("span");
+        label.className = "recipe-cost-name";
+        label.textContent = `${ing.name} — ${ing.store || "Other"}`;
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.min = "0";
+        input.inputMode = "decimal";
+        input.className = "recipe-cost-input";
+        input.placeholder = "$";
+
+        const existing = getItemPrice(ing.name, ing.store);
+        if (existing && !existing.estimated) {
+            input.value = existing.price.toFixed(2);
+        } else if (existing && existing.estimated) {
+            input.placeholder = "~" + existing.price.toFixed(2);
+        }
+
+        input.onchange = async () => {
+            await setItemPrice(ing.name, ing.store, input.value, { skipRender: true });
+            renderGroceryList();
+            renderRecipeCostsPanel(panel, mealId); // refresh totals + ~placeholders
+            const badge = document.getElementById(`costBadge_${meal.id}`);
+            if (badge) badge.outerHTML = recipeCostBadgeHTML(meal);
+        };
+
+        row.appendChild(label);
+        row.appendChild(input);
+        panel.appendChild(row);
+    });
+
+    const c = computeRecipeCost(meal);
+    const totalRow = document.createElement("div");
+    totalRow.className = "recipe-cost-total";
+    totalRow.textContent = c.priced
+        ? `Recipe total: ${(c.priced < c.count || c.estimated) ? "~" : ""}${formatPrice(c.total)}`
+          + (c.priced < c.count ? ` (${c.count - c.priced} unpriced)` : "")
+        : "No prices yet — enter one above.";
+    panel.appendChild(totalRow);
+}
 // ------------------------------
 // USDA INDEX LOADING (Tiers 2–3 support + autocomplete)
 // ------------------------------
@@ -2246,6 +2430,11 @@ function renderApp() {
         renderRecipes,
         renderPlanner
     });
+    initReceiptScanner({
+      state,
+      getAllStores,
+      bulkSetItemPrices
+    });
 
     renderRecipes();
     renderPlanner();
@@ -2534,6 +2723,7 @@ function renderRecipes() {
                     const hasInstructions = !!(meal.instructions && meal.instructions.trim());
                     const ingId  = `recipeIng_${meal.id}`;
                     const instrId = `recipeInstr_${meal.id}`;
+                    const costsId = "costs_" + meal.id;
 
                     // Build ingredients HTML for the collapsible panel
                     const ingHTML = (meal.ingredients || []).map(ing => {
@@ -2557,7 +2747,7 @@ function renderRecipes() {
                                     <div>
                                         <div style="font-weight:600; font-size:1rem;">${meal.name}</div>
                                         <div style="font-size:0.9rem; color:#6b7280;">
-                                            ${countText}
+                                            ${countText}${recipeCostBadgeHTML(meal)}
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
@@ -2576,6 +2766,10 @@ function renderRecipes() {
                                         style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
                                         📋 Instructions
                                     </button>` : ""}
+                                    <button onclick="toggleRecipeCosts('${costsId}', '${meal.id}', '${ingId}', '${instrId}')"
+                                        style="font-size:0.8rem; color:#059669; background:none; border:1px solid #a7f3d0; padding:0.2rem 0.6rem; border-radius:4px; cursor:pointer;">
+                                          💲 Costs
+                                    </button>
                                 </div>
                                 <div id="${ingId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px;">
                                     <ul style="margin:0; padding-left:0; list-style:none; font-size:0.9rem; color:#374151; line-height:1.8;">
@@ -2586,6 +2780,7 @@ function renderRecipes() {
                                 <div id="${instrId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px; font-size:0.9rem; white-space:pre-line; color:#374151;">
                                     ${meal.instructions.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
                                 </div>` : ""}
+                                <div id="${costsId}" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#f9fafb; border-radius:8px;"></div>
                             </div>
                         </div>
                     `;
@@ -3980,7 +4175,6 @@ function renderGroceryList() {
         });
     }
 
-
     // 1. ADD INGREDIENTS FROM SELECTED MEALS
     selectedMeals.forEach(meal => {
         let activeIngredients = [];
@@ -4027,154 +4221,222 @@ function renderGroceryList() {
         });
     });
 
-        // 3. MERGE DUPLICATES (per store + aisle)
-        for (const storeName of Object.keys(itemsByStore)) {
-            const aislesObj = itemsByStore[storeName]; // { aisleName: [items...] }
+    // 3. MERGE DUPLICATES (per store + aisle)
+    for (const storeName of Object.keys(itemsByStore)) {
+        const aislesObj = itemsByStore[storeName]; // { aisleName: [items...] }
 
-            Object.keys(aislesObj).forEach(aisleName => {
-                const merged = {};
+        Object.keys(aislesObj).forEach(aisleName => {
+            const merged = {};
 
-                aislesObj[aisleName].forEach(item => {
-                    const name = (item.name || "").trim();
-                    const unit = (item.unit || "CT").trim();
-                    const qty  = item.qty || 1;
+            aislesObj[aisleName].forEach(item => {
+                const name = (item.name || "").trim();
+                const unit = (item.unit || "CT").trim();
+                const qty  = item.qty || 1;
 
-                    const key = name.toLowerCase() + "|" + unit.toLowerCase();
+                const key = name.toLowerCase() + "|" + unit.toLowerCase();
 
-                    if (!merged[key]) {
-                        merged[key] = { name, qty, unit };
-                    } else {
-                        merged[key].qty += qty;
-                    }
-                });
-
-                aislesObj[aisleName] = Object.values(merged);
-            });
-        }
-
-        // 4. RENDER GROCERY LIST TO SCREEN (stores → aisles → items)
-        const storeKeys = Object.keys(itemsByStore).sort();
-
-        storeKeys.forEach(storeName => {
-            const card = document.createElement("div");
-            card.className = "grocery-store-card";
-
-            const headerRow = document.createElement("div");
-            headerRow.className = "grocery-store-header";
-            headerRow.style.display = "flex";
-            headerRow.style.alignItems = "center";
-            headerRow.style.justifyContent = "space-between";
-
-            const title = document.createElement("h3");
-            title.textContent = storeName;
-
-            const storeInfo = findStoreByName(storeName);
-            const buttonGroup = document.createElement("div");
-            buttonGroup.className = "grocery-store-actions";
-
-            // SHOP button (only for global stores with a home link)
-            if (storeInfo && storeInfo.storeHomeUrl) {
-                const shopBtn = document.createElement("button");
-                shopBtn.className = "primary";
-                shopBtn.textContent = "Shop";
-                shopBtn.style.marginRight = "6px";
-                shopBtn.onclick = () => {
-                    window.open(storeInfo.storeHomeUrl, "_blank", "noopener,noreferrer");
-                };
-                buttonGroup.appendChild(shopBtn);
-            }
-
-            // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
-            DELIVERY_SERVICES.forEach(service => {
-                // Check for store-specific override URL first
-                const storeSpecificKey = service.id + "Url"; // e.g. "instacartUrl"
-                const url = (storeInfo && storeInfo[storeSpecificKey])
-                    ? storeInfo[storeSpecificKey]
-                    : service.storeUrl.replace("{STORE}", encodeURIComponent(storeName.toLowerCase()));
-
-                const btn = document.createElement("button");
-                btn.className = service.buttonClass || "secondary";
-                btn.textContent = service.name;
-                btn.style.marginLeft = "4px";
-                btn.onclick = () => {
-                    window.open(url, "_blank", "noopener,noreferrer");
-                };
-
-                buttonGroup.appendChild(btn);
+                if (!merged[key]) {
+                    merged[key] = { name, qty, unit };
+                } else {
+                    merged[key].qty += qty;
+                }
             });
 
-            headerRow.appendChild(title);
-            headerRow.appendChild(buttonGroup);
-            card.appendChild(headerRow);
-
-            // ITEMS, grouped by aisle
-            const aislesObj = itemsByStore[storeName];
-            const aisleNames = Object.keys(aislesObj).sort();
-
-            // Render items sorted by aisle, but without aisle group headers
-            Object.keys(aislesObj).sort().forEach(aisle => {
-                aislesObj[aisle].forEach(item => {
-                  const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
-
-                  // Build a stable key from store + item name for persistence
-                  const itemKey = `${storeName}::${item.name}::${aisle}`;
-                  const isChecked = !!(state.ui.groceryCheckedItems?.[itemKey]);
-
-                  const row = document.createElement("div");
-                  row.className = "grocery-item" + (isChecked ? " grocery-item-checked" : "");
-                  row.dataset.groceryKey = itemKey;
-
-                  // CHECKBOX
-                  const cb = document.createElement("input");
-                  cb.type = "checkbox";
-                  cb.checked = isChecked;
-                  cb.className = "grocery-checkbox";
-                  cb.onchange = () => toggleGroceryItem(itemKey);
-
-                  // LEFT SIDE — item text
-                  const left = document.createElement("span");
-                  left.className = "grocery-item-name";
-                  left.textContent = `${item.name}${qtyPart}`;
-
-// RIGHT SIDE — aisle text (grey, tap to correct)
-                  const right = document.createElement("span");
-                  right.className = "grocery-item-aisle";
-                  right.textContent = aisle;
-                  right.title = "Tap to change aisle";
-                  right.style.cursor = "pointer";
-                  right.onclick = (e) => {
-                      e.stopPropagation();
-                      const sel = document.createElement("select");
-                      sel.className = "grocery-aisle-select";
-                      ALL_AISLES.forEach(a => {
-                          const opt = document.createElement("option");
-                          opt.value = a;
-                          opt.textContent = a;
-                          if (a === aisle) opt.selected = true;
-                          sel.appendChild(opt);
-                      });
-                      sel.onchange = () => setAisleOverride(item.name, sel.value);
-                      sel.onblur = () => { if (sel.parentNode) sel.replaceWith(right); };
-                      right.replaceWith(sel);
-                      sel.focus();
-                  };
-
-                  row.appendChild(cb);
-                  row.appendChild(left);
-                  row.appendChild(right);
-
-                  card.appendChild(row);
-              });
-            });
-
-
-            container.appendChild(card);
+            aislesObj[aisleName] = Object.values(merged);
         });
-
-        console.groupEnd();
     }
 
+    // 4. RENDER GROCERY LIST TO SCREEN (stores → aisles → items)
+    const storeKeys = Object.keys(itemsByStore).sort();
 
+    // 💲 Grand total accumulators (Cost Tracking)
+    let grandTotal = 0;
+    let grandPriced = 0;
+    let grandCount = 0;
+    let grandHasEstimate = false;
+
+    storeKeys.forEach(storeName => {
+        const card = document.createElement("div");
+        card.className = "grocery-store-card";
+
+        const headerRow = document.createElement("div");
+        headerRow.className = "grocery-store-header";
+        headerRow.style.display = "flex";
+        headerRow.style.alignItems = "center";
+        headerRow.style.justifyContent = "space-between";
+
+        const title = document.createElement("h3");
+        title.textContent = storeName;
+
+        const storeInfo = findStoreByName(storeName);
+        const buttonGroup = document.createElement("div");
+        buttonGroup.className = "grocery-store-actions";
+
+        // SHOP button (only for global stores with a home link)
+        if (storeInfo && storeInfo.storeHomeUrl) {
+            const shopBtn = document.createElement("button");
+            shopBtn.className = "primary";
+            shopBtn.textContent = "Shop";
+            shopBtn.style.marginRight = "6px";
+            shopBtn.onclick = () => {
+                window.open(storeInfo.storeHomeUrl, "_blank", "noopener,noreferrer");
+            };
+            buttonGroup.appendChild(shopBtn);
+        }
+
+        // DELIVERY SERVICE BUTTONS (Instacart, DoorDash, etc.)
+        DELIVERY_SERVICES.forEach(service => {
+            // Check for store-specific override URL first
+            const storeSpecificKey = service.id + "Url"; // e.g. "instacartUrl"
+            const url = (storeInfo && storeInfo[storeSpecificKey])
+                ? storeInfo[storeSpecificKey]
+                : service.storeUrl.replace("{STORE}", encodeURIComponent(storeName.toLowerCase()));
+
+            const btn = document.createElement("button");
+            btn.className = service.buttonClass || "secondary";
+            btn.textContent = service.name;
+            btn.style.marginLeft = "4px";
+            btn.onclick = () => {
+                window.open(url, "_blank", "noopener,noreferrer");
+            };
+
+            buttonGroup.appendChild(btn);
+        });
+
+        headerRow.appendChild(title);
+        headerRow.appendChild(buttonGroup);
+        card.appendChild(headerRow);
+
+        // 💲 Store subtotal accumulators (Cost Tracking)
+        let storeTotal = 0;
+        let storePriced = 0;
+        let storeCount = 0;
+        let storeHasEstimate = false;
+
+        // ITEMS, grouped by aisle
+        const aislesObj = itemsByStore[storeName];
+
+        // Render items sorted by aisle, but without aisle group headers
+        Object.keys(aislesObj).sort().forEach(aisle => {
+            aislesObj[aisle].forEach(item => {
+                const qtyPart = item.qty > 1 ? ` (${item.qty} ${item.unit})` : "";
+
+                // Build a stable key from store + item name for persistence
+                const itemKey = `${storeName}::${item.name}::${aisle}`;
+                const isChecked = !!(state.ui.groceryCheckedItems?.[itemKey]);
+
+                const row = document.createElement("div");
+                row.className = "grocery-item" + (isChecked ? " grocery-item-checked" : "");
+                row.dataset.groceryKey = itemKey;
+
+                // CHECKBOX
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.checked = isChecked;
+                cb.className = "grocery-checkbox";
+                cb.onchange = () => toggleGroceryItem(itemKey);
+
+                // LEFT SIDE — item text
+                const left = document.createElement("span");
+                left.className = "grocery-item-name";
+                left.textContent = `${item.name}${qtyPart}`;
+
+                // 💲 PRICE — tap to set/change (Cost Tracking)
+                const priceInfo = getItemPrice(item.name, storeName);
+                storeCount++; grandCount++;
+                if (priceInfo) {
+                    storeTotal += priceInfo.price; grandTotal += priceInfo.price;
+                    storePriced++; grandPriced++;
+                    if (priceInfo.estimated) { storeHasEstimate = true; grandHasEstimate = true; }
+                }
+
+                const priceSpan = document.createElement("span");
+                priceSpan.className = "grocery-item-price" + (priceInfo ? "" : " grocery-item-price-empty");
+                priceSpan.textContent = priceInfo
+                    ? (priceInfo.estimated ? "~" : "") + formatPrice(priceInfo.price)
+                    : "$ –";
+                priceSpan.title = "Tap to set price";
+                priceSpan.onclick = (e) => {
+                    e.stopPropagation();
+                    const inp = document.createElement("input");
+                    inp.type = "number";
+                    inp.step = "0.01";
+                    inp.min = "0";
+                    inp.inputMode = "decimal";
+                    inp.className = "grocery-price-input";
+                    if (priceInfo && !priceInfo.estimated) inp.value = priceInfo.price.toFixed(2);
+                    inp.onchange = () => setItemPrice(item.name, storeName, inp.value);
+                    inp.onblur = () => { if (inp.parentNode) renderGroceryList(); };
+                    priceSpan.replaceWith(inp);
+                    inp.focus();
+                };
+
+                // RIGHT SIDE — aisle text (grey, tap to correct)
+                const right = document.createElement("span");
+                right.className = "grocery-item-aisle";
+                right.textContent = aisle;
+                right.title = "Tap to change aisle";
+                right.style.cursor = "pointer";
+                right.onclick = (e) => {
+                    e.stopPropagation();
+                    const sel = document.createElement("select");
+                    sel.className = "grocery-aisle-select";
+                    ALL_AISLES.forEach(a => {
+                        const opt = document.createElement("option");
+                        opt.value = a;
+                        opt.textContent = a;
+                        if (a === aisle) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    sel.onchange = () => setAisleOverride(item.name, sel.value);
+                    sel.onblur = () => { if (sel.parentNode) sel.replaceWith(right); };
+                    right.replaceWith(sel);
+                    sel.focus();
+                };
+
+                row.appendChild(cb);
+                row.appendChild(left);
+                row.appendChild(priceSpan);
+                row.appendChild(right);
+
+                card.appendChild(row);
+            });
+        });
+
+        // 💲 Store subtotal footer (Cost Tracking)
+        if (storePriced > 0) {
+            const foot = document.createElement("div");
+            foot.className = "grocery-store-total";
+            const approx = (storePriced < storeCount || storeHasEstimate) ? "~" : "";
+            foot.textContent = `Subtotal: ${approx}${formatPrice(storeTotal)} · ${storePriced} of ${storeCount} items priced`;
+            card.appendChild(foot);
+        }
+
+        container.appendChild(card);
+    });
+
+    // 💲 Grand total bar at the top of the list (Cost Tracking)
+    if (grandPriced > 0) {
+        const bar = document.createElement("div");
+        bar.className = "grocery-grand-total";
+
+        const amount = document.createElement("div");
+        amount.className = "grocery-grand-total-amount";
+        const approx = (grandPriced < grandCount || grandHasEstimate) ? "~" : "";
+        amount.textContent = `Estimated bill: ${approx}${formatPrice(grandTotal)}`;
+
+        const note = document.createElement("div");
+        note.className = "grocery-grand-total-note";
+        note.textContent = `${grandPriced} of ${grandCount} items priced`
+            + (grandHasEstimate ? " · ~ includes prices carried over from another store" : "");
+
+        bar.appendChild(amount);
+        bar.appendChild(note);
+        container.prepend(bar);
+    }
+
+    console.groupEnd();
+}
 // ==============================
 // REVIEW PANEL (STEP 3)
 // ==============================
@@ -4430,6 +4692,13 @@ window.renderApp = renderApp;
 // Photo Import (imported from photoImport.js)
 window.openRecipeModalFromPhoto = openRecipeModalFromPhoto;
 window.openPhotoImportModal  = openPhotoImportModal;
+// Receipt Scanner (imported from receiptScanner.js)
+window.openReceiptScannerModal = openReceiptScannerModal;
+window.closeReceiptScannerModal = closeReceiptScannerModal;
+window.handleReceiptPhotosSelected = handleReceiptPhotosSelected;
+window.removeReceiptPhoto = removeReceiptPhoto;
+window.scanReceipt = scanReceipt;
+window.saveReceiptPrices = saveReceiptPrices;
 window.closePhotoImportModal = closePhotoImportModal;
 window.handleIngredientPhotosSelected = handleIngredientPhotosSelected;
 window.handleInstructionPhotosSelected = handleInstructionPhotosSelected;
