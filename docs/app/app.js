@@ -1486,22 +1486,60 @@ function getItemPrice(rawName, store) {
     return null;
 }
 
+const PRICE_HISTORY_MAX = 5;
+
+function medianOf(prices) {
+    const sorted = [...prices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2
+        ? sorted[mid]
+        : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
+}
+
+// Lazy migration: v1 entries were { price, updatedAt } with no history.
+// Converts in place, treating the existing price as one manual observation.
+function ensurePriceHistory(entry) {
+    if (!Array.isArray(entry.history)) {
+        entry.history = entry.price != null
+            ? [{ price: entry.price, date: entry.updatedAt || Date.now(), source: "manual" }]
+            : [];
+    }
+    return entry;
+}
+
 async function setItemPrice(rawName, store, price, options = {}) {
     if (!state.data.priceBook) state.data.priceBook = {};
     const key = extractSmartIngredientName(rawName);
     const storeKey = store || "Other";
+    const source = options.source || "manual";
 
     if (!state.data.priceBook[storeKey]) state.data.priceBook[storeKey] = {};
 
     const parsed = parseFloat(price);
-    if (!isNaN(parsed) && parsed > 0) {
-        state.data.priceBook[storeKey][key] = {
-            price: Math.round(parsed * 100) / 100,
-            updatedAt: Date.now()
-        };
-    } else {
-        // Blank or 0 clears the price
+
+    if (isNaN(parsed) || parsed <= 0) {
+        // Blank or 0 clears the item entirely, history included
         delete state.data.priceBook[storeKey][key];
+    } else {
+        const rounded = Math.round(parsed * 100) / 100;
+        const observation = { price: rounded, date: Date.now(), source };
+
+        let entry = state.data.priceBook[storeKey][key];
+
+        if (!entry || source === "manual") {
+            // Manual entries RESET history — the user is stating THE price.
+            // Receipt scans after this build a fresh median from here.
+            entry = { price: rounded, updatedAt: Date.now(), history: [observation] };
+        } else {
+            // Receipt observation: append (newest first), cap, re-derive median
+            ensurePriceHistory(entry);
+            entry.history.unshift(observation);
+            entry.history = entry.history.slice(0, PRICE_HISTORY_MAX);
+            entry.price = medianOf(entry.history.map(h => h.price));
+            entry.updatedAt = Date.now();
+        }
+
+        state.data.priceBook[storeKey][key] = entry;
     }
 
     if (!options.skipPersist) await persistState();
@@ -1510,14 +1548,134 @@ async function setItemPrice(rawName, store, price, options = {}) {
 window.setItemPrice = setItemPrice;
 
 // Bulk write used by the receipt scanner — one persist, one render.
+// source:"receipt" so scans append to history instead of resetting it.
 async function bulkSetItemPrices(store, items) {
     for (const it of items) {
-        await setItemPrice(it.name, store, it.price, { skipPersist: true, skipRender: true });
+        await setItemPrice(it.name, store, it.price, {
+            skipPersist: true,
+            skipRender: true,
+            source: "receipt"
+        });
     }
     await persistState();
     renderGroceryList();
     renderRecipes();
+    renderPriceBook();
 }
+// ------------------------------
+// PRICE BOOK BROWSER (Stores tab)
+// ------------------------------
+
+let priceBookOpenStores = {}; // accordion UI state (not persisted)
+
+function renderPriceBook() {
+    const container = document.getElementById("priceBookContainer");
+    if (!container) return;
+
+    const book = state?.data?.priceBook || {};
+    const term = (document.getElementById("priceBookSearch")?.value || "").trim().toLowerCase();
+
+    container.innerHTML = "";
+
+    let anyShown = false;
+
+    Object.keys(book).sort().forEach(storeName => {
+        const itemsObj = book[storeName] || {};
+        let keys = Object.keys(itemsObj);
+        if (term) keys = keys.filter(k => k.includes(term));
+        if (!keys.length) return;
+        anyShown = true;
+
+        keys.sort();
+
+        // Searching auto-expands so matches are visible
+        const isOpen = term ? true : !!priceBookOpenStores[storeName];
+
+        const wrap = document.createElement("div");
+        wrap.className = "pricebook-store";
+
+        const header = document.createElement("div");
+        header.className = "pricebook-store-header";
+        header.innerHTML =
+            `<span class="chevron">${isOpen ? "▼" : "▶"}</span> ` +
+            `<strong>${storeName}</strong> ` +
+            `<span class="pricebook-count">${keys.length} item${keys.length === 1 ? "" : "s"}</span>`;
+        header.onclick = () => {
+            priceBookOpenStores[storeName] = !priceBookOpenStores[storeName];
+            renderPriceBook();
+        };
+        wrap.appendChild(header);
+
+        if (isOpen) {
+            keys.forEach(key => {
+                const entry = ensurePriceHistory(itemsObj[key]);
+
+                const row = document.createElement("div");
+                row.className = "pricebook-row";
+
+                const name = document.createElement("span");
+                name.className = "pricebook-name";
+                name.textContent = key;
+
+                const meta = document.createElement("span");
+                meta.className = "pricebook-meta";
+                const n = entry.history.length;
+                const last = entry.history[0]?.date;
+                meta.textContent =
+                    `${n} price${n === 1 ? "" : "s"}` +
+                    (last ? " · " + new Date(last).toLocaleDateString() : "");
+
+                const priceSpan = document.createElement("span");
+                priceSpan.className = "pricebook-price";
+                priceSpan.textContent = formatPrice(entry.price);
+                priceSpan.title = "Tap to edit (manual edits reset price history)";
+                priceSpan.onclick = () => {
+                    const inp = document.createElement("input");
+                    inp.type = "number";
+                    inp.step = "0.01";
+                    inp.min = "0";
+                    inp.inputMode = "decimal";
+                    inp.className = "pricebook-price-input";
+                    inp.value = entry.price.toFixed(2);
+                    inp.onchange = async () => {
+                        await setItemPrice(key, storeName, inp.value, { skipRender: true });
+                        renderGroceryList();
+                        renderPriceBook();
+                    };
+                    inp.onblur = () => { if (inp.parentNode) renderPriceBook(); };
+                    priceSpan.replaceWith(inp);
+                    inp.focus();
+                };
+
+                const del = document.createElement("button");
+                del.className = "pricebook-delete";
+                del.textContent = "×";
+                del.title = "Remove this item from the price book";
+                del.onclick = async () => {
+                    if (!confirm(`Remove "${key}" (${storeName}) from the price book?`)) return;
+                    await setItemPrice(key, storeName, "", { skipRender: true });
+                    renderGroceryList();
+                    renderPriceBook();
+                };
+
+                row.appendChild(name);
+                row.appendChild(meta);
+                row.appendChild(priceSpan);
+                row.appendChild(del);
+                wrap.appendChild(row);
+            });
+        }
+
+        container.appendChild(wrap);
+    });
+
+    if (!anyShown) {
+        container.innerHTML = `<p class="small-note">${term
+            ? "No items match your search."
+            : "No prices yet. Add them by tapping prices on your grocery list, in a recipe's 💲 Costs panel, or by scanning a receipt."}</p>`;
+    }
+}
+window.renderPriceBook = renderPriceBook;
 // ------------------------------
 // RECIPE COSTS — badge + editable Costs panel on recipe cards
 // ------------------------------
@@ -3915,7 +4073,9 @@ function renderStoresTab() {
                 </div>
             </div>`;
         })
-        .join("");
+      .join("");
+
+    renderPriceBook();
 }
 async function setDefaultStore(storeName) {
     state.data.defaultStoreName = storeName;
@@ -4432,6 +4592,11 @@ function renderGroceryList() {
 
         bar.appendChild(amount);
         bar.appendChild(note);
+
+        const legal = document.createElement("div");
+        legal.className = "grocery-grand-total-note";
+        legal.textContent = "Estimates based on your past purchases and entries — not live store pricing.";
+        bar.appendChild(legal);
         container.prepend(bar);
     }
 
