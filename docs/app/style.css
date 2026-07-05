@@ -917,3 +917,113 @@ textarea {
         width: 100%;
     }
 }
+/* ===========================================================
+   COST TRACKING — item prices, subtotals, receipt scanner
+   =========================================================== */
+
+/* Price on each grocery item — green, tap to set/change */
+.grocery-item-price {
+    color: #059669;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-left: 1rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* Unpriced items — faint placeholder so the tap target is discoverable */
+.grocery-item-price-empty {
+    color: #d1d5db;
+    font-weight: 400;
+}
+
+/* Inline price input (appears on tap) */
+.grocery-price-input {
+    width: 80px;
+    margin-left: 1rem;
+    padding: 2px 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+
+/* Per-store subtotal footer */
+.grocery-store-total {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #e5e7eb;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    text-align: right;
+}
+
+/* Estimated bill bar at the top of the grocery list */
+.grocery-grand-total {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.grocery-grand-total-amount {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #065f46;
+}
+
+.grocery-grand-total-note {
+    font-size: 0.8rem;
+    color: #047857;
+}
+
+/* Recipe Costs panel rows */
+.recipe-cost-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+}
+
+.recipe-cost-name {
+    font-size: 0.9rem;
+    color: #374151;
+    flex: 1;
+    min-width: 0;
+}
+
+.recipe-cost-input {
+    width: 90px;
+    padding: 2px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+
+.recipe-cost-total {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #e5e7eb;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #059669;
+    text-align: right;
+}
+
+/* Receipt scanner review rows */
+.receipt-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.receipt-item-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.receipt-item-price {
+    width: 80px;
+    flex-shrink: 0;
+}
