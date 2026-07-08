@@ -2744,7 +2744,6 @@ function renderApp() {
     // Complete a pending "Add to My Recipes" from a public recipe page
     processPendingGlobalAdd();
 }
-}
 
 // ==============================
 // ONBOARDING
