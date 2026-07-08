@@ -1109,3 +1109,35 @@ textarea {
     background: #fee2e2;
     color: #dc2626;
 }
+/* Price Book v2 — rename + add item */
+.pricebook-name-input {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.pricebook-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    margin-top: 0.35rem;
+    border-top: 1px dashed #e5e7eb;
+}
+
+.pricebook-add-name {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.pricebook-add-btn {
+    flex-shrink: 0;
+    padding: 4px 12px;
+}
