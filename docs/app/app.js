@@ -1563,7 +1563,7 @@ async function bulkSetItemPrices(store, items) {
     renderPriceBook();
 }
 // ------------------------------
-// PRICE BOOK BROWSER (Stores tab)
+// PRICE BOOK BROWSER (Stores tab) — v2: rename, add, all stores
 // ------------------------------
 
 let priceBookOpenStores = {}; // accordion UI state (not persisted)
@@ -1572,23 +1572,28 @@ function renderPriceBook() {
     const container = document.getElementById("priceBookContainer");
     if (!container) return;
 
-    const book = state?.data?.priceBook || {};
+    if (!state.data.priceBook) state.data.priceBook = {};
+    const book = state.data.priceBook;
     const term = (document.getElementById("priceBookSearch")?.value || "").trim().toLowerCase();
 
     container.innerHTML = "";
 
-    let anyShown = false;
+    // Every store the user has, plus any store already in the book
+    const storeNames = Array.from(new Set([
+        ...getAllStores().map(s => s.name),
+        ...Object.keys(book)
+    ])).sort();
 
-    Object.keys(book).sort().forEach(storeName => {
+    storeNames.forEach(storeName => {
         const itemsObj = book[storeName] || {};
         let keys = Object.keys(itemsObj);
-        if (term) keys = keys.filter(k => k.includes(term));
-        if (!keys.length) return;
-        anyShown = true;
-
+        if (term) {
+            keys = keys.filter(k => k.includes(term));
+            if (!keys.length) return; // searching: hide stores with no matches
+        }
         keys.sort();
 
-        // Searching auto-expands so matches are visible
+        const totalCount = Object.keys(itemsObj).length;
         const isOpen = term ? true : !!priceBookOpenStores[storeName];
 
         const wrap = document.createElement("div");
@@ -1598,8 +1603,9 @@ function renderPriceBook() {
         header.className = "pricebook-store-header";
         header.innerHTML =
             `<span class="chevron">${isOpen ? "▼" : "▶"}</span> ` +
-            `<strong>${storeName}</strong> ` +
-            `<span class="pricebook-count">${keys.length} item${keys.length === 1 ? "" : "s"}</span>`;
+            `<strong></strong> ` +
+            `<span class="pricebook-count">${totalCount} item${totalCount === 1 ? "" : "s"}</span>`;
+        header.querySelector("strong").textContent = storeName;
         header.onclick = () => {
             priceBookOpenStores[storeName] = !priceBookOpenStores[storeName];
             renderPriceBook();
@@ -1613,9 +1619,23 @@ function renderPriceBook() {
                 const row = document.createElement("div");
                 row.className = "pricebook-row";
 
+                // NAME — tap to rename (moves the entry; merges history
+                // if the new name already exists at this store)
                 const name = document.createElement("span");
                 name.className = "pricebook-name";
                 name.textContent = key;
+                name.title = "Tap to rename this item";
+                name.onclick = () => {
+                    const inp = document.createElement("input");
+                    inp.type = "text";
+                    inp.className = "pricebook-name-input";
+                    inp.value = key;
+                    inp.onchange = () => renamePriceBookItem(storeName, key, inp.value);
+                    inp.onblur = () => { if (inp.parentNode) renderPriceBook(); };
+                    name.replaceWith(inp);
+                    inp.focus();
+                    inp.select();
+                };
 
                 const meta = document.createElement("span");
                 meta.className = "pricebook-meta";
@@ -1625,6 +1645,7 @@ function renderPriceBook() {
                     `${n} price${n === 1 ? "" : "s"}` +
                     (last ? " · " + new Date(last).toLocaleDateString() : "");
 
+                // PRICE — tap to edit (manual edit resets history)
                 const priceSpan = document.createElement("span");
                 priceSpan.className = "pricebook-price";
                 priceSpan.textContent = formatPrice(entry.price);
@@ -1664,18 +1685,104 @@ function renderPriceBook() {
                 row.appendChild(del);
                 wrap.appendChild(row);
             });
+
+            if (!keys.length && !term) {
+                const empty = document.createElement("p");
+                empty.className = "small-note";
+                empty.style.margin = "0.4rem 0";
+                empty.textContent = "No prices for this store yet — add one below or scan a receipt.";
+                wrap.appendChild(empty);
+            }
+
+            // ADD ITEM row (hidden while searching)
+            if (!term) {
+                const addRow = document.createElement("div");
+                addRow.className = "pricebook-add-row";
+
+                const nameInp = document.createElement("input");
+                nameInp.type = "text";
+                nameInp.placeholder = "Add item...";
+                nameInp.className = "pricebook-add-name";
+
+                const priceInp = document.createElement("input");
+                priceInp.type = "number";
+                priceInp.step = "0.01";
+                priceInp.min = "0";
+                priceInp.inputMode = "decimal";
+                priceInp.placeholder = "$";
+                priceInp.className = "pricebook-price-input";
+
+                const addBtn = document.createElement("button");
+                addBtn.className = "primary pricebook-add-btn";
+                addBtn.textContent = "Add";
+                addBtn.onclick = async () => {
+                    const rawName = nameInp.value.trim();
+                    const rawPrice = parseFloat(priceInp.value);
+                    if (!rawName || isNaN(rawPrice) || rawPrice <= 0) {
+                        alert("Enter an item name and a price above 0.");
+                        return;
+                    }
+                    priceBookOpenStores[storeName] = true; // keep this store open
+                    await setItemPrice(rawName, storeName, rawPrice, { skipRender: true });
+                    renderGroceryList();
+                    renderPriceBook();
+                };
+
+                addRow.appendChild(nameInp);
+                addRow.appendChild(priceInp);
+                addRow.appendChild(addBtn);
+                wrap.appendChild(addRow);
+            }
         }
 
         container.appendChild(wrap);
     });
 
-    if (!anyShown) {
+    if (!container.children.length) {
         container.innerHTML = `<p class="small-note">${term
             ? "No items match your search."
-            : "No prices yet. Add them by tapping prices on your grocery list, in a recipe's 💲 Costs panel, or by scanning a receipt."}</p>`;
+            : "No stores yet. Add a store above to start tracking prices."}</p>`;
     }
 }
 window.renderPriceBook = renderPriceBook;
+
+// Rename a price book entry. The new name is normalized with the
+// same engine as everything else; if it collides with an existing
+// entry at the same store, the two price histories are merged
+// (newest first, capped, median re-derived).
+async function renamePriceBookItem(storeName, oldKey, newRawName) {
+    const book = state?.data?.priceBook;
+    if (!book?.[storeName]?.[oldKey]) { renderPriceBook(); return; }
+
+    const newKey = extractSmartIngredientName((newRawName || "").trim());
+    if (!newKey || newKey === oldKey) { renderPriceBook(); return; }
+
+    const moving = ensurePriceHistory(book[storeName][oldKey]);
+    const existing = book[storeName][newKey];
+
+    if (existing) {
+        if (!confirm(`"${newKey}" already exists at ${storeName}. Merge their price histories?`)) {
+            renderPriceBook();
+            return;
+        }
+        ensurePriceHistory(existing);
+        const combined = [...existing.history, ...moving.history]
+            .sort((a, b) => (b.date || 0) - (a.date || 0))
+            .slice(0, PRICE_HISTORY_MAX);
+        existing.history = combined;
+        existing.price = medianOf(combined.map(h => h.price));
+        existing.updatedAt = Date.now();
+    } else {
+        book[storeName][newKey] = moving;
+    }
+
+    delete book[storeName][oldKey];
+
+    await persistState();
+    renderGroceryList();
+    renderPriceBook();
+}
+
 // ------------------------------
 // RECIPE COSTS — badge + editable Costs panel on recipe cards
 // ------------------------------
