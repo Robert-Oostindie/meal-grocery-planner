@@ -202,16 +202,22 @@ exports.parseRecipeFromPhoto = onRequest(
     }
 );
 // ============================================================
-// RECEIPT SCANNER — parseReceiptFromPhoto
+// RECEIPT SCANNER — parseReceiptFromPhoto  (v2)
 //
-// APPEND THIS ENTIRE FILE TO THE END OF functions/index.js
-// It is self-contained: it reuses onRequest, defineSecret,
-// https, and ALLOWED_ORIGINS already declared at the top of
-// that file, and declares everything else it needs itself.
+// REPLACES the previously appended parseReceiptFromPhoto block
+// at the end of functions/index.js. Delete everything from the
+// old "RECEIPT SCANNER — parseReceiptFromPhoto" banner to the
+// end of the file, then append this entire file.
 //
-// Uses its OWN Anthropic API key (ANTHROPIC_API_KEY_RECEIPTS)
-// so receipt-scanning cost is trackable separately from recipe
-// photo imports in the Anthropic Console.
+// v2 changes:
+// - Extracts SINGLE-UNIT price when quantity lines are present
+//   (handles both Aldi-style "2 x 0.98" below the item and
+//   Woodman's-style "2 @ 2.99" above the item)
+// - Returns qty per item and the printed receipt SUBTOTAL so the
+//   client can cross-check for misread digits (6/8, 5/8, 3/8)
+// - Stronger brand/store-prefix stripping in names
+//
+// Uses its OWN Anthropic API key (ANTHROPIC_API_KEY_RECEIPTS).
 // ============================================================
 
 const anthropicReceiptApiKey = defineSecret("ANTHROPIC_API_KEY_RECEIPTS");
@@ -221,19 +227,47 @@ const MAX_RECEIPT_IMAGES = 2;
 const RECEIPT_RESPONSE_FORMAT = `Return ONLY a valid JSON object with this exact structure, nothing else:
 {
   "store": "Store name if visible on the receipt, otherwise an empty string",
+  "receiptSubtotal": 65.63,
   "items": [
-    {"name": "chicken breast", "price": 8.97},
-    {"name": "olive oil", "price": 6.48}
+    {"name": "chicken thighs", "price": 8.22, "qty": 1},
+    {"name": "steam mixed vegetables", "price": 0.98, "qty": 2}
   ]
 }
 
 Rules:
-- "name": Expand receipt abbreviations into plain, lowercase grocery item names a home cook would write in a recipe (e.g. "GV CHKN BRST 3LB" → "chicken breast", "BNLS SKLS THGH" → "chicken thighs", "2% MLK GAL" → "milk"). Drop brand names, package sizes, and store prefixes.
-- "price": The FINAL price paid for that line as a number. If a discount or coupon is printed on the line directly below an item, subtract it and report the net price for that item. No dollar signs, no strings.
-- Include only purchased grocery items. SKIP: tax, subtotal, total, change, payment/tender lines, standalone coupon lines (apply them to their item instead), bag fees, bottle deposits, loyalty point summaries, and non-food service lines.
-- If the same item appears on multiple lines, include it once. If a quantity and unit price are shown (e.g. "2 @ 3.49"), report the single-unit price.
+
+PRICES — always report the SINGLE-UNIT price:
+- Receipts print quantities in different formats. Watch for BOTH:
+  - Quantity line BELOW the item (Aldi style):
+      "Steam Mixed Veg.    1.96"
+      "2 x    0.98"
+    → price 0.98, qty 2 (1.96 is the line total — do NOT use it)
+  - Quantity line ABOVE the item (Woodman's style):
+      "2 @ 2.99"
+      "   CRAN NATRLS 64Z    5.98"
+    → price 2.99, qty 2
+      "4 @ 0.99"
+      "   AVOCADOS    3.96"
+    → price 0.99, qty 4
+- If no quantity line is attached to an item, price is the printed line amount and qty is 1.
+- Weight-based items (e.g. "0.95lb @ 0.99/lb ... 0.94"): report the line total actually paid (0.94) with qty 1 — that is what a typical purchase of that item costs.
+
+DIGIT ACCURACY:
+- Receipt dot-matrix fonts make 6/8, 5/8, and 3/8 easy to confuse. Read carefully.
+- Cross-check yourself: the sum of (price × qty) over all items should approximately equal the printed subtotal. If your sum is off, re-read the digits before answering.
+
+"receiptSubtotal": the printed SUBTOTAL (pre-tax) as a number. If no subtotal is printed, use the pre-tax total. If neither is visible, use null.
+
+NAMES:
+- Expand abbreviations into plain, lowercase grocery item names a home cook would write in a recipe: "B/S CHICKEN THIGHS" → "chicken thighs", "MILD CHEDDAR SHRED" → "mild cheddar shredded cheese", "CAMP CHDR SOUP" → "cheddar soup", "COND CRM OF CHKN" → "condensed cream of chicken soup".
+- STRIP brand codes and store-brand prefixes: "GV", "GI", "OO", "MM", item numbers, and similar leading codes are brands, not part of the food name. "GI POTATO PUFF 28Z" → "potato puffs", "OO CRAN NATRLS 64Z" → "cranberry juice".
+- Drop package sizes and counts from names ("64Z", "20ct", "3LB").
+
+WHAT TO INCLUDE:
+- Only purchased grocery items. SKIP: tax, subtotal, total, change, payment/tender lines, standalone coupon lines (apply them to their item instead), bag fees, bottle deposits, loyalty summaries, and non-food service lines.
 - If you cannot confidently read a price for an item, skip that item entirely.
-- Return ONLY the JSON, no explanation, no markdown code blocks`;
+
+Return ONLY the JSON, no explanation, no markdown code blocks`;
 
 exports.parseReceiptFromPhoto = onRequest(
     { secrets: ["ANTHROPIC_API_KEY_RECEIPTS"] },
@@ -275,8 +309,8 @@ exports.parseReceiptFromPhoto = onRequest(
         }));
 
         const prompt = images.length === 1
-            ? `You are a grocery receipt parser. Extract the purchased items and their final prices from this receipt photo.\n\n${RECEIPT_RESPONSE_FORMAT}`
-            : `You are a grocery receipt parser. These ${images.length} photos show the SAME receipt (e.g. top half and bottom half). Combine them and extract each purchased item and its final price exactly once.\n\n${RECEIPT_RESPONSE_FORMAT}`;
+            ? `You are a grocery receipt parser. Extract the purchased items and their single-unit prices from this receipt photo.\n\n${RECEIPT_RESPONSE_FORMAT}`
+            : `You are a grocery receipt parser. These ${images.length} photos show the SAME receipt (e.g. top half and bottom half). Combine them and extract each purchased item and its single-unit price exactly once.\n\n${RECEIPT_RESPONSE_FORMAT}`;
 
         const requestBody = JSON.stringify({
             model: "claude-haiku-4-5-20251001",
@@ -342,14 +376,23 @@ exports.parseReceiptFromPhoto = onRequest(
         }
 
         const items = result.items
-            .map(it => ({
-                name: String(it.name || "").trim().toLowerCase(),
-                price: Math.round(Number(it.price) * 100) / 100
-            }))
+            .map(it => {
+                const qty = parseInt(it.qty, 10);
+                return {
+                    name: String(it.name || "").trim().toLowerCase(),
+                    price: Math.round(Number(it.price) * 100) / 100,
+                    qty: (!isNaN(qty) && qty > 0) ? qty : 1
+                };
+            })
             .filter(it => it.name && !isNaN(it.price) && it.price > 0);
+
+        const subtotalNum = Number(result.receiptSubtotal);
 
         return res.status(200).json({
             store: String(result.store || ""),
+            receiptSubtotal: (!isNaN(subtotalNum) && subtotalNum > 0)
+                ? Math.round(subtotalNum * 100) / 100
+                : null,
             items
         });
     }
