@@ -202,64 +202,69 @@ exports.parseRecipeFromPhoto = onRequest(
     }
 );
 // ============================================================
-// RECEIPT SCANNER — parseReceiptFromPhoto  (v2)
+// RECEIPT SCANNER — parseReceiptFromPhoto  (v3)
 //
-// REPLACES the previously appended parseReceiptFromPhoto block
-// at the end of functions/index.js. Delete everything from the
-// old "RECEIPT SCANNER — parseReceiptFromPhoto" banner to the
-// end of the file, then append this entire file.
+// REPLACES the v2 parseReceiptFromPhoto block at the end of
+// functions/index.js. Delete everything from the old
+// "RECEIPT SCANNER — parseReceiptFromPhoto" banner to the end
+// of the file, then append this entire file.
 //
-// v2 changes:
-// - Extracts SINGLE-UNIT price when quantity lines are present
-//   (handles both Aldi-style "2 x 0.98" below the item and
-//   Woodman's-style "2 @ 2.99" above the item)
-// - Returns qty per item and the printed receipt SUBTOTAL so the
-//   client can cross-check for misread digits (6/8, 5/8, 3/8)
-// - Stronger brand/store-prefix stripping in names
+// v3 changes (fixes Aldi-style "2 x 0.98" continuation lines):
+// - Model must TRANSCRIBE the receipt verbatim before parsing,
+//   which forces it to associate quantity lines with their items
+// - Items now carry {name, unitPrice, qty, lineTotal}; the server
+//   VERIFIES unitPrice × qty ≈ lineTotal and deterministically
+//   recomputes unitPrice = lineTotal ÷ qty on any mismatch
+// - Server-side dedupe collapses duplicate rows where one row is
+//   the line total of the other (the "1.96 + 0.98" double-emit)
 //
-// Uses its OWN Anthropic API key (ANTHROPIC_API_KEY_RECEIPTS).
+// Client response shape is UNCHANGED ({store, receiptSubtotal,
+// items:[{name, price, qty}]}) — no hosting deploy needed.
 // ============================================================
 
 const anthropicReceiptApiKey = defineSecret("ANTHROPIC_API_KEY_RECEIPTS");
 
 const MAX_RECEIPT_IMAGES = 2;
 
-const RECEIPT_RESPONSE_FORMAT = `Return ONLY a valid JSON object with this exact structure, nothing else:
+const RECEIPT_RESPONSE_FORMAT = `Work in TWO steps.
+
+STEP 1 — TRANSCRIBE. Inside <transcription></transcription> tags, transcribe the receipt line by line, exactly as printed, in order. Include EVERY line: item lines, and especially quantity lines like "2 x 0.98" or "2 @ 1.89" or "0.95lb @ 0.99/lb". A quantity line belongs to the item line directly next to it (some stores print it BELOW the item, some print it ABOVE).
+
+STEP 2 — PARSE. After the closing </transcription> tag, output ONLY a valid JSON object with this exact structure, nothing else:
 {
   "store": "Store name if visible on the receipt, otherwise an empty string",
   "receiptSubtotal": 65.63,
   "items": [
-    {"name": "chicken thighs", "price": 8.22, "qty": 1},
-    {"name": "steam mixed vegetables", "price": 0.98, "qty": 2}
+    {"name": "chicken thighs", "unitPrice": 8.22, "qty": 1, "lineTotal": 8.22},
+    {"name": "steam mixed vegetables", "unitPrice": 0.98, "qty": 2, "lineTotal": 1.96}
   ]
 }
 
-Rules:
+Rules for STEP 2:
 
-PRICES — always report the SINGLE-UNIT price:
-- Receipts print quantities in different formats. Watch for BOTH:
+QUANTITY AND PRICE — every item gets all four fields, and unitPrice × qty MUST equal lineTotal:
+- "lineTotal" is the amount printed on the item's own line.
+- If a quantity line is attached to the item, take qty and unitPrice from it:
   - Quantity line BELOW the item (Aldi style):
       "Steam Mixed Veg.    1.96"
       "2 x    0.98"
-    → price 0.98, qty 2 (1.96 is the line total — do NOT use it)
+    → {"unitPrice": 0.98, "qty": 2, "lineTotal": 1.96}
   - Quantity line ABOVE the item (Woodman's style):
-      "2 @ 2.99"
-      "   CRAN NATRLS 64Z    5.98"
-    → price 2.99, qty 2
-      "4 @ 0.99"
-      "   AVOCADOS    3.96"
-    → price 0.99, qty 4
-- If no quantity line is attached to an item, price is the printed line amount and qty is 1.
-- Weight-based items (e.g. "0.95lb @ 0.99/lb ... 0.94"): report the line total actually paid (0.94) with qty 1 — that is what a typical purchase of that item costs.
+      "2 @ 1.89"
+      "   CAMP CHDR SOUP    3.78"
+    → {"unitPrice": 1.89, "qty": 2, "lineTotal": 3.78}
+- If no quantity line is attached: qty is 1 and unitPrice equals lineTotal.
+- Output each receipt line as ONE item only — never emit both a line-total version and a unit-price version of the same item.
+- Weight-based items (e.g. "0.95lb @ 0.99/lb ... 0.94"): {"unitPrice": 0.94, "qty": 1, "lineTotal": 0.94} — the amount actually paid.
 
 DIGIT ACCURACY:
-- Receipt dot-matrix fonts make 6/8, 5/8, and 3/8 easy to confuse. Read carefully.
-- Cross-check yourself: the sum of (price × qty) over all items should approximately equal the printed subtotal. If your sum is off, re-read the digits before answering.
+- Receipt dot-matrix fonts make 6/8, 5/8, and 3/8 easy to confuse. Transcribe carefully in STEP 1 and reuse your transcription in STEP 2.
+- The sum of lineTotal over all items should approximately equal the printed subtotal. If it doesn't, re-check your digits.
 
 "receiptSubtotal": the printed SUBTOTAL (pre-tax) as a number. If no subtotal is printed, use the pre-tax total. If neither is visible, use null.
 
 NAMES:
-- Expand abbreviations into plain, lowercase grocery item names a home cook would write in a recipe: "B/S CHICKEN THIGHS" → "chicken thighs", "MILD CHEDDAR SHRED" → "mild cheddar shredded cheese", "CAMP CHDR SOUP" → "cheddar soup", "COND CRM OF CHKN" → "condensed cream of chicken soup".
+- Expand abbreviations into plain, lowercase grocery item names a home cook would write in a recipe: "B/S CHICKEN THIGHS" → "chicken thighs", "MILD CHEDDAR SHRED" → "mild cheddar shredded cheese", "COND CRM OF CHKN" → "condensed cream of chicken soup".
 - STRIP brand codes and store-brand prefixes: "GV", "GI", "OO", "MM", item numbers, and similar leading codes are brands, not part of the food name. "GI POTATO PUFF 28Z" → "potato puffs", "OO CRAN NATRLS 64Z" → "cranberry juice".
 - Drop package sizes and counts from names ("64Z", "20ct", "3LB").
 
@@ -267,7 +272,7 @@ WHAT TO INCLUDE:
 - Only purchased grocery items. SKIP: tax, subtotal, total, change, payment/tender lines, standalone coupon lines (apply them to their item instead), bag fees, bottle deposits, loyalty summaries, and non-food service lines.
 - If you cannot confidently read a price for an item, skip that item entirely.
 
-Return ONLY the JSON, no explanation, no markdown code blocks`;
+After the </transcription> tag, output ONLY the JSON — no explanation, no markdown code blocks.`;
 
 exports.parseReceiptFromPhoto = onRequest(
     { secrets: ["ANTHROPIC_API_KEY_RECEIPTS"] },
@@ -309,12 +314,12 @@ exports.parseReceiptFromPhoto = onRequest(
         }));
 
         const prompt = images.length === 1
-            ? `You are a grocery receipt parser. Extract the purchased items and their single-unit prices from this receipt photo.\n\n${RECEIPT_RESPONSE_FORMAT}`
-            : `You are a grocery receipt parser. These ${images.length} photos show the SAME receipt (e.g. top half and bottom half). Combine them and extract each purchased item and its single-unit price exactly once.\n\n${RECEIPT_RESPONSE_FORMAT}`;
+            ? `You are a grocery receipt parser.\n\n${RECEIPT_RESPONSE_FORMAT}`
+            : `You are a grocery receipt parser. These ${images.length} photos show the SAME receipt (e.g. top half and bottom half). Transcribe them in order as one receipt and extract each purchased item exactly once.\n\n${RECEIPT_RESPONSE_FORMAT}`;
 
         const requestBody = JSON.stringify({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 3000,
+            max_tokens: 4000,
             messages: [
                 {
                     role: "user",
@@ -362,7 +367,20 @@ exports.parseReceiptFromPhoto = onRequest(
         }
 
         const rawText = apiResponse.body.content?.[0]?.text || "";
-        const cleaned = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        // Discard the transcription scratchpad, keep only the JSON that follows
+        let cleaned = rawText;
+        const tEnd = cleaned.lastIndexOf("</transcription>");
+        if (tEnd !== -1) {
+            cleaned = cleaned.slice(tEnd + "</transcription>".length);
+        }
+        cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        const firstBrace = cleaned.indexOf("{");
+        const lastBrace = cleaned.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+        }
 
         let result;
         try {
@@ -375,16 +393,61 @@ exports.parseReceiptFromPhoto = onRequest(
             return res.status(500).json({ error: "No items found on the receipt. Try a clearer photo." });
         }
 
-        const items = result.items
+        // ── Normalize + deterministic math repair ─────────────
+        let items = result.items
             .map(it => {
-                const qty = parseInt(it.qty, 10);
+                const qtyParsed = parseInt(it.qty, 10);
+                const qty = (!isNaN(qtyParsed) && qtyParsed > 0) ? qtyParsed : 1;
+
+                let unitPrice = Number(it.unitPrice != null ? it.unitPrice : it.price);
+                const lineTotal = Number(it.lineTotal);
+
+                // Enforce unitPrice × qty = lineTotal. The line amount is the
+                // most reliably printed number, so on mismatch derive from it.
+                if (!isNaN(lineTotal) && lineTotal > 0) {
+                    if (isNaN(unitPrice) || unitPrice <= 0 ||
+                        Math.abs(unitPrice * qty - lineTotal) > 0.02) {
+                        unitPrice = lineTotal / qty;
+                    }
+                }
+
                 return {
                     name: String(it.name || "").trim().toLowerCase(),
-                    price: Math.round(Number(it.price) * 100) / 100,
-                    qty: (!isNaN(qty) && qty > 0) ? qty : 1
+                    price: Math.round(unitPrice * 100) / 100,
+                    qty,
+                    _total: (!isNaN(lineTotal) && lineTotal > 0)
+                        ? Math.round(lineTotal * 100) / 100
+                        : Math.round(unitPrice * qty * 100) / 100
                 };
             })
             .filter(it => it.name && !isNaN(it.price) && it.price > 0);
+
+        // ── Dedupe double-emits ────────────────────────────────
+        // Collapses two rows of the same item where one row is the
+        // line total of the other (e.g. "1.96 qty1" + "0.98 qty2").
+        // Rows with the same name but different totals (two separate
+        // purchases) are preserved.
+        const deduped = [];
+        for (const it of items) {
+            const dupIdx = deduped.findIndex(d =>
+                d.name === it.name && (
+                    Math.abs(d._total - it._total) < 0.02 ||
+                    Math.abs(d.price - it._total) < 0.02 ||
+                    Math.abs(it.price - d._total) < 0.02
+                )
+            );
+            if (dupIdx === -1) {
+                deduped.push(it);
+                continue;
+            }
+            const d = deduped[dupIdx];
+            // Keep the row that looks like the unit-price version
+            if (it.qty > d.qty || (it.qty === d.qty && it.price < d.price)) {
+                deduped[dupIdx] = it;
+            }
+        }
+
+        const finalItems = deduped.map(({ name, price, qty }) => ({ name, price, qty }));
 
         const subtotalNum = Number(result.receiptSubtotal);
 
@@ -393,7 +456,7 @@ exports.parseReceiptFromPhoto = onRequest(
             receiptSubtotal: (!isNaN(subtotalNum) && subtotalNum > 0)
                 ? Math.round(subtotalNum * 100) / 100
                 : null,
-            items
+            items: finalItems
         });
     }
 );
