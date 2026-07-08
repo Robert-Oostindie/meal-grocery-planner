@@ -73,7 +73,38 @@ import {
     scanReceipt,
     saveReceiptPrices
 } from "./receiptScanner.js?v=2";
+// ------------------------------
+// ?addRecipe= FUNNEL (from public /recipes/ pages)
+// Captures the recipe ID before auth, survives the sign-in
+// flow via sessionStorage, then imports once signed in.
+// ------------------------------
+(function captureAddRecipeParam() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("addRecipe");
+        if (id) {
+            sessionStorage.setItem("pendingGlobalRecipeAdd", id);
+            // Clean the URL so refreshes don't re-trigger
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+        if (sessionStorage.getItem("pendingGlobalRecipeAdd")) {
+            document.getElementById("authRecipeNotice")?.classList.remove("hidden");
+        }
+    } catch (e) { /* non-fatal */ }
+})();
 
+async function processPendingGlobalAdd() {
+    const id = sessionStorage.getItem("pendingGlobalRecipeAdd");
+    if (!id || !state?.user?.id) return;
+    sessionStorage.removeItem("pendingGlobalRecipeAdd");
+
+    try {
+        await ensureGlobalRecipesLoaded();
+        await importGlobalRecipe(id);
+    } catch (e) {
+        console.error("❌ Pending recipe add failed:", e);
+    }
+}
 // ==============================
 // DOM ELEMENTS
 // ==============================
