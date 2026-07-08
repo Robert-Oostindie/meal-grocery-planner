@@ -70,7 +70,7 @@ import {
     removeReceiptPhoto,
     scanReceipt,
     saveReceiptPrices
-} from "./receiptScanner.js";
+} from "./receiptScanner.js?v=2";
 
 // ==============================
 // DOM ELEMENTS
