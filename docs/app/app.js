@@ -2737,10 +2737,14 @@ function renderApp() {
     renderRecipes();
     renderPlanner();
 
-    // Only render grocery list IF the grocery tab is active
+   // Only render grocery list IF the grocery tab is active
     if (activeTab === "groceryTab") {
         renderGroceryList();
     }
+
+    // Complete a pending "Add to My Recipes" from a public recipe page
+    processPendingGlobalAdd();
+}
 }
 
 // ==============================
