@@ -565,3 +565,7 @@ export function refreshGlobalRecipes() {
     _loaded = false;
     renderGlobalRecipesTab();
 }
+// ── Ensure cache is loaded (used by the ?addRecipe= funnel) ──
+export async function ensureGlobalRecipesLoaded() {
+    if (!_loaded) await fetchGlobalRecipes();
+}
