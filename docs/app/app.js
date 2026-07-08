@@ -51,8 +51,7 @@ import {
     setGlobalRecipesSearch,
     setGlobalRecipesSort,
     refreshGlobalRecipes,
-    ensureGlobalRecipesLoaded,
-    importGlobalRecipe
+    ensureGlobalRecipesLoaded
 } from "./globalRecipes.js";
 
 import {
